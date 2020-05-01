@@ -246,7 +246,7 @@ runtimeConfigSetter}
         // if provided from worker or params if we're parsing them here
         renderOpts.params = _params || params
 
-        console.log({ query: parsedUrl.query, params, url: req.url })
+        console.log(JSON.stringify({ query: parsedUrl.query, params, url: req.url, headers: req.headers }))
 
         const isFallback = parsedUrl.query.__nextFallback
 
