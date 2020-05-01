@@ -106,7 +106,7 @@
                 : dynamicRouteMatcher(parsedUrl.pathname)
               `:`{}`}
 
-          console.log({ params })
+          console.log({ params, url: req.url })
 
           const resolver = require('${absolutePagePath}')
           await apiResolver(
@@ -246,7 +246,7 @@ runtimeConfigSetter}
         // if provided from worker or params if we're parsing them here
         renderOpts.params = _params || params
 
-        console.log({ query: parsedUrl.query, params })
+        console.log({ query: parsedUrl.query, params, url: req.url })
 
         const isFallback = parsedUrl.query.__nextFallback
 
