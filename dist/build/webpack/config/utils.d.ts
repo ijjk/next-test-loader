@@ -4,7 +4,7 @@ export declare type ConfigurationContext = {
     customAppFile: string | null;
     isDevelopment: boolean;
     isProduction: boolean;
-    hasReactRefresh: boolean;
+    isReactRefreshEnabled: boolean;
     isServer: boolean;
     isClient: boolean;
     assetPrefix: string;

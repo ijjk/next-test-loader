@@ -32,17 +32,14 @@
 // https://github.com/glenjamin/webpack-hot-middleware
 var hadRuntimeError=false;var customHmrEventHandler;function connect(options){// Open stack traces in an editor.
 ErrorOverlay.setEditorHandler(function editorHandler(_ref){var{fileName,lineNumber,colNumber}=_ref;// Resolve invalid paths coming from react-error-overlay
-var resolvedFilename=fileName.replace(/^webpack:\/\//,'');(0,_unfetch.default)('/_next/development/open-stack-frame-in-editor'+("?fileName="+window.encodeURIComponent(resolvedFilename))+("&lineNumber="+(lineNumber||1))+("&colNumber="+(colNumber||1)));});if(process.env.__NEXT_FAST_REFRESH){DevOverlay.register();}// We need to keep track of if there has been a runtime error.
+var resolvedFilename=fileName.replace(/^webpack:\/\//,'');(0,_unfetch.default)('/_next/development/open-stack-frame-in-editor'+("?fileName="+window.encodeURIComponent(resolvedFilename))+("&lineNumber="+(lineNumber||1))+("&colNumber="+(colNumber||1)));});if(process.env.__NEXT_FAST_REFRESH){DevOverlay.register();}else{// We need to keep track of if there has been a runtime error.
 // Essentially, we cannot guarantee application state was not corrupted by the
 // runtime error. To prevent confusing behavior, we forcibly reload the entire
 // application. This is handled below when we are notified of a compile (code
 // change).
 // See https://github.com/facebook/create-react-app/issues/3096
-ErrorOverlay.startReportingRuntimeErrors({onError:function onError(){if(process.env.__NEXT_FAST_REFRESH){return;}hadRuntimeError=true;}});if(module.hot&&typeof module.hot.dispose==='function'){module.hot.dispose(function(){// TODO: why do we need this?
-ErrorOverlay.stopReportingRuntimeErrors();});}(0,_eventsource.getEventSourceWrapper)(options).addMessageListener(event=>{// This is the heartbeat event
-if(event.data==='\uD83D\uDC93'){return;}try{processMessage(event);}catch(ex){console.warn('Invalid HMR message: '+event.data+'\n'+ex);}});return{subscribeToHmrEvent(handler){customHmrEventHandler=handler;},reportRuntimeError(err){if(process.env.__NEXT_FAST_REFRESH){// FIXME: this code branch should be eliminated
-setTimeout(()=>{// An unhandled rendering error occurred
-throw err;});}else{ErrorOverlay.reportRuntimeError(err);}},prepareError(err){// Temporary workaround for https://github.com/facebook/create-react-app/issues/4760
+ErrorOverlay.startReportingRuntimeErrors({onError:function onError(){hadRuntimeError=true;}});}(0,_eventsource.getEventSourceWrapper)(options).addMessageListener(event=>{// This is the heartbeat event
+if(event.data==='\uD83D\uDC93'){return;}try{processMessage(event);}catch(ex){console.warn('Invalid HMR message: '+event.data+'\n'+ex);}});return{subscribeToHmrEvent(handler){customHmrEventHandler=handler;},reportRuntimeError(err){if(process.env.__NEXT_FAST_REFRESH){return;}ErrorOverlay.reportRuntimeError(err);},prepareError(err){// Temporary workaround for https://github.com/facebook/create-react-app/issues/4760
 // Should be removed once the fix lands
 hadRuntimeError=true;// react-error-overlay expects a type of `Error`
 var error=new Error(err.message);error.name=err.name;error.stack=err.stack;// __NEXT_DIST_DIR is provided by webpack
@@ -60,13 +57,13 @@ if(isHotUpdate){tryApplyUpdates(function onSuccessfulHotUpdate(hasUpdates){// On
 onFastRefresh(hasUpdates);});}}// Compilation with errors (e.g. syntax error or missing modules).
 function handleErrors(errors){clearOutdatedErrors();isFirstCompilation=false;hasCompileErrors=true;// "Massage" webpack messages.
 var formatted=(0,_formatWebpackMessages.default)({errors:errors,warnings:[]});// Only show the first error.
-ErrorOverlay.reportBuildError(formatted.errors[0]);// Also log them to the console.
+if(process.env.__NEXT_FAST_REFRESH){DevOverlay.onBuildError(formatted.errors[0]);}else{ErrorOverlay.reportBuildError(formatted.errors[0]);}// Also log them to the console.
 if(typeof console!=='undefined'&&typeof console.error==='function'){for(var i=0;i<formatted.errors.length;i++){console.error((0,_stripAnsi.default)(formatted.errors[i]));}}// Do not attempt to reload now.
 // We will reload on next success instead.
-if(process.env.__NEXT_TEST_MODE){if(self.__NEXT_HMR_CB){self.__NEXT_HMR_CB(formatted.errors[0]);self.__NEXT_HMR_CB=null;}}}function tryDismissErrorOverlay(){if(!hasCompileErrors){ErrorOverlay.dismissBuildError();}}function onFastRefresh(hasUpdates){tryDismissErrorOverlay();if(hasUpdates){if(process.env.__NEXT_FAST_REFRESH){DevOverlay.onRefresh();}}}// There is a newer version of the code available.
+if(process.env.__NEXT_TEST_MODE){if(self.__NEXT_HMR_CB){self.__NEXT_HMR_CB(formatted.errors[0]);self.__NEXT_HMR_CB=null;}}}function tryDismissErrorOverlay(){if(!process.env.__NEXT_FAST_REFRESH){if(!hasCompileErrors){ErrorOverlay.dismissBuildError();}}}function onFastRefresh(hasUpdates){tryDismissErrorOverlay();if(process.env.__NEXT_FAST_REFRESH){DevOverlay.onBuildOk();if(hasUpdates){DevOverlay.onRefresh();}}}// There is a newer version of the code available.
 function handleAvailableHash(hash){// Update last known compilation hash.
 mostRecentCompilationHash=hash;}// Handle messages from the server.
-function processMessage(e){var obj=JSON.parse(e.data);switch(obj.action){case'building':{++hmrEventCount;console.log('[HMR] bundle '+(obj.name?"'"+obj.name+"' ":'')+'rebuilding');break;}case'built':case'sync':{if(obj.action==='built')++hmrEventCount;if(obj.hash){handleAvailableHash(obj.hash);}var{errors,warnings}=obj;var hasErrors=Boolean(errors&&errors.length);if(hasErrors){return handleErrors(errors);}var hasWarnings=Boolean(warnings&&warnings.length);if(hasWarnings){return handleWarnings(warnings);}return handleSuccess();}case'typeChecked':{var eventId=++hmrEventCount;var[{errors:_errors}]=obj.data;var _hasErrors=Boolean(_errors&&_errors.length);// Disregard event if there are no errors to report.
+function processMessage(e){var obj=JSON.parse(e.data);switch(obj.action){case'building':{++hmrEventCount;console.log('[HMR] bundle '+(obj.name?"'"+obj.name+"' ":'')+'rebuilding');break;}case'built':case'sync':{if(obj.action==='built')++hmrEventCount;if(obj.hash){handleAvailableHash(obj.hash);}var{errors,warnings}=obj;var hasErrors=Boolean(errors&&errors.length);if(hasErrors){return handleErrors(errors);}var hasWarnings=Boolean(warnings&&warnings.length);if(hasWarnings){return handleWarnings(warnings);}return handleSuccess();}case'typeChecked':{if(process.env.__NEXT_FAST_REFRESH){break;}var eventId=++hmrEventCount;var[{errors:_errors}]=obj.data;var _hasErrors=Boolean(_errors&&_errors.length);// Disregard event if there are no errors to report.
 if(!_hasErrors){// We need to _try_ dismissing the error overlay, as code may not have
 // changed, for example, when only types are updated.
 // n.b. `handleSuccess` only dismisses the overlay if code was updated.

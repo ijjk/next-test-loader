@@ -14,7 +14,6 @@ const compression_1 = __importDefault(require("next/dist/compiled/compression"))
 const fs_1 = __importDefault(require("fs"));
 const chalk_1 = __importDefault(require("next/dist/compiled/chalk"));
 const http_proxy_1 = __importDefault(require("next/dist/compiled/http-proxy"));
-const index_js_1 = __importDefault(require("next/dist/compiled/nanoid/index.js"));
 const path_1 = require("path");
 const querystring_1 = require("querystring");
 const url_1 = require("url");
@@ -619,9 +618,6 @@ class Server {
         const isSSG = !!components.getStaticProps;
         const isServerProps = !!components.getServerSideProps;
         const hasStaticPaths = !!components.getStaticPaths;
-        if (isSSG && query.amp) {
-            pathname += `.amp`;
-        }
         if (!query.amp) {
             delete query.amp;
         }
@@ -681,13 +677,10 @@ class Server {
                 .replace(/\/index$/, '/');
         }
         const ssgCacheKey = isPreviewMode
-            ? `__` + index_js_1.default() // Preview mode uses a throw away key to not coalesce preview invokes
+            ? undefined // Preview mode bypasses the cache
             : urlPathname;
         // Complete the response with cached data if its present
-        const cachedData = isPreviewMode
-            ? // Preview data bypasses the cache
-                undefined
-            : await spr_cache_1.getSprCache(ssgCacheKey);
+        const cachedData = ssgCacheKey ? await spr_cache_1.getSprCache(ssgCacheKey) : undefined;
         if (cachedData) {
             const data = isDataReq
                 ? JSON.stringify(cachedData.pageData)
@@ -707,7 +700,13 @@ class Server {
             }
         }
         // If we're here, that means data is missing or it's stale.
-        const doRender = coalesced_function_1.withCoalescedInvoke(async function () {
+        const maybeCoalesceInvoke = ssgCacheKey
+            ? (fn) => coalesced_function_1.withCoalescedInvoke(fn).bind(null, ssgCacheKey, [])
+            : (fn) => async () => {
+                const value = await fn();
+                return { isOrigin: true, value };
+            };
+        const doRender = maybeCoalesceInvoke(async function () {
             let pageData;
             let html;
             let sprRevalidate;
@@ -784,7 +783,7 @@ class Server {
             }
             send_payload_1.sendPayload(res, html, 'html');
         }
-        const { isOrigin, value: { html, pageData, sprRevalidate }, } = await doRender(ssgCacheKey, []);
+        const { isOrigin, value: { html, pageData, sprRevalidate }, } = await doRender();
         if (!utils_2.isResSent(res)) {
             send_payload_1.sendPayload(res, isDataReq ? JSON.stringify(pageData) : html, isDataReq ? 'json' : 'html', !this.renderOpts.dev
                 ? {
@@ -794,12 +793,9 @@ class Server {
                 }
                 : undefined);
         }
-        // Update the SPR cache if the head request
-        if (isOrigin) {
-            // Preview mode should not be stored in cache
-            if (!isPreviewMode) {
-                await spr_cache_1.setSprCache(ssgCacheKey, { html: html, pageData }, sprRevalidate);
-            }
+        // Update the SPR cache if the head request and cacheable
+        if (isOrigin && ssgCacheKey) {
+            await spr_cache_1.setSprCache(ssgCacheKey, { html: html, pageData }, sprRevalidate);
         }
         return null;
     }

@@ -10,7 +10,7 @@ const utils_1 = require("../lib/utils");
 const crypto_utils_1 = require("./crypto-utils");
 const load_components_1 = require("./load-components");
 async function apiResolver(req, res, params, resolverModule, apiContext, onError) {
-    var _a;
+    var _a, _b;
     const apiReq = req;
     const apiRes = res;
     try {
@@ -21,6 +21,7 @@ async function apiResolver(req, res, params, resolverModule, apiContext, onError
         }
         const config = resolverModule.config || {};
         const bodyParser = ((_a = config.api) === null || _a === void 0 ? void 0 : _a.bodyParser) !== false;
+        const externalResolver = ((_b = config.api) === null || _b === void 0 ? void 0 : _b.externalResolver) || false;
         // Parsing of cookies
         setLazyProp({ req: apiReq }, 'cookies', getCookieParser(req));
         // Parsing query string
@@ -44,7 +45,10 @@ async function apiResolver(req, res, params, resolverModule, apiContext, onError
         }
         // Call API route method
         await resolver(req, res);
-        if (process.env.NODE_ENV !== 'production' && !utils_1.isResSent(res) && !wasPiped) {
+        if (process.env.NODE_ENV !== 'production' &&
+            !externalResolver &&
+            !utils_1.isResSent(res) &&
+            !wasPiped) {
             console.warn(`API resolved without sending a response for ${req.url}, this may result in stalled requests.`);
         }
     }
@@ -259,7 +263,7 @@ function tryGetPreviewData(req, res, options) {
         clearPreviewData(res);
         return false;
     }
-    const decryptedPreviewData = crypto_utils_1.decryptWithSecret(Buffer.from(options.previewModeEncryptionKey), encryptedPreviewData);
+    const decryptedPreviewData = crypto_utils_1.decryptWithSecret(Buffer.from(options.previewModeEncryptionKey), encryptedPreviewData.data);
     try {
         // TODO: strict runtime type checking
         const data = JSON.parse(decryptedPreviewData);
@@ -290,7 +294,9 @@ options) {
         throw new Error('invariant: invalid previewModeSigningKey');
     }
     const jsonwebtoken = require('next/dist/compiled/jsonwebtoken');
-    const payload = jsonwebtoken.sign(crypto_utils_1.encryptWithSecret(Buffer.from(options.previewModeEncryptionKey), JSON.stringify(data)), options.previewModeSigningKey, Object.assign({ algorithm: 'HS256' }, (options.maxAge !== undefined
+    const payload = jsonwebtoken.sign({
+        data: crypto_utils_1.encryptWithSecret(Buffer.from(options.previewModeEncryptionKey), JSON.stringify(data)),
+    }, options.previewModeSigningKey, Object.assign({ algorithm: 'HS256' }, (options.maxAge !== undefined
         ? { expiresIn: options.maxAge }
         : undefined)));
     // limit preview mode cookie to 2KB since we shouldn't store too much

@@ -3,15 +3,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const fs_1 = __importDefault(require("fs"));
+const fs_1 = require("fs");
 const lru_cache_1 = __importDefault(require("next/dist/compiled/lru-cache"));
 const path_1 = __importDefault(require("path"));
-const util_1 = require("util");
 const constants_1 = require("../lib/constants");
 const normalize_page_path_1 = require("./normalize-page-path");
-const mkdir = util_1.promisify(fs_1.default.mkdir);
-const readFile = util_1.promisify(fs_1.default.readFile);
-const writeFile = util_1.promisify(fs_1.default.writeFile);
 function toRoute(pathname) {
     return pathname.replace(/\/$/, '').replace(/\/index$/, '') || '/';
 }
@@ -53,7 +49,7 @@ function initializeSprCache({ max, dev, distDir, pagesDir, flushToDisk, }) {
         };
     }
     else {
-        prerenderManifest = JSON.parse(fs_1.default.readFileSync(path_1.default.join(distDir, constants_1.PRERENDER_MANIFEST), 'utf8'));
+        prerenderManifest = JSON.parse(fs_1.readFileSync(path_1.default.join(distDir, constants_1.PRERENDER_MANIFEST), 'utf8'));
     }
     cache = new lru_cache_1.default({
         // default to 50MB limit
@@ -67,7 +63,7 @@ function initializeSprCache({ max, dev, distDir, pagesDir, flushToDisk, }) {
 exports.initializeSprCache = initializeSprCache;
 async function getFallback(page) {
     page = normalize_page_path_1.normalizePagePath(page);
-    return readFile(getSeedPath(page, 'html'), 'utf8');
+    return fs_1.promises.readFile(getSeedPath(page, 'html'), 'utf8');
 }
 exports.getFallback = getFallback;
 // get data from SPR cache if available
@@ -79,8 +75,8 @@ async function getSprCache(pathname) {
     // let's check the disk for seed data
     if (!data) {
         try {
-            const html = await readFile(getSeedPath(pathname, 'html'), 'utf8');
-            const pageData = JSON.parse(await readFile(getSeedPath(pathname, 'json'), 'utf8'));
+            const html = await fs_1.promises.readFile(getSeedPath(pathname, 'html'), 'utf8');
+            const pageData = JSON.parse(await fs_1.promises.readFile(getSeedPath(pathname, 'json'), 'utf8'));
             data = {
                 html,
                 pageData,
@@ -124,9 +120,9 @@ async function setSprCache(pathname, data, revalidateSeconds) {
     if (sprOptions.flushToDisk) {
         try {
             const seedPath = getSeedPath(pathname, 'html');
-            await mkdir(path_1.default.dirname(seedPath), { recursive: true });
-            await writeFile(seedPath, data.html, 'utf8');
-            await writeFile(getSeedPath(pathname, 'json'), JSON.stringify(data.pageData), 'utf8');
+            await fs_1.promises.mkdir(path_1.default.dirname(seedPath), { recursive: true });
+            await fs_1.promises.writeFile(seedPath, data.html, 'utf8');
+            await fs_1.promises.writeFile(getSeedPath(pathname, 'json'), JSON.stringify(data.pageData), 'utf8');
         }
         catch (error) {
             // failed to flush to disk

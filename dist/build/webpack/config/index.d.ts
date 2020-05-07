@@ -1,10 +1,10 @@
 import webpack from 'webpack';
-export declare function build(config: webpack.Configuration, { rootDirectory, customAppFile, isDevelopment, isServer, hasReactRefresh, assetPrefix, sassOptions, }: {
+export declare function build(config: webpack.Configuration, { rootDirectory, customAppFile, isDevelopment, isServer, isReactRefreshEnabled, assetPrefix, sassOptions, }: {
     rootDirectory: string;
     customAppFile: string | null;
     isDevelopment: boolean;
     isServer: boolean;
-    hasReactRefresh: boolean;
+    isReactRefreshEnabled: boolean;
     assetPrefix: string;
     sassOptions: any;
 }): Promise<webpack.Configuration>;
