@@ -21,6 +21,7 @@ function getRouteRegex(normalizedRoute) {
         return isCatchAll ? '/(.+?)' : '/([^/]+?)';
     });
     let namedParameterizedRoute;
+    const routeKeys = {};
     // dead code eliminate for browser since it's only needed
     // while generating routes-manifest
     if (typeof window === 'undefined') {
@@ -30,13 +31,18 @@ function getRouteRegex(normalizedRoute) {
                 // Un-escape key
                 .replace(/\\([|\\{}()[\]^$+*?.-])/g, '$1')
                 .replace(/^\.{3}/, '');
+            // replace any non-word characters since they can break
+            // the named regex
+            const cleanedKey = key.replace(/\W/g, '');
+            routeKeys[cleanedKey] = key;
             return isCatchAll
-                ? `/(?<${escapeRegex(key)}>.+?)`
-                : `/(?<${escapeRegex(key)}>[^/]+?)`;
+                ? `/(?<${cleanedKey}>.+?)`
+                : `/(?<${cleanedKey}>[^/]+?)`;
         });
     }
     return Object.assign({ re: new RegExp('^' + parameterizedRoute + '(?:/)?$', 'i'), groups }, (namedParameterizedRoute
         ? {
+            routeKeys,
             namedRegex: `^${namedParameterizedRoute}(?:/)?$`,
         }
         : {}));

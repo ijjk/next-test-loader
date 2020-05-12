@@ -129,7 +129,6 @@ const invalidKeysMsg = (methodName, invalidKeys) => {
         `\nRead more: https://err.sh/next.js/invalid-getstaticprops-value`);
 };
 async function renderToHTML(req, res, pathname, query, renderOpts) {
-    var _a;
     pathname = pathname === '/index' ? '/' : pathname;
     const { err, dev = false, staticMarkup = false, ampPath = '', App, Document, pageConfig = {}, Component, buildManifest, reactLoadableManifest, ErrorDebug, getStaticProps, getStaticPaths, getServerSideProps, isDataReq, params, previewProps, basePath, } = renderOpts;
     const callMiddleware = async (method, args, props = false) => {
@@ -372,7 +371,7 @@ async function renderToHTML(req, res, pathname, query, renderOpts) {
     if (!isSSG && // we only show this warning for legacy pages
         !getServerSideProps &&
         process.env.NODE_ENV !== 'production' &&
-        Object.keys(((_a = props) === null || _a === void 0 ? void 0 : _a.pageProps) || {}).includes('url')) {
+        Object.keys((props === null || props === void 0 ? void 0 : props.pageProps) || {}).includes('url')) {
         console.warn(`The prop \`url\` is a reserved prop in Next.js for legacy reasons and will be overridden on page ${pathname}\n` +
             `See more info here: https://err.sh/zeit/next.js/reserved-page-prop`);
     }

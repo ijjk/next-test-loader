@@ -45,6 +45,7 @@ const defaultConfig = {
         canonicalBase: '',
     },
     exportTrailingSlash: false,
+    sassOptions: {},
     experimental: {
         cpus: Math.max(1, (Number(process.env.CIRCLE_NODE_TOTAL) ||
             (os_1.default.cpus() || { length: 1 }).length) - 1),
@@ -56,10 +57,8 @@ const defaultConfig = {
         reactMode: 'legacy',
         workerThreads: false,
         basePath: '',
-        sassOptions: {},
-        pageEnv: true,
-        measureFid: false,
-        reactRefresh: false,
+        pageEnv: false,
+        reactRefresh: true,
     },
     future: {
         excludeDefaultMomentLocales: false,
@@ -159,7 +158,7 @@ function normalizeConfig(phase, config) {
 }
 exports.normalizeConfig = normalizeConfig;
 function loadConfig(phase, dir, customConfig) {
-    var _a, _b, _c, _d;
+    var _a, _b;
     if (customConfig) {
         return assignDefaults(Object.assign({ configOrigin: 'server' }, customConfig));
     }
@@ -167,7 +166,7 @@ function loadConfig(phase, dir, customConfig) {
         cwd: dir,
     });
     // If config file was found
-    if ((_a = path) === null || _a === void 0 ? void 0 : _a.length) {
+    if (path === null || path === void 0 ? void 0 : path.length) {
         const userConfigModule = require(path);
         const userConfig = normalizeConfig(phase, userConfigModule.default || userConfigModule);
         if (Object.keys(userConfig).length === 0) {
@@ -177,7 +176,7 @@ function loadConfig(phase, dir, customConfig) {
         if (userConfig.target && !targets.includes(userConfig.target)) {
             throw new Error(`Specified target is invalid. Provided: "${userConfig.target}" should be one of ${targets.join(', ')}`);
         }
-        if ((_b = userConfig.amp) === null || _b === void 0 ? void 0 : _b.canonicalBase) {
+        if ((_a = userConfig.amp) === null || _a === void 0 ? void 0 : _a.canonicalBase) {
             const { canonicalBase } = userConfig.amp || {};
             userConfig.amp = userConfig.amp || {};
             userConfig.amp.canonicalBase =
@@ -185,7 +184,7 @@ function loadConfig(phase, dir, customConfig) {
                     ? canonicalBase.slice(0, -1)
                     : canonicalBase) || '';
         }
-        if (((_c = userConfig.experimental) === null || _c === void 0 ? void 0 : _c.reactMode) &&
+        if (((_b = userConfig.experimental) === null || _b === void 0 ? void 0 : _b.reactMode) &&
             !reactModes.includes(userConfig.experimental.reactMode)) {
             throw new Error(`Specified React Mode is invalid. Provided: ${userConfig.experimental.reactMode} should be one of ${reactModes.join(', ')}`);
         }
@@ -199,7 +198,7 @@ function loadConfig(phase, dir, customConfig) {
             `${configBaseName}.tsx`,
             `${configBaseName}.json`,
         ], { cwd: dir });
-        if ((_d = nonJsPath) === null || _d === void 0 ? void 0 : _d.length) {
+        if (nonJsPath === null || nonJsPath === void 0 ? void 0 : nonJsPath.length) {
             throw new Error(`Configuring Next.js via '${path_1.basename(nonJsPath)}' is not supported. Please replace the file with 'next.config.js'.`);
         }
     }

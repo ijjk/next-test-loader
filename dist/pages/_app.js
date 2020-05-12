@@ -4,7 +4,7 @@
  */async function appGetInitialProps(_ref){var{Component,ctx}=_ref;var pageProps=await(0,_utils.loadGetInitialProps)(Component,ctx);return{pageProps};}class App extends _react.default.Component{// Kept here for backwards compatibility.
 // When someone ended App they could call `super.componentDidCatch`.
 // @deprecated This method is no longer needed. Errors are caught at the top level
-componentDidCatch(error,_errorInfo){throw error;}render(){var{router,Component,pageProps,__N_SSG,__N_SSP}=this.props;return _react.default.createElement(Component,Object.assign({},pageProps,// we don't add the legacy URL prop if it's using non-legacy
+componentDidCatch(error,_errorInfo){throw error;}render(){var{router,Component,pageProps,__N_SSG,__N_SSP}=this.props;return/*#__PURE__*/_react.default.createElement(Component,Object.assign({},pageProps,// we don't add the legacy URL prop if it's using non-legacy
 // methods like getStaticProps and getServerSideProps
 !(__N_SSG||__N_SSP)?{url:createUrl(router)}:{}));}}exports.default=App;App.origGetInitialProps=appGetInitialProps;App.getInitialProps=appGetInitialProps;var warnContainer;var warnUrl;if(process.env.NODE_ENV!=='production'){warnContainer=(0,_utils.execOnce)(()=>{console.warn("Warning: the `Container` in `_app` has been deprecated and should be removed. https://err.sh/zeit/next.js/app-container-deprecated");});warnUrl=(0,_utils.execOnce)(()=>{console.error("Warning: the 'url' property is deprecated. https://err.sh/zeit/next.js/url-deprecated");});}// @deprecated noop for now until removal
 function Container(p){if(process.env.NODE_ENV!=='production')warnContainer();return p.children;}function createUrl(router){// This is to make sure we don't references the router object at call time

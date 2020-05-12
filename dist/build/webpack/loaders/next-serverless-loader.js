@@ -1,12 +1,4 @@
-"use strict";exports.__esModule=true;exports.default=void 0;var _devalue=_interopRequireDefault(require("next/dist/compiled/devalue"));var _escapeStringRegexp=_interopRequireDefault(require("next/dist/compiled/escape-string-regexp"));var _path=require("path");var _querystring=require("querystring");var _constants=require("../../../lib/constants");var _constants2=require("../../../next-server/lib/constants");var _utils=require("../../../next-server/lib/router/utils");function _interopRequireDefault(obj){return obj&&obj.__esModule?obj:{default:obj};}const vercelHeader='x-vercel-id';const nextServerlessLoader=function(){const{distDir,absolutePagePath,page,buildId,canonicalBase,assetPrefix,absoluteAppPath,absoluteDocumentPath,absoluteErrorPath,generateEtags,basePath,runtimeConfig,previewProps}=typeof this.query==='string'?(0,_querystring.parse)(this.query.substr(1)):this.query;const buildManifest=(0,_path.join)(distDir,_constants2.BUILD_MANIFEST).replace(/\\/g,'/');const reactLoadableManifest=(0,_path.join)(distDir,_constants2.REACT_LOADABLE_MANIFEST).replace(/\\/g,'/');const routesManifest=(0,_path.join)(distDir,_constants2.ROUTES_MANIFEST).replace(/\\/g,'/');const escapedBuildId=(0,_escapeStringRegexp.default)(buildId);const pageIsDynamicRoute=(0,_utils.isDynamicRoute)(page);const encodedPreviewProps=(0,_devalue.default)(JSON.parse(previewProps));const collectDynamicRouteParams=pageIsDynamicRoute?`
-      function collectDynamicRouteParams(query) {
-        return ${JSON.stringify(Object.keys((0,_utils.getRouteRegex)(page).groups))}
-          .reduce((prev, key) => {
-            prev[key] = query[key]
-            return prev
-          }, {})
-      }
-    `:'';const runtimeConfigImports=runtimeConfig?`
+"use strict";exports.__esModule=true;exports.default=void 0;var _devalue=_interopRequireDefault(require("next/dist/compiled/devalue"));var _escapeStringRegexp=_interopRequireDefault(require("next/dist/compiled/escape-string-regexp"));var _path=require("path");var _querystring=require("querystring");var _constants=require("../../../lib/constants");var _constants2=require("../../../next-server/lib/constants");var _utils=require("../../../next-server/lib/router/utils");function _interopRequireDefault(obj){return obj&&obj.__esModule?obj:{default:obj};}const nextServerlessLoader=function(){const{distDir,absolutePagePath,page,buildId,canonicalBase,assetPrefix,absoluteAppPath,absoluteDocumentPath,absoluteErrorPath,generateEtags,basePath,runtimeConfig,previewProps}=typeof this.query==='string'?(0,_querystring.parse)(this.query.substr(1)):this.query;const buildManifest=(0,_path.join)(distDir,_constants2.BUILD_MANIFEST).replace(/\\/g,'/');const reactLoadableManifest=(0,_path.join)(distDir,_constants2.REACT_LOADABLE_MANIFEST).replace(/\\/g,'/');const routesManifest=(0,_path.join)(distDir,_constants2.ROUTES_MANIFEST).replace(/\\/g,'/');const escapedBuildId=(0,_escapeStringRegexp.default)(buildId);const pageIsDynamicRoute=(0,_utils.isDynamicRoute)(page);const encodedPreviewProps=(0,_devalue.default)(JSON.parse(previewProps));const runtimeConfigImports=runtimeConfig?`
       const { setConfig } = require('next/config')
     `:'';const runtimeConfigSetter=runtimeConfig?`
       const runtimeConfig = ${runtimeConfig}
@@ -23,11 +15,7 @@
     const getCustomRouteMatcher = pathMatch(true)
     const {prepareDestination} = require('next/dist/next-server/server/router')
 
-    function handleRewrites(parsedUrl, trustQuery) {
-      if (trustQuery) {
-        return parsedUrl
-      }
-
+    function handleRewrites(parsedUrl) {
       for (const rewrite of rewrites) {
         const matcher = getCustomRouteMatcher(rewrite.source)
         const params = matcher(parsedUrl.pathname)
@@ -38,7 +26,6 @@
             params,
             parsedUrl.query
           )
-
           Object.assign(parsedUrl.query, parsedDestination.query, params)
           delete parsedDestination.query
 
@@ -66,7 +53,7 @@
       import initServer from 'next-plugin-loader?middleware=on-init-server!'
       import onError from 'next-plugin-loader?middleware=on-error-server!'
       import fetch from 'next/dist/compiled/node-fetch'
-
+    
       if(!global.fetch) {
         global.fetch = fetch
       }
@@ -80,7 +67,6 @@
       ${rewriteImports}
 
       ${dynamicRouteMatcher}
-      ${collectDynamicRouteParams}
 
       ${handleRewrites}
 
@@ -93,18 +79,9 @@
             req.url = req.url.replace('${basePath}', '')
           }
           `:''}
-          // We don't need to loop over rewrites to collect the query values
-          // on Vercel because the query values are already present
-          const trustQuery = req.headers['${vercelHeader}']
-          const parsedUrl = handleRewrites(parse(req.url, true), trustQuery)
+          const parsedUrl = handleRewrites(parse(req.url, true))
 
-          // The dynamic route params are already provided in the query
-          // on Vercel
-          const params = ${pageIsDynamicRoute?`
-              trustQuery
-                ? collectDynamicRouteParams(parsedUrl.query)
-                : dynamicRouteMatcher(parsedUrl.pathname)
-              `:`{}`}
+          const params = ${pageIsDynamicRoute?`dynamicRouteMatcher(parsedUrl.pathname)`:`{}`}
 
           const resolver = require('${absolutePagePath}')
           await apiResolver(
@@ -132,7 +109,7 @@
     import initServer from 'next-plugin-loader?middleware=on-init-server!'
     import onError from 'next-plugin-loader?middleware=on-error-server!'
     import fetch from 'next/dist/compiled/node-fetch'
-
+    
     if(!global.fetch) {
       global.fetch = fetch
     }
@@ -168,7 +145,6 @@ runtimeConfigSetter}
     export const unstable_getServerProps = ComponentInfo['unstable_getServerProp' + 's']
 
     ${dynamicRouteMatcher}
-    ${collectDynamicRouteParams}
     ${handleRewrites}
 
     export const config = ComponentInfo['confi' + 'g'] || {}
@@ -201,11 +177,7 @@ runtimeConfigSetter}
       let parsedUrl
 
       try {
-        // We don't need to loop over rewrites to collect the query values
-        // on Vercel because the query values are already present except for
-        // iSSG currently
-        const trustQuery = !getStaticProps && req.headers['${vercelHeader}']
-        const parsedUrl = handleRewrites(parse(req.url, true), trustQuery)
+        parsedUrl = handleRewrites(parse(req.url, true))
 
         if (parsedUrl.pathname.match(/_next\\/data/)) {
           _nextData = true
@@ -229,16 +201,7 @@ runtimeConfigSetter}
           }
         `:''}
 
-        ${pageIsDynamicRoute?`
-            const params = (
-              fromExport &&
-              !getStaticProps &&
-              !getServerSideProps
-            ) ? {}
-              : trustQuery
-                ? collectDynamicRouteParams(parsedUrl.query)
-                : dynamicRouteMatcher(parsedUrl.pathname) || {};
-            `:`const params = {};`}
+        ${pageIsDynamicRoute?`const params = fromExport && !getStaticProps && !getServerSideProps ? {} : dynamicRouteMatcher(parsedUrl.pathname) || {};`:`const params = {};`}
         ${// Temporary work around: `x-now-route-matches` is a platform header
 // _only_ set for `Prerender` requests. We should move this logic
 // into our builder to ensure we're decoupled. However, this entails

@@ -14,7 +14,7 @@ var paths=this.getPaths();// We need to handle a prefetch error here since we ma
 _router.default.prefetch(paths[/* href */0],paths[/* asPath */1],options).catch(err=>{if(process.env.NODE_ENV!=='production'){// rethrow to show invalid URL errors
 throw err;}});prefetched[paths.join(// Join on an invalid URI character
 '%')]=true;}render(){var{children}=this.props;var{href,as}=this.formatUrls(this.props.href,this.props.as);// Deprecated. Warning shown by propType check. If the children provided is a string (<Link>example</Link>) we wrap it in an <a> tag
-if(typeof children==='string'){children=_react.default.createElement("a",null,children);}// This will return the first child, if multiple are provided it will throw an error
+if(typeof children==='string'){children=/*#__PURE__*/_react.default.createElement("a",null,children);}// This will return the first child, if multiple are provided it will throw an error
 var child=_react.Children.only(children);var props={ref:el=>{this.handleRef(el);if(child&&typeof child==='object'&&child.ref){if(typeof child.ref==='function')child.ref(el);else if(typeof child.ref==='object'){child.ref.current=el;}}},onMouseEnter:e=>{if(child.props&&typeof child.props.onMouseEnter==='function'){child.props.onMouseEnter(e);}this.prefetch({priority:true});},onClick:e=>{if(child.props&&typeof child.props.onClick==='function'){child.props.onClick(e);}if(!e.defaultPrevented){this.linkClicked(e);}}};// If child is an <a> tag and doesn't have a href attribute, or if the 'passHref' property is
 // defined, we specify the current 'href', so that repetition is not needed by the user
 if(this.props.passHref||child.type==='a'&&!('href'in child.props)){props.href=as||href;}// Add the ending slash to the paths. So, we can serve the

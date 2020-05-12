@@ -388,12 +388,12 @@ class Server {
             type: 'route',
             name: 'Catchall render',
             fn: async (req, res, params, parsedUrl) => {
-                var _a, _b;
+                var _a;
                 const { pathname, query } = parsedUrl;
                 if (!pathname) {
                     throw new Error('pathname is undefined');
                 }
-                if (((_b = (_a = params) === null || _a === void 0 ? void 0 : _a.path) === null || _b === void 0 ? void 0 : _b[0]) === 'api') {
+                if (((_a = params === null || params === void 0 ? void 0 : params.path) === null || _a === void 0 ? void 0 : _a[0]) === 'api') {
                     const handled = await this.handleApiRequest(req, res, pathname, query);
                     if (handled) {
                         return { finished: true };
@@ -603,7 +603,7 @@ class Server {
         return { staticPaths, hasStaticFallback };
     }
     async renderToHTMLWithComponents(req, res, pathname, { components, query }, opts) {
-        var _a, _b;
+        var _a;
         // we need to ensure the status code if /404 is visited directly
         if (pathname === '/404') {
             res.statusCode = 404;
@@ -636,7 +636,7 @@ class Server {
             if (isLikeServerless) {
                 if (isDataReq) {
                     const renderResult = await components.Component.renderReqToHTML(req, res, 'passthrough');
-                    send_payload_1.sendPayload(res, JSON.stringify((_b = (_a = renderResult) === null || _a === void 0 ? void 0 : _a.renderOpts) === null || _b === void 0 ? void 0 : _b.pageData), 'json', !this.renderOpts.dev
+                    send_payload_1.sendPayload(res, JSON.stringify((_a = renderResult === null || renderResult === void 0 ? void 0 : renderResult.renderOpts) === null || _a === void 0 ? void 0 : _a.pageData), 'json', !this.renderOpts.dev
                         ? {
                             private: isPreviewMode,
                             stateful: true,

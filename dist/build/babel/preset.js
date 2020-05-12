@@ -9,7 +9,7 @@ if((isServer||isTest)&&(!presetEnvConfig.targets||!(typeof presetEnvConfig.targe
 node:'current'};}// specify a preset to use instead of @babel/preset-env
 const customModernPreset=isLaxModern&&options['experimental-modern-preset'];return{sourceType:'unambiguous',presets:[customModernPreset||[require('@babel/preset-env').default,presetEnvConfig],[require('@babel/preset-react'),{// This adds @babel/plugin-transform-react-jsx-source and
 // @babel/plugin-transform-react-jsx-self automatically in development
-development:isDevelopment||isTest,pragma:'__jsx',...options['preset-react']}],[require('@babel/preset-typescript'),{allowNamespaces:true}]],plugins:[[require('./plugins/jsx-pragma'),{// This produces the following injected import for modules containing JSX:
+development:isDevelopment||isTest,pragma:'__jsx',...options['preset-react']}],[require('@babel/preset-typescript'),{allowNamespaces:true,...options['preset-typescript']}]],plugins:[[require('./plugins/jsx-pragma'),{// This produces the following injected import for modules containing JSX:
 //   import React from 'react';
 //   var __jsx = React.createElement;
 module:'react',importAs:'React',pragma:'__jsx',property:'createElement'}],[require('./plugins/optimize-hook-destructuring'),{// only optimize hook functions imported from React/Preact
