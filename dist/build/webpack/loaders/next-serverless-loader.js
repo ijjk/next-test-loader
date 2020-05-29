@@ -1,4 +1,7 @@
-"use strict";exports.__esModule=true;exports.default=void 0;var _devalue=_interopRequireDefault(require("next/dist/compiled/devalue"));var _escapeStringRegexp=_interopRequireDefault(require("next/dist/compiled/escape-string-regexp"));var _path=require("path");var _querystring=require("querystring");var _constants=require("../../../lib/constants");var _constants2=require("../../../next-server/lib/constants");var _utils=require("../../../next-server/lib/router/utils");function _interopRequireDefault(obj){return obj&&obj.__esModule?obj:{default:obj};}const nextServerlessLoader=function(){const{distDir,absolutePagePath,page,buildId,canonicalBase,assetPrefix,absoluteAppPath,absoluteDocumentPath,absoluteErrorPath,generateEtags,basePath,runtimeConfig,previewProps}=typeof this.query==='string'?(0,_querystring.parse)(this.query.substr(1)):this.query;const buildManifest=(0,_path.join)(distDir,_constants2.BUILD_MANIFEST).replace(/\\/g,'/');const reactLoadableManifest=(0,_path.join)(distDir,_constants2.REACT_LOADABLE_MANIFEST).replace(/\\/g,'/');const routesManifest=(0,_path.join)(distDir,_constants2.ROUTES_MANIFEST).replace(/\\/g,'/');const escapedBuildId=(0,_escapeStringRegexp.default)(buildId);const pageIsDynamicRoute=(0,_utils.isDynamicRoute)(page);const encodedPreviewProps=(0,_devalue.default)(JSON.parse(previewProps));const runtimeConfigImports=runtimeConfig?`
+"use strict";exports.__esModule=true;exports.default=void 0;var _devalue=_interopRequireDefault(require("next/dist/compiled/devalue"));var _escapeStringRegexp=_interopRequireDefault(require("next/dist/compiled/escape-string-regexp"));var _path=require("path");var _querystring=require("querystring");var _constants=require("../../../lib/constants");var _constants2=require("../../../next-server/lib/constants");var _utils=require("../../../next-server/lib/router/utils");function _interopRequireDefault(obj){return obj&&obj.__esModule?obj:{default:obj};}const nextServerlessLoader=function(){const{distDir,absolutePagePath,page,buildId,canonicalBase,assetPrefix,absoluteAppPath,absoluteDocumentPath,absoluteErrorPath,generateEtags,basePath,runtimeConfig,previewProps,loadedEnvFiles}=typeof this.query==='string'?(0,_querystring.parse)(this.query.substr(1)):this.query;const buildManifest=(0,_path.join)(distDir,_constants2.BUILD_MANIFEST).replace(/\\/g,'/');const reactLoadableManifest=(0,_path.join)(distDir,_constants2.REACT_LOADABLE_MANIFEST).replace(/\\/g,'/');const routesManifest=(0,_path.join)(distDir,_constants2.ROUTES_MANIFEST).replace(/\\/g,'/');const escapedBuildId=(0,_escapeStringRegexp.default)(buildId);const pageIsDynamicRoute=(0,_utils.isDynamicRoute)(page);const encodedPreviewProps=(0,_devalue.default)(JSON.parse(previewProps));const envLoading=`
+    const { processEnv } = require('next/dist/lib/load-env-config')
+    processEnv(${loadedEnvFiles})
+  `;const runtimeConfigImports=runtimeConfig?`
       const { setConfig } = require('next/config')
     `:'';const runtimeConfigSetter=runtimeConfig?`
       const runtimeConfig = ${runtimeConfig}
@@ -52,11 +55,9 @@
   `;if(page.match(_constants.API_ROUTE)){return`
       import initServer from 'next-plugin-loader?middleware=on-init-server!'
       import onError from 'next-plugin-loader?middleware=on-error-server!'
-      import fetch from 'next/dist/compiled/node-fetch'
-    
-      if(!global.fetch) {
-        global.fetch = fetch
-      }
+      import 'next/dist/next-server/server/node-polyfill-fetch'
+
+      ${envLoading}
       ${runtimeConfigImports}
       ${/*
           this needs to be called first so its available for any other imports
@@ -108,11 +109,9 @@
     `;}else{return`
     import initServer from 'next-plugin-loader?middleware=on-init-server!'
     import onError from 'next-plugin-loader?middleware=on-error-server!'
-    import fetch from 'next/dist/compiled/node-fetch'
-    
-    if(!global.fetch) {
-      global.fetch = fetch
-    }
+    import 'next/dist/next-server/server/node-polyfill-fetch'
+
+    ${envLoading}
     ${runtimeConfigImports}
     ${// this needs to be called first so its available for any other imports
 runtimeConfigSetter}
@@ -190,7 +189,8 @@ runtimeConfigSetter}
           {
             Component,
             pageConfig: config,
-            nextExport: fromExport
+            nextExport: fromExport,
+            isDataReq: _nextData,
           },
           options,
         )
@@ -216,6 +216,7 @@ pageIsDynamicRoute?`const nowParams = req.headers && req.headers["x-now-route-ma
                         // Simulate a RegExp match from the \`req.url\` input
                         exec: str => {
                           const obj = parseQs(str);
+                          console.log('x-now-route-matches', { parsed: obj, raw: str })
                           return Object.keys(obj).reduce(
                             (prev, key) =>
                               Object.assign(prev, {
@@ -299,3 +300,4 @@ pageIsDynamicRoute?`const nowParams = req.headers && req.headers["x-now-route-ma
       }
     }
   `;}};var _default=nextServerlessLoader;exports.default=_default;
+//# sourceMappingURL=next-serverless-loader.js.map

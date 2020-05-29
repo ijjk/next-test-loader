@@ -1,11 +1,11 @@
 "use strict";exports.__esModule=true;exports.css=void 0;var _lodash=_interopRequireDefault(require("next/dist/compiled/lodash.curry"));var _path=_interopRequireDefault(require("path"));var _miniCssExtractPlugin=_interopRequireDefault(require("../../../plugins/mini-css-extract-plugin"));var _helpers=require("../../helpers");var _utils=require("../../utils");var _loaders=require("./loaders");var _messages=require("./messages");var _plugins=require("./plugins");function _interopRequireDefault(obj){return obj&&obj.__esModule?obj:{default:obj};}// RegExps for all Style Sheet variants
 const regexLikeCss=/\.(css|scss|sass)$/;// RegExps for Style Sheets
 const regexCssGlobal=/(?<!\.module)\.css$/;const regexCssModules=/\.module\.css$/;// RegExps for Syntactically Awesome Style Sheets
-const regexSassGlobal=/(?<!\.module)\.(scss|sass)$/;const regexSassModules=/\.module\.(scss|sass)$/;const css=(0,_lodash.default)(async function css(ctx,config){const sassPreprocessors=[// First, process files with `sass-loader`: this inlines content, and
+const regexSassGlobal=/(?<!\.module)\.(scss|sass)$/;const regexSassModules=/\.module\.(scss|sass)$/;const css=(0,_lodash.default)(async function css(ctx,config){const{prependData:sassPrependData,...sassOptions}=ctx.sassOptions;const sassPreprocessors=[// First, process files with `sass-loader`: this inlines content, and
 // compiles away the proprietary syntax.
 {loader:require.resolve('sass-loader'),options:{// Source maps are required so that `resolve-url-loader` can locate
 // files original to their source directory.
-sourceMap:true,sassOptions:ctx.sassOptions}},// Then, `sass-loader` will have passed-through CSS imports as-is instead
+sourceMap:true,sassOptions,prependData:sassPrependData}},// Then, `sass-loader` will have passed-through CSS imports as-is instead
 // of inlining them. Because they were inlined, the paths are no longer
 // correct.
 // To fix this, we use `resolve-url-loader` to rewrite the CSS
@@ -68,3 +68,4 @@ fns.push((0,_helpers.plugin)(new _miniCssExtractPlugin.default({filename:'static
 // If this warning were to trigger, it'd be unactionable by the user,
 // but also not valid -- so we disable it.
 ignoreOrder:true})));}const fn=(0,_utils.pipe)(...fns);return fn(config);});exports.css=css;
+//# sourceMappingURL=index.js.map

@@ -2,3 +2,4 @@
 function createServer(options){const standardEnv=['production','development','test'];if(!options.isNextDevCommand&&process.env.NODE_ENV&&!standardEnv.includes(process.env.NODE_ENV)){log.warn(_constants.NON_STANDARD_NODE_ENV);}if(options.dev){const Server=require('./next-dev-server').default;return new Server(options);}return new _nextServer.default(options);}// Support commonjs `require('next')`
 module.exports=createServer;exports=module.exports;// Support `import next from 'next'`
 var _default=createServer;exports.default=_default;
+//# sourceMappingURL=next.js.map

@@ -30,7 +30,7 @@ declare type RouteInfo = {
     err?: Error;
     error?: any;
 };
-declare type Subscription = (data: RouteInfo, App?: ComponentType) => void;
+declare type Subscription = (data: RouteInfo, App?: ComponentType) => Promise<void>;
 declare type BeforePopStateCallback = (state: any) => boolean;
 declare type ComponentLoadCancel = (() => void) | null;
 declare type HistoryMethod = 'replaceState' | 'pushState';
@@ -93,7 +93,7 @@ export default class Router implements BaseRouter {
     change(method: HistoryMethod, _url: Url, _as: Url, options: any): Promise<boolean>;
     changeState(method: HistoryMethod, url: string, as: string, options?: {}): void;
     getRouteInfo(route: string, pathname: string, query: any, as: string, shallow?: boolean): Promise<RouteInfo>;
-    set(route: string, pathname: string, query: any, as: string, data: RouteInfo): void;
+    set(route: string, pathname: string, query: any, as: string, data: RouteInfo): Promise<void>;
     /**
      * Callback to execute before replacing router state
      * @param cb callback to be executed
@@ -115,6 +115,6 @@ export default class Router implements BaseRouter {
     _getServerData: (asPath: string) => Promise<object>;
     getInitialProps(Component: ComponentType, ctx: NextPageContext): Promise<any>;
     abortComponentLoad(as: string): void;
-    notify(data: RouteInfo): void;
+    notify(data: RouteInfo): Promise<void>;
 }
 export {};

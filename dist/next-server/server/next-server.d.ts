@@ -6,6 +6,8 @@ import { PrerenderManifest } from '../../build';
 import { Header, Redirect, Rewrite } from '../../lib/check-custom-routes';
 import { __ApiPreviewProps } from './api-utils';
 import Router, { DynamicRoutes, PageChecker, Params, Route } from './router';
+import './node-polyfill-fetch';
+import { PagesManifest } from '../../build/webpack/plugins/pages-manifest-plugin';
 declare type NextConfig = any;
 export declare type ServerConstructor = {
     /**
@@ -33,9 +35,7 @@ export default class Server {
     publicDir: string;
     hasStaticDir: boolean;
     serverBuildDir: string;
-    pagesManifest?: {
-        [name: string]: string;
-    };
+    pagesManifest?: PagesManifest;
     buildId: string;
     renderOpts: {
         poweredByHeader: boolean;

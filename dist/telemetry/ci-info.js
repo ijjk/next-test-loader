@@ -2,3 +2,4 @@
 // which allows us to disable certain messages which do not require their
 // action.
 exports.name=name;const hasNextSupport=Boolean(isZeitNow);exports.hasNextSupport=hasNextSupport;
+//# sourceMappingURL=ci-info.js.map

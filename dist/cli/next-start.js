@@ -20,3 +20,4 @@ console.log(`
     `);process.exit(0);}const dir=(0,_path.resolve)(args._[0]||'.');const port=args['--port']||3000;(0,_startServer.default)({dir},port,args['--hostname']).then(async app=>{// tslint:disable-next-line
 Log.ready(`started server on http://${args['--hostname']||'localhost'}:${port}`);await app.prepare();}).catch(err=>{// tslint:disable-next-line
 console.error(err);process.exit(1);});};exports.nextStart=nextStart;
+//# sourceMappingURL=next-start.js.map

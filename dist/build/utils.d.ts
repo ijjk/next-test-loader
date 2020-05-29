@@ -1,3 +1,4 @@
+import '../next-server/server/node-polyfill-fetch';
 import { Redirect, Rewrite, Header } from '../lib/check-custom-routes';
 import { GetStaticPaths } from 'next/types';
 export declare function collectPages(directory: string, pageExtensions: string[]): Promise<string[]>;
@@ -45,5 +46,6 @@ export declare function isPageStatic(page: string, serverBundle: string, runtime
     prerenderRoutes?: string[] | undefined;
     prerenderFallback?: boolean | undefined;
 }>;
-export declare function hasCustomGetInitialProps(bundle: string, runtimeEnvConfig: any): boolean;
+export declare function hasCustomGetInitialProps(bundle: string, runtimeEnvConfig: any, checkingApp: boolean): boolean;
+export declare function getNamedExports(bundle: string, runtimeEnvConfig: any): Array<string>;
 export {};

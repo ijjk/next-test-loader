@@ -19,6 +19,7 @@ export default class HotReloader {
     private initialized;
     private config;
     private stats;
+    private serverStats;
     private serverPrevDocumentHash;
     private prevChunkNames?;
     private onDemandEntries;
@@ -30,13 +31,12 @@ export default class HotReloader {
         previewProps: __ApiPreviewProps;
     });
     run(req: IncomingMessage, res: ServerResponse, parsedUrl: UrlObject): Promise<{
-        finished: any;
+        finished: true | undefined;
     } | undefined>;
     clean(): Promise<void>;
     getWebpackConfig(): Promise<[webpack.Configuration, webpack.Configuration]>;
     start(): Promise<void>;
-    stop(webpackDevMiddleware?: WebpackDevMiddleware.WebpackDevMiddleware): Promise<unknown>;
-    reload(): Promise<void>;
+    stop(webpackDevMiddleware?: WebpackDevMiddleware.WebpackDevMiddleware): Promise<void>;
     assignBuildTools({ webpackDevMiddleware, webpackHotMiddleware, onDemandEntries, }: {
         webpackDevMiddleware: WebpackDevMiddleware.WebpackDevMiddleware;
         webpackHotMiddleware: NextHandleFunction & WebpackHotMiddleware.EventStream;
@@ -46,12 +46,11 @@ export default class HotReloader {
         webpackDevMiddleware: WebpackDevMiddleware.WebpackDevMiddleware & NextHandleFunction;
         webpackHotMiddleware: NextHandleFunction & WebpackHotMiddleware.EventStream;
         onDemandEntries: {
-            waitUntilReloaded(): Promise<unknown>;
             ensurePage(page: string): Promise<unknown>;
             middleware(): (req: IncomingMessage, res: ServerResponse, next: Function) => any;
         };
     }>;
-    waitUntilValid(webpackDevMiddleware?: WebpackDevMiddleware.WebpackDevMiddleware): Promise<unknown>;
+    waitUntilValid(webpackDevMiddleware?: WebpackDevMiddleware.WebpackDevMiddleware): Promise<webpack.Stats>;
     getCompilationErrors(page: string): Promise<any>;
     send: (action: string, ...args: any[]) => void;
     ensurePage(page: string): Promise<any>;

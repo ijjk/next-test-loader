@@ -2,3 +2,4 @@
 if(err.code!=='EEXIST'){throw err;}}sema.release();const files=await _fs.promises.readdir(item);await Promise.all(files.map(file=>_copy(_path.default.join(item,file))));}else if(stats.isFile()&&// before we send the path to filter
 // we remove the base path (from) and replace \ by / (windows)
 filter(item.replace(from,'').replace(/\\/g,'/'))){await _fs.promises.copyFile(item,target,overwrite?undefined:COPYFILE_EXCL);sema.release();}}await _copy(from);}
+//# sourceMappingURL=recursive-copy.js.map
