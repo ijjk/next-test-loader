@@ -11,5 +11,5 @@ declare type Entrypoints = {
     client: WebpackEntrypoints;
     server: WebpackEntrypoints;
 };
-export declare function createEntrypoints(dev: boolean, pages: PagesMapping, target: 'server' | 'serverless' | 'experimental-serverless-trace', buildId: string, previewMode: __ApiPreviewProps, config: any, loadedEnvFiles: LoadedEnvFiles): Entrypoints;
+export declare function createEntrypoints(pages: PagesMapping, target: 'server' | 'serverless' | 'experimental-serverless-trace', buildId: string, previewMode: __ApiPreviewProps, config: any, loadedEnvFiles: LoadedEnvFiles): Entrypoints;
 export {};

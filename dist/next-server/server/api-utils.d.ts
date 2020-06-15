@@ -13,7 +13,7 @@ export declare type __ApiPreviewProps = {
     previewModeEncryptionKey: string;
     previewModeSigningKey: string;
 };
-export declare function apiResolver(req: IncomingMessage, res: ServerResponse, params: any, resolverModule: any, apiContext: __ApiPreviewProps, onError?: ({ err }: {
+export declare function apiResolver(req: IncomingMessage, res: ServerResponse, params: any, resolverModule: any, apiContext: __ApiPreviewProps, propagateError: boolean, onError?: ({ err }: {
     err: any;
 }) => Promise<void>): Promise<void>;
 /**
@@ -40,10 +40,11 @@ export declare function getCookieParser(req: IncomingMessage): () => NextApiRequ
 export declare function sendStatusCode(res: NextApiResponse, statusCode: number): NextApiResponse<any>;
 /**
  * Send `any` body to response
+ * @param req request object
  * @param res response object
  * @param body of response
  */
-export declare function sendData(res: NextApiResponse, body: any): void;
+export declare function sendData(req: NextApiRequest, res: NextApiResponse, body: any): void;
 /**
  * Send `JSON` object
  * @param res response object

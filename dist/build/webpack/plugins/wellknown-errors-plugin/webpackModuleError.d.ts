@@ -1,3 +1,3 @@
-import { compilation } from 'webpack';
+import { compilation as CompilationType } from 'webpack';
 import { SimpleWebpackError } from './simpleWebpackError';
-export declare function getModuleBuildError(compilation: compilation.Compilation, input: any): SimpleWebpackError | false;
+export declare function getModuleBuildError(compilation: CompilationType.Compilation, input: any): SimpleWebpackError | false;

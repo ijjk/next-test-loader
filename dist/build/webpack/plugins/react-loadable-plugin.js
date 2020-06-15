@@ -1,4 +1,4 @@
-"use strict";exports.__esModule=true;exports.ReactLoadablePlugin=void 0;var _url=_interopRequireDefault(require("url"));function _interopRequireDefault(obj){return obj&&obj.__esModule?obj:{default:obj};}/**
+"use strict";exports.__esModule=true;exports.ReactLoadablePlugin=void 0;/**
 COPYRIGHT (c) 2017-present James Kyle <me@thejameskyle.com>
  MIT License
  Permission is hereby granted, free of charge, to any person obtaining
@@ -19,7 +19,7 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWAR
 */ // Implementation of this PR: https://github.com/jamiebuilds/react-loadable/pull/132
 // Modified to strip out unneeded results for Next's specific use case
-function buildManifest(compiler,compilation){let context=compiler.options.context;let manifest={};compilation.chunkGroups.forEach(chunkGroup=>{if(chunkGroup.isInitial()){return;}chunkGroup.origins.forEach(chunkGroupOrigin=>{const{request}=chunkGroupOrigin;chunkGroup.chunks.forEach(chunk=>{chunk.files.forEach(file=>{if(!file.match(/\.js$/)||!file.match(/^static\/chunks\//)){return;}let publicPath=_url.default.resolve(compilation.outputOptions.publicPath||'',file);for(const module of chunk.modulesIterable){let id=module.id;let name=typeof module.libIdent==='function'?module.libIdent({context}):null;if(!manifest[request]){manifest[request]=[];}// Avoid duplicate files
-if(manifest[request].some(item=>item.id===id&&item.file===file)){continue;}manifest[request].push({id,name,file,publicPath});}});});});});manifest=Object.keys(manifest).sort()// eslint-disable-next-line no-sequences
+function buildManifest(_compiler,compilation){let manifest={};compilation.chunkGroups.forEach(chunkGroup=>{if(chunkGroup.isInitial()){return;}chunkGroup.origins.forEach(chunkGroupOrigin=>{const{request}=chunkGroupOrigin;chunkGroup.chunks.forEach(chunk=>{chunk.files.forEach(file=>{if(!file.match(/\.js$/)||!file.match(/^static\/chunks\//)){return;}for(const module of chunk.modulesIterable){let id=module.id;if(!manifest[request]){manifest[request]=[];}// Avoid duplicate files
+if(manifest[request].some(item=>item.id===id&&item.file===file)){continue;}manifest[request].push({id,file});}});});});});manifest=Object.keys(manifest).sort()// eslint-disable-next-line no-sequences
 .reduce((a,c)=>(a[c]=manifest[c],a),{});return manifest;}class ReactLoadablePlugin{constructor(opts){this.filename=void 0;this.filename=opts.filename;}apply(compiler){compiler.hooks.emit.tapAsync('ReactLoadableManifest',(compilation,callback)=>{const manifest=buildManifest(compiler,compilation);var json=JSON.stringify(manifest,null,2);compilation.assets[this.filename]={source(){return json;},size(){return json.length;}};callback();});}}exports.ReactLoadablePlugin=ReactLoadablePlugin;
 //# sourceMappingURL=react-loadable-plugin.js.map

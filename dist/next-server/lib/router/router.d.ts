@@ -90,7 +90,7 @@ export default class Router implements BaseRouter {
      * @param options object you can define `shallow` and other options
      */
     replace(url: Url, as?: Url, options?: {}): Promise<boolean>;
-    change(method: HistoryMethod, _url: Url, _as: Url, options: any): Promise<boolean>;
+    change(method: HistoryMethod, url: string, as: string, options: any): Promise<boolean>;
     changeState(method: HistoryMethod, url: string, as: string, options?: {}): void;
     getRouteInfo(route: string, pathname: string, query: any, as: string, shallow?: boolean): Promise<RouteInfo>;
     set(route: string, pathname: string, query: any, as: string, data: RouteInfo): Promise<void>;

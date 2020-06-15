@@ -1,6 +1,7 @@
 /// <reference types="node" />
 import { IncomingMessage, ServerResponse } from 'http';
 import { UrlWithParsedQuery } from 'url';
+import { CustomRoutes } from '../lib/load-custom-routes';
 import { __ApiPreviewProps } from '../next-server/server/api-utils';
 import Server, { ServerConstructor } from '../next-server/server/next-server';
 import { Params } from '../next-server/server/router';
@@ -23,14 +24,9 @@ export default class DevServer extends Server {
     protected hasPage(pathname: string): Promise<boolean>;
     protected _beforeCatchAllRender(req: IncomingMessage, res: ServerResponse, params: Params, parsedUrl: UrlWithParsedQuery): Promise<boolean>;
     run(req: IncomingMessage, res: ServerResponse, parsedUrl: UrlWithParsedQuery): Promise<void>;
-    protected getCustomRoutes(): {
-        rewrites: import("../lib/check-custom-routes").Rewrite[];
-        redirects: import("../lib/check-custom-routes").Redirect[];
-        headers: import("../lib/check-custom-routes").Header[];
-    } | undefined;
+    protected getCustomRoutes(): CustomRoutes;
     private _devCachedPreviewProps;
     protected getPreviewProps(): __ApiPreviewProps;
-    private loadCustomRoutes;
     generateRoutes(): {
         headers: import("../next-server/server/router").Route[];
         rewrites: import("../next-server/server/router").Route[];

@@ -51,7 +51,7 @@ export default class Router {
         useFileSystemPublicRoutes: boolean;
     });
     setDynamicRoutes(routes?: DynamicRoutes): void;
-    addFsRoute(route: Route): void;
+    addFsRoute(fsRoute: Route): void;
     execute(req: IncomingMessage, res: ServerResponse, parsedUrl: UrlWithParsedQuery): Promise<boolean>;
 }
 export {};

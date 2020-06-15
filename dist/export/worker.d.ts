@@ -13,11 +13,10 @@ interface PathMap {
         [key: string]: string | string[];
     };
 }
-interface ExortPageInput {
+interface ExportPageInput {
     path: string;
     pathMap: PathMap;
     distDir: string;
-    buildId: string;
     outDir: string;
     pagesDataDir: string;
     renderOpts: RenderOpts;
@@ -44,5 +43,5 @@ interface RenderOpts {
     hybridAmp?: boolean;
     inAmpMode?: boolean;
 }
-export default function exportPage({ path, pathMap, distDir, buildId, outDir, pagesDataDir, renderOpts, buildExport, serverRuntimeConfig, subFolders, serverless, }: ExortPageInput): Promise<ExportPageResults>;
+export default function exportPage({ path, pathMap, distDir, outDir, pagesDataDir, renderOpts, buildExport, serverRuntimeConfig, subFolders, serverless, }: ExportPageInput): Promise<ExportPageResults>;
 export {};

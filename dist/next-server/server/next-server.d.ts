@@ -3,7 +3,7 @@ import { IncomingMessage, ServerResponse } from 'http';
 import { ParsedUrlQuery } from 'querystring';
 import { UrlWithParsedQuery } from 'url';
 import { PrerenderManifest } from '../../build';
-import { Header, Redirect, Rewrite } from '../../lib/check-custom-routes';
+import { CustomRoutes } from '../../lib/load-custom-routes';
 import { __ApiPreviewProps } from './api-utils';
 import Router, { DynamicRoutes, PageChecker, Params, Route } from './router';
 import './node-polyfill-fetch';
@@ -14,7 +14,6 @@ export declare type ServerConstructor = {
      * Where the Next project is located - @default '.'
      */
     dir?: string;
-    staticMarkup?: boolean;
     /**
      * Hide error messages containing server information - @default false
      */
@@ -39,7 +38,6 @@ export default class Server {
     buildId: string;
     renderOpts: {
         poweredByHeader: boolean;
-        staticMarkup: boolean;
         buildId: string;
         generateEtags: boolean;
         runtimeConfig?: {
@@ -59,15 +57,11 @@ export default class Server {
     private onErrorMiddleware?;
     router: Router;
     protected dynamicRoutes?: DynamicRoutes;
-    protected customRoutes?: {
-        rewrites: Rewrite[];
-        redirects: Redirect[];
-        headers: Header[];
-    };
+    protected customRoutes: CustomRoutes;
     protected staticPathsWorker?: import('jest-worker').default & {
         loadStaticPaths: typeof import('../../server/static-paths-worker').loadStaticPaths;
     };
-    constructor({ dir, staticMarkup, quiet, conf, dev, customServer, }?: ServerConstructor);
+    constructor({ dir, quiet, conf, dev, customServer, }?: ServerConstructor);
     protected currentPhase(): string;
     private logError;
     private handleRequest;
@@ -76,7 +70,7 @@ export default class Server {
     prepare(): Promise<void>;
     protected close(): Promise<void>;
     protected setImmutableAssetCacheControl(res: ServerResponse): void;
-    protected getCustomRoutes(): any;
+    protected getCustomRoutes(): CustomRoutes;
     private _cachedPreviewManifest;
     protected getPrerenderManifest(): PrerenderManifest;
     protected getPreviewProps(): __ApiPreviewProps;
@@ -93,7 +87,7 @@ export default class Server {
     private getPagePath;
     protected hasPage(pathname: string): Promise<boolean>;
     protected _beforeCatchAllRender(_req: IncomingMessage, _res: ServerResponse, _params: Params, _parsedUrl: UrlWithParsedQuery): Promise<boolean>;
-    protected ensureApiPage(pathname: string): Promise<void>;
+    protected ensureApiPage(_pathname: string): Promise<void>;
     /**
      * Resolves `API` request, in development builds on demand
      * @param req http request

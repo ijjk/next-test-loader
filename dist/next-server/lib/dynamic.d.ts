@@ -15,6 +15,7 @@ export declare type LoadableBaseOptions<P = {}> = LoadableGeneratedOptions & {
         error?: Error | null;
         isLoading?: boolean;
         pastDelay?: boolean;
+        retry?: () => void;
         timedOut?: boolean;
     }) => JSX.Element | null;
     loader?: Loader<P> | LoaderMap;

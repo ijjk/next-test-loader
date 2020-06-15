@@ -15,4 +15,9 @@ export declare type Header = {
 };
 export declare function getRedirectStatus(route: Redirect): number;
 export declare type RouteType = 'rewrite' | 'redirect' | 'header';
-export default function checkCustomRoutes(routes: Redirect[] | Header[] | Rewrite[], type: RouteType): void;
+export interface CustomRoutes {
+    headers: Header[];
+    rewrites: Rewrite[];
+    redirects: Redirect[];
+}
+export default function loadCustomRoutes(config: any): Promise<CustomRoutes>;

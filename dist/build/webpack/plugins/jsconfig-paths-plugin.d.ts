@@ -7,7 +7,7 @@ export declare function hasZeroOrOneAsteriskCharacter(str: string): boolean;
 /**
  * Determines whether a path starts with a relative path component (i.e. `.` or `..`).
  */
-export declare function pathIsRelative(path: string): boolean;
+export declare function pathIsRelative(testPath: string): boolean;
 export declare function tryParsePattern(pattern: string): Pattern | undefined;
 /** Return the object corresponding to the best pattern to match `candidate`. */
 export declare function findBestPatternMatch<T>(values: readonly T[], getPattern: (value: T) => Pattern, candidate: string): T | undefined;

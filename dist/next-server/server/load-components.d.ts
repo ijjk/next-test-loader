@@ -7,7 +7,6 @@ export declare type ManifestItem = {
     id: number | string;
     name: string;
     file: string;
-    publicPath: string;
 };
 declare type ReactLoadableManifest = {
     [moduleId: string]: ManifestItem[];
@@ -23,5 +22,5 @@ export declare type LoadComponentsReturnType = {
     getStaticPaths?: GetStaticPaths;
     getServerSideProps?: GetServerSideProps;
 };
-export declare function loadComponents(distDir: string, buildId: string, pathname: string, serverless: boolean): Promise<LoadComponentsReturnType>;
+export declare function loadComponents(distDir: string, pathname: string, serverless: boolean): Promise<LoadComponentsReturnType>;
 export {};

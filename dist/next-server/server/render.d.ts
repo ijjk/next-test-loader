@@ -5,7 +5,6 @@ import React from 'react';
 import { __ApiPreviewProps } from './api-utils';
 import { LoadComponentsReturnType } from './load-components';
 export declare type RenderOptsPartial = {
-    staticMarkup: boolean;
     buildId: string;
     canonicalBase: string;
     runtimeConfig?: {

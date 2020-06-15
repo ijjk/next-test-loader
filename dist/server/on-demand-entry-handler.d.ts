@@ -3,8 +3,7 @@
 import { IncomingMessage, ServerResponse } from 'http';
 import WebpackDevMiddleware from 'next/dist/compiled/webpack-dev-middleware';
 import webpack from 'webpack';
-export default function onDemandEntryHandler(devMiddleware: WebpackDevMiddleware.WebpackDevMiddleware, multiCompiler: webpack.MultiCompiler, { buildId, pagesDir, pageExtensions, maxInactiveAge, pagesBufferLength, }: {
-    buildId: string;
+export default function onDemandEntryHandler(devMiddleware: WebpackDevMiddleware.WebpackDevMiddleware, multiCompiler: webpack.MultiCompiler, { pagesDir, pageExtensions, maxInactiveAge, pagesBufferLength, }: {
     pagesDir: string;
     pageExtensions: string[];
     maxInactiveAge: number;
@@ -13,4 +12,3 @@ export default function onDemandEntryHandler(devMiddleware: WebpackDevMiddleware
     ensurePage(page: string): Promise<unknown>;
     middleware(): (req: IncomingMessage, res: ServerResponse, next: Function) => any;
 };
-export declare function normalizePage(page: string): string;
