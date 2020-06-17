@@ -1,4 +1,4 @@
-"use strict";exports.__esModule=true;exports.default=void 0;/**
+"use strict";exports.__esModule=true;exports.NextEsmPlugin=void 0;/**
  * MIT License
  *
  * Copyright (c) 2018 Prateek Bhatnagar
@@ -52,5 +52,5 @@ new JsonpTemplatePlugin().apply(childCompiler);const optimization=compiler.optio
 const child=new Promise((resolve,reject)=>{// Defer the child compiler until known main thread "dead time" (while Terser is doing minification in the background)
 let started=false;compilation.hooks.optimizeChunkAssets.intercept({call:()=>{// only run the first time optimizeChunkAssets is called
 if(started)return;started=true;// Delay the Child Compiler until optimizeChunkAssets has had time to send work to the Terser pool
-setTimeout(()=>{this.updateOptions(childCompiler);childCompiler.runAsChild((err,_entries,childCompilation)=>{if(err){return reject(err);}if(childCompilation.errors.length>0){return reject(childCompilation.errors[0]);}this.updateAssets(compilation,childCompilation);resolve();});},500);}});});compilation.hooks.optimizeAssets.tapPromise(PLUGIN_NAME,()=>child);}}exports.default=NextEsmPlugin;
+setTimeout(()=>{this.updateOptions(childCompiler);childCompiler.runAsChild((err,_entries,childCompilation)=>{if(err){return reject(err);}if(childCompilation.errors.length>0){return reject(childCompilation.errors[0]);}this.updateAssets(compilation,childCompilation);resolve();});},500);}});});compilation.hooks.optimizeAssets.tapPromise(PLUGIN_NAME,()=>child);}}exports.NextEsmPlugin=NextEsmPlugin;
 //# sourceMappingURL=next-esm-plugin.js.map

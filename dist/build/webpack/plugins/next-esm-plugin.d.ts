@@ -30,7 +30,7 @@
  */
 import { Compiler, compilation as CompilationType, Plugin, RuleSetRule, RuleSetLoader } from 'webpack';
 declare type BabelConfigItem = string | [string] | [string, any];
-export default class NextEsmPlugin implements Plugin {
+export declare class NextEsmPlugin implements Plugin {
     options: {
         filename: any;
         chunkFilename: any;
