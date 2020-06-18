@@ -1,8 +1,16 @@
 "use strict";exports.__esModule=true;exports.default=void 0;var _devalue=_interopRequireDefault(require("next/dist/compiled/devalue"));var _escapeStringRegexp=_interopRequireDefault(require("next/dist/compiled/escape-string-regexp"));var _path=require("path");var _querystring=require("querystring");var _constants=require("../../../lib/constants");var _constants2=require("../../../next-server/lib/constants");var _utils=require("../../../next-server/lib/router/utils");function _interopRequireDefault(obj){return obj&&obj.__esModule?obj:{default:obj};}const vercelHeader='x-vercel-id';const nextServerlessLoader=function(){const{distDir,absolutePagePath,page,buildId,canonicalBase,assetPrefix,absoluteAppPath,absoluteDocumentPath,absoluteErrorPath,generateEtags,basePath,runtimeConfig,previewProps,loadedEnvFiles}=typeof this.query==='string'?(0,_querystring.parse)(this.query.substr(1)):this.query;const buildManifest=(0,_path.join)(distDir,_constants2.BUILD_MANIFEST).replace(/\\/g,'/');const reactLoadableManifest=(0,_path.join)(distDir,_constants2.REACT_LOADABLE_MANIFEST).replace(/\\/g,'/');const routesManifest=(0,_path.join)(distDir,_constants2.ROUTES_MANIFEST).replace(/\\/g,'/');const escapedBuildId=(0,_escapeStringRegexp.default)(buildId);const pageIsDynamicRoute=(0,_utils.isDynamicRoute)(page);const encodedPreviewProps=(0,_devalue.default)(JSON.parse(previewProps));const collectDynamicRouteParams=pageIsDynamicRoute?`
       function collectDynamicRouteParams(query) {
-        return ${JSON.stringify(Object.keys((0,_utils.getRouteRegex)(page).groups))}
+        const routeRegex = getRouteRegex("${page}")
+
+        return Object.keys(routeRegex.groups)
           .reduce((prev, key) => {
-            prev[key] = query[key]
+            let value = query[key]
+
+            if (routeRegex.groups[key].repeat) {
+              value = value.split('/')
+            }
+
+            prev[key] = value
             return prev
           }, {})
       }
