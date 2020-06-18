@@ -6,6 +6,9 @@
           .reduce((prev, key) => {
             let value = query[key]
 
+            ${''// query values from the proxy aren't already split into arrays
+// so make sure to normalize catch-all values
+}
             if (routeRegex.groups[key].repeat) {
               value = value.split('/')
             }
@@ -34,11 +37,7 @@
     const getCustomRouteMatcher = pathMatch(true)
     const {prepareDestination} = require('next/dist/next-server/server/router')
 
-    function handleRewrites(parsedUrl, trustQuery) {
-      if (trustQuery) {
-        return parsedUrl
-      }
-
+    function handleRewrites(parsedUrl) {
       for (const rewrite of rewrites) {
         const matcher = getCustomRouteMatcher(rewrite.source)
         const params = matcher(parsedUrl.pathname)
@@ -105,7 +104,7 @@
           // We don't need to loop over rewrites to collect the query values
           // on Vercel because the query values are already present
           const trustQuery = req.headers['${vercelHeader}']
-          const parsedUrl = handleRewrites(parse(req.url, true), trustQuery)
+          const parsedUrl = handleRewrites(parse(req.url, true))
 
           // The dynamic route params are already provided in the query
           // on Vercel
@@ -213,7 +212,7 @@ runtimeConfigSetter}
         // on Vercel because the query values are already present except for
         // iSSG currently
         const trustQuery = !getStaticProps && req.headers['${vercelHeader}']
-        const parsedUrl = handleRewrites(parse(req.url, true), trustQuery)
+        const parsedUrl = handleRewrites(parse(req.url, true))
 
         if (parsedUrl.pathname.match(/_next\\/data/)) {
           _nextData = true
