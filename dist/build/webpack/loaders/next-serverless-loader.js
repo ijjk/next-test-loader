@@ -103,7 +103,9 @@
             res.end('Bad Request')
           } else {
             // Throw the error to crash the serverless function
-            throw err
+            // throw err
+            res.statusCode = 500
+            res.end('internal server error')
           }
         }
       }
@@ -176,6 +178,7 @@ runtimeConfigSetter}
       let parsedUrl
 
       try {
+        console.log('before parsing URL', req.url)
         parsedUrl = handleRewrites(parse(req.url, true))
 
         if (parsedUrl.pathname.match(/_next\\/data/)) {
@@ -240,7 +243,11 @@ pageIsDynamicRoute?`const nowParams = req.headers && req.headers["x-now-route-ma
         const previewData = tryGetPreviewData(req, res, options.previewProps)
         const isPreviewMode = previewData !== false
 
+        console.log('before render')
+
         let result = await renderToHTML(req, res, "${page}", Object.assign({}, getStaticProps ? { ...(parsedUrl.query.amp ? { amp: '1' } : {}) } : parsedUrl.query, nowParams ? nowParams : params, _params, isFallback ? { __nextFallback: 'true' } : {}), renderOpts)
+
+        console.log('rendered successfully')
 
         if (!renderMode) {
           if (_nextData || getStaticProps || getServerSideProps) {
@@ -258,9 +265,12 @@ pageIsDynamicRoute?`const nowParams = req.headers && req.headers["x-now-route-ma
           )
         }
 
+        console.log('after render')
+
         if (renderMode) return { html: result, renderOpts }
         return result
       } catch (err) {
+
         if (!parsedUrl) {
           parsedUrl = parse(req.url, true)
         }
@@ -320,8 +330,11 @@ pageIsDynamicRoute?`const nowParams = req.headers && req.headers["x-now-route-ma
       } catch(err) {
         console.error(err)
         await onError(err)
+        console.log('render catch')
+        res.statusCode = 500
+        res.send('internal server error')
         // Throw the error to crash the serverless function
-        throw err
+        // throw err
       }
     }
   `;}};var _default=nextServerlessLoader;exports.default=_default;
