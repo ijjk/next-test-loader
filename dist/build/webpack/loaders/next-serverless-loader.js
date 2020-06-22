@@ -274,31 +274,31 @@ pageIsDynamicRoute?`const nowParams = req.headers && req.headers["x-now-route-ma
           console.error('Unhandled error during request:', err)
 
           // Backwards compat (call getInitialProps in custom error):
-        //   try {
-        //     await renderToHTML(req, res, "/_error", parsedUrl.query, Object.assign({}, options, {
-        //       getStaticProps: undefined,
-        //       getStaticPaths: undefined,
-        //       getServerSideProps: undefined,
-        //       Component: Error,
-        //       err: err,
-        //       // Short-circuit rendering:
-        //       isDataReq: true
-        //     }))
-        //   } catch (underErrorErr) {
-        //     console.error('Failed call /_error subroutine, continuing to crash function:', underErrorErr)
-        //   }
+          // try {
+          //   await renderToHTML(req, res, "/_error", parsedUrl.query, Object.assign({}, options, {
+          //     getStaticProps: undefined,
+          //     getStaticPaths: undefined,
+          //     getServerSideProps: undefined,
+          //     Component: Error,
+          //     err: err,
+          //     // Short-circuit rendering:
+          //     isDataReq: true
+          //   }))
+          // } catch (underErrorErr) {
+          //   console.error('Failed call /_error subroutine, continuing to crash function:', underErrorErr)
+          // }
 
-        //   // Throw the error to crash the serverless function
-        //   if (isResSent(res)) {
-        //     console.error('!!! WARNING !!!')
-        //     console.error(
-        //       'Your function crashed, but closed the response before allowing the function to exit.\\n' +
-        //       'This may cause unexpected behavior for the next request.'
-        //     )
-        //     console.error('!!! WARNING !!!')
-        //   }
-        //   throw err
-        // }
+          // Throw the error to crash the serverless function
+          // if (isResSent(res)) {
+          //   console.error('!!! WARNING !!!')
+          //   console.error(
+          //     'Your function crashed, but closed the response before allowing the function to exit.\\n' +
+          //     'This may cause unexpected behavior for the next request.'
+          //   )
+          //   console.error('!!! WARNING !!!')
+          // }
+          // throw err
+        }
 
         const result = await renderToHTML(req, res, "/_error", parsedUrl.query, Object.assign({}, options, {
           getStaticProps: undefined,
