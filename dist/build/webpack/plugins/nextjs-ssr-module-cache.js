@@ -1,4 +1,4 @@
-"use strict";exports.__esModule=true;exports.default=void 0;var _webpack=_interopRequireDefault(require("webpack"));var _webpackSources=require("webpack-sources");var _path=require("path");var _constants=require("../../../next-server/lib/constants");function _interopRequireDefault(obj){return obj&&obj.__esModule?obj:{default:obj};}const SSR_MODULE_CACHE_FILENAME='ssr-module-cache.js';// By default webpack keeps initialized modules per-module.
+"use strict";exports.__esModule=true;exports.default=void 0;var _webpack=_interopRequireDefault(require("webpack"));var _webpackSources=require("webpack-sources");var _path=require("path");var _getRouteFromEntrypoint=_interopRequireDefault(require("../../../next-server/server/get-route-from-entrypoint"));function _interopRequireDefault(obj){return obj&&obj.__esModule?obj:{default:obj};}const SSR_MODULE_CACHE_FILENAME='ssr-module-cache.js';// By default webpack keeps initialized modules per-module.
 // This means that if you have 2 entrypoints loaded into the same app
 // they will *not* share the same instance
 // This creates many issues when developers / libraries rely on the singleton pattern
@@ -14,7 +14,7 @@ class NextJsSsrImportPlugin{constructor(options){this.options=void 0;this.option
       `);callback();});compiler.hooks.compilation.tap('NextJsSSRModuleCache',compilation=>{compilation.mainTemplate.hooks.localVars.intercept({register(tapInfo){if(tapInfo.name==='MainTemplate'){const originalFn=tapInfo.fn;tapInfo.fn=(source,chunk)=>{// If the chunk is not part of the pages directory we have to keep the original behavior,
 // otherwise webpack will error out when the file is used before the compilation finishes
 // this is the case with mini-css-extract-plugin
-if(!_constants.IS_BUNDLED_PAGE_REGEX.exec(chunk.name)){return originalFn(source,chunk);}const pagePath=(0,_path.join)(outputPath,(0,_path.dirname)(chunk.name));let relativePathToBaseDir=(0,_path.relative)(pagePath,(0,_path.join)(outputPath,SSR_MODULE_CACHE_FILENAME));// Make sure even in windows, the path looks like in unix
+if(!(0,_getRouteFromEntrypoint.default)(chunk.name)){return originalFn(source,chunk);}const pagePath=(0,_path.join)(outputPath,(0,_path.dirname)(chunk.name));let relativePathToBaseDir=(0,_path.relative)(pagePath,(0,_path.join)(outputPath,SSR_MODULE_CACHE_FILENAME));// Make sure even in windows, the path looks like in unix
 // Node.js require system will convert it accordingly
 const relativePathToBaseDirNormalized=relativePathToBaseDir.replace(/\\/g,'/');return _webpack.default.Template.asString([source,'// The module cache',`var installedModules = require('${relativePathToBaseDirNormalized}');`]);};}return tapInfo;}});});}}exports.default=NextJsSsrImportPlugin;
 //# sourceMappingURL=nextjs-ssr-module-cache.js.map

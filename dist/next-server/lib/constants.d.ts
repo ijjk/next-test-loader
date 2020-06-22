@@ -25,7 +25,6 @@ export declare const CLIENT_STATIC_FILES_RUNTIME_REACT_REFRESH: string;
 export declare const CLIENT_STATIC_FILES_RUNTIME_AMP: string;
 export declare const CLIENT_STATIC_FILES_RUNTIME_WEBPACK: string;
 export declare const CLIENT_STATIC_FILES_RUNTIME_POLYFILLS: string;
-export declare const IS_BUNDLED_PAGE_REGEX: RegExp;
 export declare const TEMPORARY_REDIRECT_STATUS = 307;
 export declare const PERMANENT_REDIRECT_STATUS = 308;
 export declare const STATIC_PROPS_ID = "__N_SSG";

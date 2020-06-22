@@ -1,23 +1,4 @@
-"use strict";exports.__esModule=true;exports.default=void 0;var _devalue=_interopRequireDefault(require("next/dist/compiled/devalue"));var _escapeStringRegexp=_interopRequireDefault(require("next/dist/compiled/escape-string-regexp"));var _path=require("path");var _querystring=require("querystring");var _constants=require("../../../lib/constants");var _constants2=require("../../../next-server/lib/constants");var _utils=require("../../../next-server/lib/router/utils");function _interopRequireDefault(obj){return obj&&obj.__esModule?obj:{default:obj};}const vercelHeader='x-vercel-id';const nextServerlessLoader=function(){const{distDir,absolutePagePath,page,buildId,canonicalBase,assetPrefix,absoluteAppPath,absoluteDocumentPath,absoluteErrorPath,generateEtags,basePath,runtimeConfig,previewProps,loadedEnvFiles}=typeof this.query==='string'?(0,_querystring.parse)(this.query.substr(1)):this.query;const buildManifest=(0,_path.join)(distDir,_constants2.BUILD_MANIFEST).replace(/\\/g,'/');const reactLoadableManifest=(0,_path.join)(distDir,_constants2.REACT_LOADABLE_MANIFEST).replace(/\\/g,'/');const routesManifest=(0,_path.join)(distDir,_constants2.ROUTES_MANIFEST).replace(/\\/g,'/');const escapedBuildId=(0,_escapeStringRegexp.default)(buildId);const pageIsDynamicRoute=(0,_utils.isDynamicRoute)(page);const encodedPreviewProps=(0,_devalue.default)(JSON.parse(previewProps));const collectDynamicRouteParams=pageIsDynamicRoute?`
-      function collectDynamicRouteParams(query) {
-        const routeRegex = getRouteRegex("${page}")
-
-        return Object.keys(routeRegex.groups)
-          .reduce((prev, key) => {
-            let value = query[key]
-
-            ${''// query values from the proxy aren't already split into arrays
-// so make sure to normalize catch-all values
-}
-            if (routeRegex.groups[key].repeat) {
-              value = value.split('/')
-            }
-
-            prev[key] = value
-            return prev
-          }, {})
-      }
-    `:'';const envLoading=`
+"use strict";exports.__esModule=true;exports.default=void 0;var _devalue=_interopRequireDefault(require("next/dist/compiled/devalue"));var _escapeStringRegexp=_interopRequireDefault(require("next/dist/compiled/escape-string-regexp"));var _path=require("path");var _querystring=require("querystring");var _constants=require("../../../lib/constants");var _constants2=require("../../../next-server/lib/constants");var _utils=require("../../../next-server/lib/router/utils");function _interopRequireDefault(obj){return obj&&obj.__esModule?obj:{default:obj};}const nextServerlessLoader=function(){const{distDir,absolutePagePath,page,buildId,canonicalBase,assetPrefix,absoluteAppPath,absoluteDocumentPath,absoluteErrorPath,generateEtags,basePath,runtimeConfig,previewProps,loadedEnvFiles}=typeof this.query==='string'?(0,_querystring.parse)(this.query.substr(1)):this.query;const buildManifest=(0,_path.join)(distDir,_constants2.BUILD_MANIFEST).replace(/\\/g,'/');const reactLoadableManifest=(0,_path.join)(distDir,_constants2.REACT_LOADABLE_MANIFEST).replace(/\\/g,'/');const routesManifest=(0,_path.join)(distDir,_constants2.ROUTES_MANIFEST).replace(/\\/g,'/');const escapedBuildId=(0,_escapeStringRegexp.default)(buildId);const pageIsDynamicRoute=(0,_utils.isDynamicRoute)(page);const encodedPreviewProps=(0,_devalue.default)(JSON.parse(previewProps));const envLoading=`
     const { processEnv } = require('next/dist/lib/load-env-config')
     processEnv(${loadedEnvFiles})
   `;const runtimeConfigImports=runtimeConfig?`
@@ -48,7 +29,6 @@
             params,
             parsedUrl.query
           )
-
           Object.assign(parsedUrl.query, parsedDestination.query, params)
           delete parsedDestination.query
 
@@ -91,7 +71,6 @@
       ${rewriteImports}
 
       ${dynamicRouteMatcher}
-      ${collectDynamicRouteParams}
 
       ${handleRewrites}
 
@@ -100,19 +79,9 @@
           await initServer()
 
           ${handleBasePath}
-
-          // We don't need to loop over rewrites to collect the query values
-          // on Vercel because the query values are already present
-          const trustQuery = req.headers['${vercelHeader}']
           const parsedUrl = handleRewrites(parse(req.url, true))
 
-          // The dynamic route params are already provided in the query
-          // on Vercel
-          const params = ${pageIsDynamicRoute?`
-              trustQuery
-                ? collectDynamicRouteParams(parsedUrl.query)
-                : dynamicRouteMatcher(parsedUrl.pathname)
-              `:`{}`}
+          const params = ${pageIsDynamicRoute?`dynamicRouteMatcher(parsedUrl.pathname)`:`{}`}
 
           const resolver = require('${absolutePagePath}')
           await apiResolver(
@@ -177,7 +146,6 @@ runtimeConfigSetter}
     export const unstable_getServerProps = ComponentInfo['unstable_getServerProp' + 's']
 
     ${dynamicRouteMatcher}
-    ${collectDynamicRouteParams}
     ${handleRewrites}
 
     export const config = ComponentInfo['confi' + 'g'] || {}
@@ -208,11 +176,7 @@ runtimeConfigSetter}
       let parsedUrl
 
       try {
-        // We don't need to loop over rewrites to collect the query values
-        // on Vercel because the query values are already present except for
-        // iSSG currently
-        const trustQuery = !getStaticProps && req.headers['${vercelHeader}']
-        const parsedUrl = handleRewrites(parse(req.url, true))
+        parsedUrl = handleRewrites(parse(req.url, true))
 
         if (parsedUrl.pathname.match(/_next\\/data/)) {
           _nextData = true
@@ -237,16 +201,7 @@ runtimeConfigSetter}
           }
         `:''}
 
-        ${pageIsDynamicRoute?`
-            const params = (
-              fromExport &&
-              !getStaticProps &&
-              !getServerSideProps
-            ) ? {}
-              : trustQuery
-                ? collectDynamicRouteParams(parsedUrl.query)
-                : dynamicRouteMatcher(parsedUrl.pathname) || {};
-            `:`const params = {};`}
+        ${pageIsDynamicRoute?`const params = fromExport && !getStaticProps && !getServerSideProps ? {} : dynamicRouteMatcher(parsedUrl.pathname) || {};`:`const params = {};`}
         ${// Temporary work around: `x-now-route-matches` is a platform header
 // _only_ set for `Prerender` requests. We should move this logic
 // into our builder to ensure we're decoupled. However, this entails
@@ -319,31 +274,31 @@ pageIsDynamicRoute?`const nowParams = req.headers && req.headers["x-now-route-ma
           console.error('Unhandled error during request:', err)
 
           // Backwards compat (call getInitialProps in custom error):
-          try {
-            await renderToHTML(req, res, "/_error", parsedUrl.query, Object.assign({}, options, {
-              getStaticProps: undefined,
-              getStaticPaths: undefined,
-              getServerSideProps: undefined,
-              Component: Error,
-              err: err,
-              // Short-circuit rendering:
-              isDataReq: true
-            }))
-          } catch (underErrorErr) {
-            console.error('Failed call /_error subroutine, continuing to crash function:', underErrorErr)
-          }
+        //   try {
+        //     await renderToHTML(req, res, "/_error", parsedUrl.query, Object.assign({}, options, {
+        //       getStaticProps: undefined,
+        //       getStaticPaths: undefined,
+        //       getServerSideProps: undefined,
+        //       Component: Error,
+        //       err: err,
+        //       // Short-circuit rendering:
+        //       isDataReq: true
+        //     }))
+        //   } catch (underErrorErr) {
+        //     console.error('Failed call /_error subroutine, continuing to crash function:', underErrorErr)
+        //   }
 
-          // Throw the error to crash the serverless function
-          if (isResSent(res)) {
-            console.error('!!! WARNING !!!')
-            console.error(
-              'Your function crashed, but closed the response before allowing the function to exit.\\n' +
-              'This may cause unexpected behavior for the next request.'
-            )
-            console.error('!!! WARNING !!!')
-          }
-          throw err
-        }
+        //   // Throw the error to crash the serverless function
+        //   if (isResSent(res)) {
+        //     console.error('!!! WARNING !!!')
+        //     console.error(
+        //       'Your function crashed, but closed the response before allowing the function to exit.\\n' +
+        //       'This may cause unexpected behavior for the next request.'
+        //     )
+        //     console.error('!!! WARNING !!!')
+        //   }
+        //   throw err
+        // }
 
         const result = await renderToHTML(req, res, "/_error", parsedUrl.query, Object.assign({}, options, {
           getStaticProps: undefined,

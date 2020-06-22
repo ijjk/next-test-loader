@@ -1,5 +1,6 @@
 export declare type BuildManifest = {
     devFiles: string[];
+    ampDevFiles: string[];
     polyfillFiles: string[];
     lowPriorityFiles: string[];
     pages: {
