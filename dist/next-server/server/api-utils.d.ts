@@ -39,6 +39,13 @@ export declare function getCookieParser(req: IncomingMessage): () => NextApiRequ
  */
 export declare function sendStatusCode(res: NextApiResponse, statusCode: number): NextApiResponse<any>;
 /**
+ *
+ * @param res response object
+ * @param [statusOrUrl] `HTTP` status code of redirect
+ * @param url URL of redirect
+ */
+export declare function redirect(res: NextApiResponse, statusOrUrl: string | number, url?: string): NextApiResponse<any>;
+/**
  * Send `any` body to response
  * @param req request object
  * @param res response object

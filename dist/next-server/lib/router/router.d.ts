@@ -7,6 +7,11 @@ import { NextPageContext } from '../utils';
 export declare function addBasePath(path: string): string;
 export declare function delBasePath(path: string): string;
 declare type Url = UrlObject | string;
+/**
+ * Resolves a given hyperlink with a certain router state (basePath not included).
+ * Preserves absolute urls.
+ */
+export declare function resolveHref(currentPath: string, href: Url): string;
 declare type ComponentRes = {
     page: ComponentType;
     mod: any;
@@ -57,6 +62,7 @@ export default class Router implements BaseRouter {
     _wrapApp: (App: ComponentType) => any;
     isSsr: boolean;
     isFallback: boolean;
+    _inFlightRoute?: string;
     static events: MittEmitter;
     constructor(pathname: string, query: ParsedUrlQuery, as: string, { initialProps, pageLoader, App, wrapApp, Component, err, subscription, isFallback, }: {
         subscription: Subscription;
@@ -92,6 +98,10 @@ export default class Router implements BaseRouter {
     replace(url: Url, as?: Url, options?: {}): Promise<boolean>;
     change(method: HistoryMethod, url: string, as: string, options: any): Promise<boolean>;
     changeState(method: HistoryMethod, url: string, as: string, options?: {}): void;
+    handleRouteInfoError(err: Error & {
+        code: any;
+        cancelled: boolean;
+    }, pathname: string, query: any, as: string, loadErrorFail?: boolean): Promise<RouteInfo>;
     getRouteInfo(route: string, pathname: string, query: any, as: string, shallow?: boolean): Promise<RouteInfo>;
     set(route: string, pathname: string, query: any, as: string, data: RouteInfo): Promise<void>;
     /**
@@ -111,8 +121,8 @@ export default class Router implements BaseRouter {
     prefetch(url: string, asPath?: string, options?: PrefetchOptions): Promise<void>;
     fetchComponent(route: string): Promise<ComponentRes>;
     _getData<T>(fn: () => Promise<T>): Promise<T>;
-    _getStaticData: (asPath: string) => Promise<object>;
-    _getServerData: (asPath: string) => Promise<object>;
+    _getStaticData(dataHref: string): Promise<object>;
+    _getServerData(dataHref: string): Promise<object>;
     getInitialProps(Component: ComponentType, ctx: NextPageContext): Promise<any>;
     abortComponentLoad(as: string): void;
     notify(data: RouteInfo): Promise<void>;

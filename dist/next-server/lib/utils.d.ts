@@ -2,7 +2,7 @@
 import { IncomingMessage, ServerResponse } from 'http';
 import { ParsedUrlQuery } from 'querystring';
 import { ComponentType } from 'react';
-import { URLFormatOptions, UrlObject } from 'url';
+import { UrlObject } from 'url';
 import { ManifestItem } from '../server/load-components';
 import { NextRouter } from './router/router';
 import { Env } from '../../lib/load-env-config';
@@ -25,6 +25,17 @@ export declare type AppType = NextComponentType<AppContextType, AppInitialProps,
 export declare type AppTreeType = ComponentType<AppInitialProps & {
     [name: string]: any;
 }>;
+/**
+ * Web vitals provided to _app.reportWebVitals by Core Web Vitals plugin developed by Google Chrome team.
+ * https://nextjs.org/blog/next-9-4#integrated-web-vitals-reporting
+ */
+export declare type NextWebVitalsMetric = {
+    id: string;
+    label: string;
+    name: string;
+    startTime: number;
+    value: number;
+};
 export declare type Enhancer<C> = (Component: C) => C;
 export declare type ComponentsEnhancer = {
     enhanceApp?: Enhancer<AppType>;
@@ -150,6 +161,11 @@ export interface NextApiRequest extends IncomingMessage {
     };
     body: any;
     env: Env;
+    preview?: boolean;
+    /**
+     * Preview data set on the request, if any
+     * */
+    previewData?: any;
 }
 /**
  * Send body of response
@@ -168,6 +184,7 @@ export declare type NextApiResponse<T = any> = ServerResponse & {
      */
     json: Send<T>;
     status: (statusCode: number) => NextApiResponse<T>;
+    redirect: (statusOrUrl: string | number, url?: string) => NextApiResponse<T>;
     /**
      * Set preview data for Next.js' prerender mode
      */
@@ -196,7 +213,7 @@ export declare function getDisplayName<P>(Component: ComponentType<P>): string;
 export declare function isResSent(res: ServerResponse): boolean;
 export declare function loadGetInitialProps<C extends BaseContext, IP = {}, P = {}>(App: NextComponentType<C, IP, P>, ctx: C): Promise<IP>;
 export declare const urlObjectKeys: string[];
-export declare function formatWithValidation(url: UrlObject, options?: URLFormatOptions): string;
+export declare function formatWithValidation(url: UrlObject): string;
 export declare const SP: boolean;
 export declare const ST: boolean;
 export {};

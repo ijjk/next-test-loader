@@ -1,5 +1,5 @@
 "use strict";exports.__esModule=true;exports.noSSR=noSSR;exports.default=dynamic;var _react=_interopRequireDefault(require("react"));var _loadable=_interopRequireDefault(require("./loadable"));function _interopRequireDefault(obj){return obj&&obj.__esModule?obj:{default:obj};}const isServerSide=typeof window==='undefined';function noSSR(LoadableInitializer,loadableOptions){// Removing webpack and modules means react-loadable won't try preloading
-delete loadableOptions.webpack;delete loadableOptions.modules;// This check is neccesary to prevent react-loadable from initializing on the server
+delete loadableOptions.webpack;delete loadableOptions.modules;// This check is necessary to prevent react-loadable from initializing on the server
 if(!isServerSide){return LoadableInitializer(loadableOptions);}const Loading=loadableOptions.loading;// This will only be rendered on the server side
 return()=>/*#__PURE__*/_react.default.createElement(Loading,{error:null,isLoading:true,pastDelay:false,timedOut:false});}// function dynamic<P = {}, O extends DynamicOptions>(options: O):
 function dynamic(dynamicOptions,options){let loadableFn=_loadable.default;let loadableOptions={// A loading component is not required, so we default it

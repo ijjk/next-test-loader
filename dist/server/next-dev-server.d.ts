@@ -11,6 +11,9 @@ export default class DevServer extends Server {
     private webpackWatcher?;
     private hotReloader?;
     private isCustomServer;
+    protected staticPathsWorker: import('jest-worker').default & {
+        loadStaticPaths: typeof import('./static-paths-worker').loadStaticPaths;
+    };
     constructor(options: ServerConstructor & {
         isNextDevCommand?: boolean;
     });
@@ -28,6 +31,7 @@ export default class DevServer extends Server {
     private _devCachedPreviewProps;
     protected getPreviewProps(): __ApiPreviewProps;
     generateRoutes(): {
+        basePath: string;
         headers: import("../next-server/server/router").Route[];
         rewrites: import("../next-server/server/router").Route[];
         redirects: import("../next-server/server/router").Route[];
@@ -44,6 +48,10 @@ export default class DevServer extends Server {
         col: number;
         code: string;
     }): boolean;
+    protected getStaticPaths(pathname: string): Promise<{
+        staticPaths: string[] | undefined;
+        hasStaticFallback: boolean;
+    }>;
     protected ensureApiPage(pathname: string): Promise<any>;
     renderToHTML(req: IncomingMessage, res: ServerResponse, pathname: string, query: {
         [key: string]: string;

@@ -23,7 +23,8 @@ SOFTWARE.
 */ // This file is based on https://github.com/facebook/create-react-app/blob/7b1a32be6ec9f99a6c9a3c66813f3ac09c4736b9/packages/react-dev-utils/formatWebpackMessages.js
 // It's been edited to remove chalk and CRA-specific logic
 const friendlySyntaxErrorLabel='Syntax error:';function isLikelyASyntaxError(message){return message.indexOf(friendlySyntaxErrorLabel)!==-1;}// Cleans up webpack error messages.
-function formatMessage(message){let lines=message.split('\n');// Strip Webpack-added headers off errors/warnings
+function formatMessage(message){// TODO: Replace this once webpack 5 is stable
+if(typeof message==='object'&&message.message){message=(message.moduleName?message.moduleName+'\n':'')+(message.file?message.file+'\n':'')+message.message;}let lines=message.split('\n');// Strip Webpack-added headers off errors/warnings
 // https://github.com/webpack/webpack/blob/master/lib/ModuleError.js
 lines=lines.filter(line=>!/Module [A-z ]+\(from/.test(line));// Transform parsing error into syntax error
 // TODO: move this to our ESLint formatter?

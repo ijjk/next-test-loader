@@ -21,4 +21,4 @@ export declare type PrerenderManifest = {
     };
     preview: __ApiPreviewProps;
 };
-export default function build(dir: string, conf?: null): Promise<void>;
+export default function build(dir: string, conf?: null, reactProductionProfiling?: boolean): Promise<void>;

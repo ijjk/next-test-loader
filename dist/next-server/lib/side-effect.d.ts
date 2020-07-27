@@ -7,6 +7,7 @@ declare type SideEffectProps = {
     inAmpMode?: boolean;
 };
 export default class extends Component<SideEffectProps> {
+    private _hasHeadManager;
     emitChange: () => void;
     constructor(props: any);
     componentDidMount(): void;

@@ -40,7 +40,7 @@ compilation.chunks.push(...Object.values(childChunkFileMap),...unnamedChunks);//
 compilation.entrypoints.forEach((entryPoint,entryPointName)=>{const childEntryPoint=childCompilation.entrypoints.get(entryPointName);childEntryPoint.chunks.forEach(chunk=>{if(// Add null named dynamic chunks since they weren't merged
 chunk.name===null||childChunkFileMap.hasOwnProperty(chunk.name)){entryPoint.chunks.push(chunk);}});});}async runBuild(compiler,compilation){const outputOptions={...compiler.options.output};if(typeof this.options.filename==='function'){outputOptions.filename=this.options.filename(outputOptions.filename);}else{outputOptions.filename=this.options.filename;}if(typeof this.options.chunkFilename==='function'){outputOptions.chunkFilename=this.options.chunkFilename(outputOptions.chunkFilename);}else{outputOptions.chunkFilename=this.options.chunkFilename;}let plugins=(compiler.options.plugins||[]).filter(c=>!(this.options.excludedPlugins.includes(c.constructor.name)||c.constructor.name===PLUGIN_NAME));// Add the additionalPlugins
 plugins=plugins.concat(this.options.additionalPlugins);/**
-     * We are deliberatly not passing plugins in createChildCompiler.
+     * We are deliberately not passing plugins in createChildCompiler.
      * All webpack does with plugins is to call `apply` method on them
      * with the childCompiler.
      * But by then we haven't given childCompiler a fileSystem or other options

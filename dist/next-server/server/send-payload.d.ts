@@ -1,6 +1,6 @@
 /// <reference types="node" />
-import { ServerResponse } from 'http';
-export declare function sendPayload(res: ServerResponse, payload: any, type: 'html' | 'json', options?: {
+import { IncomingMessage, ServerResponse } from 'http';
+export declare function sendPayload(req: IncomingMessage, res: ServerResponse, payload: any, type: 'html' | 'json', generateEtags: boolean, options?: {
     private: true;
 } | {
     private: boolean;

@@ -21,7 +21,7 @@ true);// CSS cannot be imported in _document. This comes before everything becau
 fns.push((0,_helpers.loader)({oneOf:[{test:regexLikeCss,// Use a loose regex so we don't have to crawl the file system to
 // find the real file name (if present).
 issuer:/pages[\\/]_document\./,use:{loader:'error-loader',options:{reason:(0,_messages.getCustomDocumentError)()}}}]}));// CSS Modules support must be enabled on the server and client so the class
-// names are availble for SSR or Prerendering.
+// names are available for SSR or Prerendering.
 fns.push((0,_helpers.loader)({oneOf:[{// CSS Modules should never have side effects. This setting will
 // allow unused CSS to be removed from the production build.
 // We ensure this by disallowing `:global()` CSS at the top-level
@@ -56,7 +56,8 @@ exclude:[/\.(js|mjs|jsx|ts|tsx)$/,/\.html$/,/\.json$/],use:{// `file-loader` alw
 // might inline the asset as a data URI
 loader:require.resolve('next/dist/compiled/file-loader'),options:{// Hash the file for immutable cacheability
 name:'static/media/[name].[hash].[ext]'}}}]}));}if(ctx.isClient&&ctx.isProduction){// Extract CSS as CSS file(s) in the client-side production bundle.
-fns.push((0,_helpers.plugin)(new _miniCssExtractPlugin.default({filename:'static/css/[contenthash].css',chunkFilename:'static/css/[contenthash].css',// Next.js guarantees that CSS order "doesn't matter", due to imposed
+fns.push((0,_helpers.plugin)(// @ts-ignore webpack 5 compat
+new _miniCssExtractPlugin.default({filename:'static/css/[contenthash].css',chunkFilename:'static/css/[contenthash].css',// Next.js guarantees that CSS order "doesn't matter", due to imposed
 // restrictions:
 // 1. Global CSS can only be defined in a single entrypoint (_app)
 // 2. CSS Modules generate scoped class names by default and cannot

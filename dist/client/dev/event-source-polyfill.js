@@ -17,7 +17,7 @@ status=0;statusText='';contentType=undefined;// Firefox < 14, Chrome ?, Safari ?
 // IE 8 fires "onload" without "onprogress"
 onProgress();if(state===1||state===2||state===3){state=4;if(timeout!==0){clearTimeout(timeout);timeout=0;}that.readyState=4;that.onreadystatechange();}};var onReadyStateChange=function onReadyStateChange(){if(xhr!=undefined){// Opera 12
 if(xhr.readyState===4){onFinish();}else if(xhr.readyState===3){onProgress();}else if(xhr.readyState===2){onStart();}}};var onTimeout=function onTimeout(){timeout=setTimeout(function(){onTimeout();},500);if(xhr.readyState===3){onProgress();}};// XDomainRequest#abort removes onprogress, onerror, onload
-xhr.onload=onFinish;xhr.onerror=onFinish;// improper fix to match Firefox behaviour, but it is better than just ignore abort
+xhr.onload=onFinish;xhr.onerror=onFinish;// improper fix to match Firefox behavior, but it is better than just ignore abort
 // see https://bugzilla.mozilla.org/show_bug.cgi?id=768596
 // https://bugzilla.mozilla.org/show_bug.cgi?id=880200
 // https://code.google.com/p/chromium/issues/detail?id=153570

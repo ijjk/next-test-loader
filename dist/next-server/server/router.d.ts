@@ -20,6 +20,7 @@ export declare type Route = {
     check?: boolean;
     statusCode?: number;
     name: string;
+    requireBasePath?: false;
     fn: (req: IncomingMessage, res: ServerResponse, params: Params, parsedUrl: UrlWithParsedQuery) => Promise<RouteResult> | RouteResult;
 };
 export declare type DynamicRoutes = Array<{
@@ -27,11 +28,12 @@ export declare type DynamicRoutes = Array<{
     match: RouteMatch;
 }>;
 export declare type PageChecker = (pathname: string) => Promise<boolean>;
-export declare const prepareDestination: (destination: string, params: Params, query: ParsedUrlQuery, appendParamsToQuery?: boolean | undefined) => {
+export declare const prepareDestination: (destination: string, params: Params, query: ParsedUrlQuery, appendParamsToQuery: boolean, basePath: string) => {
     newUrl: string;
     parsedDestination: UrlWithParsedQuery;
 };
 export default class Router {
+    basePath: string;
     headers: Route[];
     fsRoutes: Route[];
     rewrites: Route[];
@@ -40,7 +42,8 @@ export default class Router {
     pageChecker: PageChecker;
     dynamicRoutes: DynamicRoutes;
     useFileSystemPublicRoutes: boolean;
-    constructor({ headers, fsRoutes, rewrites, redirects, catchAllRoute, dynamicRoutes, pageChecker, useFileSystemPublicRoutes, }: {
+    constructor({ basePath, headers, fsRoutes, rewrites, redirects, catchAllRoute, dynamicRoutes, pageChecker, useFileSystemPublicRoutes, }: {
+        basePath: string;
         headers: Route[];
         fsRoutes: Route[];
         rewrites: Route[];

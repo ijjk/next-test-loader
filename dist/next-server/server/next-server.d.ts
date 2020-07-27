@@ -55,12 +55,10 @@ export default class Server {
     };
     private compression?;
     private onErrorMiddleware?;
+    private incrementalCache;
     router: Router;
     protected dynamicRoutes?: DynamicRoutes;
     protected customRoutes: CustomRoutes;
-    protected staticPathsWorker?: import('jest-worker').default & {
-        loadStaticPaths: typeof import('../../server/static-paths-worker').loadStaticPaths;
-    };
     constructor({ dir, quiet, conf, dev, customServer, }?: ServerConstructor);
     protected currentPhase(): string;
     private logError;
@@ -75,6 +73,7 @@ export default class Server {
     protected getPrerenderManifest(): PrerenderManifest;
     protected getPreviewProps(): __ApiPreviewProps;
     protected generateRoutes(): {
+        basePath: string;
         headers: Route[];
         rewrites: Route[];
         fsRoutes: Route[];
@@ -107,7 +106,10 @@ export default class Server {
     protected sendHTML(req: IncomingMessage, res: ServerResponse, html: string): Promise<void>;
     render(req: IncomingMessage, res: ServerResponse, pathname: string, query?: ParsedUrlQuery, parsedUrl?: UrlWithParsedQuery): Promise<void>;
     private findPageComponents;
-    private getStaticPaths;
+    protected getStaticPaths(pathname: string): Promise<{
+        staticPaths: string[] | undefined;
+        hasStaticFallback: boolean;
+    }>;
     private renderToHTMLWithComponents;
     renderToHTML(req: IncomingMessage, res: ServerResponse, pathname: string, query?: ParsedUrlQuery): Promise<string | null>;
     renderError(err: Error | null, req: IncomingMessage, res: ServerResponse, pathname: string, query?: ParsedUrlQuery): Promise<void>;
@@ -119,6 +121,6 @@ export default class Server {
     private getFilesystemPaths;
     protected isServeableUrl(untrustedFileUrl: string): boolean;
     protected readBuildId(): string;
-    private get _isLikeServerless();
+    protected get _isLikeServerless(): boolean;
 }
 export {};
