@@ -8,6 +8,7 @@ import { __ApiPreviewProps } from './api-utils';
 import Router, { DynamicRoutes, PageChecker, Params, Route } from './router';
 import './node-polyfill-fetch';
 import { PagesManifest } from '../../build/webpack/plugins/pages-manifest-plugin';
+import { FontManifest } from './font-utils';
 declare type NextConfig = any;
 export declare type ServerConstructor = {
     /**
@@ -52,6 +53,9 @@ export default class Server {
             [key: string]: any;
         };
         basePath: string;
+        optimizeFonts: boolean;
+        fontManifest: FontManifest;
+        optimizeImages: boolean;
     };
     private compression?;
     private onErrorMiddleware?;
@@ -108,7 +112,7 @@ export default class Server {
     private findPageComponents;
     protected getStaticPaths(pathname: string): Promise<{
         staticPaths: string[] | undefined;
-        hasStaticFallback: boolean;
+        fallbackMode: 'static' | 'blocking' | false;
     }>;
     private renderToHTMLWithComponents;
     renderToHTML(req: IncomingMessage, res: ServerResponse, pathname: string, query?: ParsedUrlQuery): Promise<string | null>;

@@ -1,19 +1,32 @@
-"use strict";exports.__esModule=true;exports.default=void 0;var _devalue=_interopRequireDefault(require("next/dist/compiled/devalue"));var _escapeStringRegexp=_interopRequireDefault(require("next/dist/compiled/escape-string-regexp"));var _path=require("path");var _querystring=require("querystring");var _constants=require("../../../lib/constants");var _constants2=require("../../../next-server/lib/constants");var _utils=require("../../../next-server/lib/router/utils");function _interopRequireDefault(obj){return obj&&obj.__esModule?obj:{default:obj};}const vercelHeader='x-vercel-id';const nextServerlessLoader=function(){const{distDir,absolutePagePath,page,buildId,canonicalBase,assetPrefix,absoluteAppPath,absoluteDocumentPath,absoluteErrorPath,generateEtags,basePath,runtimeConfig,previewProps,loadedEnvFiles}=typeof this.query==='string'?(0,_querystring.parse)(this.query.substr(1)):this.query;const buildManifest=(0,_path.join)(distDir,_constants2.BUILD_MANIFEST).replace(/\\/g,'/');const reactLoadableManifest=(0,_path.join)(distDir,_constants2.REACT_LOADABLE_MANIFEST).replace(/\\/g,'/');const routesManifest=(0,_path.join)(distDir,_constants2.ROUTES_MANIFEST).replace(/\\/g,'/');const escapedBuildId=(0,_escapeStringRegexp.default)(buildId);const pageIsDynamicRoute=(0,_utils.isDynamicRoute)(page);const encodedPreviewProps=(0,_devalue.default)(JSON.parse(previewProps));const collectDynamicRouteParams=pageIsDynamicRoute?`
+"use strict";exports.__esModule=true;exports.default=void 0;var _devalue=_interopRequireDefault(require("next/dist/compiled/devalue"));var _escapeStringRegexp=_interopRequireDefault(require("next/dist/compiled/escape-string-regexp"));var _path=require("path");var _querystring=require("querystring");var _constants=require("../../../lib/constants");var _constants2=require("../../../next-server/lib/constants");var _utils=require("../../../next-server/lib/router/utils");function _interopRequireDefault(obj){return obj&&obj.__esModule?obj:{default:obj};}const vercelHeader='x-vercel-id';const nextServerlessLoader=function(){const{distDir,absolutePagePath,page,buildId,canonicalBase,assetPrefix,absoluteAppPath,absoluteDocumentPath,absoluteErrorPath,generateEtags,poweredByHeader,basePath,runtimeConfig,previewProps,loadedEnvFiles}=typeof this.query==='string'?(0,_querystring.parse)(this.query.substr(1)):this.query;const buildManifest=(0,_path.join)(distDir,_constants2.BUILD_MANIFEST).replace(/\\/g,'/');const reactLoadableManifest=(0,_path.join)(distDir,_constants2.REACT_LOADABLE_MANIFEST).replace(/\\/g,'/');const routesManifest=(0,_path.join)(distDir,_constants2.ROUTES_MANIFEST).replace(/\\/g,'/');const escapedBuildId=(0,_escapeStringRegexp.default)(buildId);const pageIsDynamicRoute=(0,_utils.isDynamicRoute)(page);const encodedPreviewProps=(0,_devalue.default)(JSON.parse(previewProps));const defaultRouteRegex=pageIsDynamicRoute?`
+      const defaultRouteRegex = getRouteRegex("${page}")
+    `:'';const collectDynamicRouteParams=pageIsDynamicRoute?`
       function collectDynamicRouteParams(query) {
-        const routeRegex = getRouteRegex("${page}")
-
-        return Object.keys(routeRegex.groups)
+        return Object.keys(defaultRouteRegex.groups)
           .reduce((prev, key) => {
             let value = query[key]
 
+            ${''// non-provided optional values should be undefined so normalize
+// them to undefined
+}
+            if(defaultRouteRegex.groups[key].optional && !value) {
+              value = undefined
+              delete query[key]
+            }
             ${''// query values from the proxy aren't already split into arrays
 // so make sure to normalize catch-all values
 }
-            if (routeRegex.groups[key].repeat) {
+            if (
+              value &&
+              typeof value === 'string' &&
+              defaultRouteRegex.groups[key].repeat
+            ) {
               value = value.split('/')
             }
 
-            prev[key] = value
+            if (value) {
+              prev[key] = value
+            }
             return prev
           }, {})
       }
@@ -89,11 +102,14 @@
           this needs to be called first so its available for any other imports
         */runtimeConfigSetter}
       ${dynamicRouteImports}
-      const { parse } = require('url')
+      const { parse: parseUrl } = require('url')
       const { apiResolver } = require('next/dist/next-server/server/api-utils')
       ${rewriteImports}
 
       ${dynamicRouteMatcher}
+
+      ${defaultRouteRegex}
+
       ${collectDynamicRouteParams}
 
       ${handleRewrites}
@@ -105,7 +121,7 @@
           // We need to trust the dynamic route params from the proxy
           // to ensure we are using the correct values
           const trustQuery = req.headers['${vercelHeader}']
-          const parsedUrl = handleRewrites(parse(req.url, true))
+          const parsedUrl = handleRewrites(parseUrl(req.url, true))
 
           ${handleBasePath}
 
@@ -149,17 +165,17 @@
     ${runtimeConfigImports}
     ${// this needs to be called first so its available for any other imports
 runtimeConfigSetter}
-    const {parse} = require('url')
+    const {parse: parseUrl, format: formatUrl} = require('url')
     const {parse: parseQs} = require('querystring')
-    const {renderToHTML} = require('next/dist/next-server/server/render');
+    const { renderToHTML } = require('next/dist/next-server/server/render');
     const { tryGetPreviewData } = require('next/dist/next-server/server/api-utils');
-    const {sendHTML} = require('next/dist/next-server/server/send-html');
     const {sendPayload} = require('next/dist/next-server/server/send-payload');
     const buildManifest = require('${buildManifest}');
     const reactLoadableManifest = require('${reactLoadableManifest}');
     const Document = require('${absoluteDocumentPath}').default;
     const Error = require('${absoluteErrorPath}').default;
     const App = require('${absoluteAppPath}').default;
+
     ${dynamicRouteImports}
     ${rewriteImports}
 
@@ -178,6 +194,7 @@ runtimeConfigSetter}
     export const unstable_getServerProps = ComponentInfo['unstable_getServerProp' + 's']
 
     ${dynamicRouteMatcher}
+    ${defaultRouteRegex}
     ${collectDynamicRouteParams}
     ${handleRewrites}
 
@@ -210,7 +227,7 @@ runtimeConfigSetter}
         // We need to trust the dynamic route params from the proxy
         // to ensure we are using the correct values
         const trustQuery = !getStaticProps && req.headers['${vercelHeader}']
-        const parsedUrl = handleRewrites(parse(req.url, true))
+        const parsedUrl = handleRewrites(parseUrl(req.url, true))
 
         ${handleBasePath}
 
@@ -287,11 +304,40 @@ pageIsDynamicRoute?`const nowParams = req.headers && req.headers["x-now-route-ma
         // if provided from worker or params if we're parsing them here
         renderOpts.params = _params || params
 
+        // make sure to normalize req.url on Vercel to strip dynamic params
+        // from the query which are added during routing
+        ${pageIsDynamicRoute?`
+          if (trustQuery) {
+            console.log('before cleaning', req.url)
+
+            const _parsedUrl = parseUrl(req.url, true)
+            delete _parsedUrl.search
+
+            console.log('parsed URL', _parsedUrl)
+
+            for (const param of Object.keys(defaultRouteRegex.groups)) {
+              delete _parsedUrl.query[param]
+            }
+            req.url = formatUrl(_parsedUrl)
+
+            console.log('after cleaning', req.url)
+          }
+        `:''}
+
         const isFallback = parsedUrl.query.__nextFallback
 
         const previewData = tryGetPreviewData(req, res, options.previewProps)
         const isPreviewMode = previewData !== false
 
+        if (process.env.__NEXT_OPTIMIZE_FONTS) {
+          renderOpts.optimizeFonts = true
+          /**
+           * __webpack_require__.__NEXT_FONT_MANIFEST__ is added by
+           * font-stylesheet-gathering-plugin
+           */
+          renderOpts.fontManifest = __webpack_require__.__NEXT_FONT_MANIFEST__;
+          process.env['__NEXT_OPTIMIZE_FONT'+'S'] = true
+        }
         let result = await renderToHTML(req, res, "${page}", Object.assign({}, getStaticProps ? { ...(parsedUrl.query.amp ? { amp: '1' } : {}) } : parsedUrl.query, nowParams ? nowParams : params, _params, isFallback ? { __nextFallback: 'true' } : {}), renderOpts)
 
         if (!renderMode) {
@@ -314,7 +360,7 @@ pageIsDynamicRoute?`const nowParams = req.headers && req.headers["x-now-route-ma
         return result
       } catch (err) {
         if (!parsedUrl) {
-          parsedUrl = parse(req.url, true)
+          parsedUrl = parseUrl(req.url, true)
         }
 
         if (err.code === 'ENOENT') {
@@ -367,7 +413,7 @@ pageIsDynamicRoute?`const nowParams = req.headers && req.headers["x-now-route-ma
         await initServer()
         const html = await renderReqToHTML(req, res)
         if (html) {
-          sendHTML(req, res, html, {generateEtags: ${generateEtags==='true'?true:false}})
+          sendPayload(req, res, html, 'html', {generateEtags: ${JSON.stringify(generateEtags==='true')}, poweredByHeader: ${JSON.stringify(poweredByHeader==='true')}})
         }
       } catch(err) {
         console.error(err)

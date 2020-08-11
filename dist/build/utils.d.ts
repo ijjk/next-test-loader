@@ -2,6 +2,7 @@ import '../next-server/server/node-polyfill-fetch';
 import { CustomRoutes } from '../lib/load-custom-routes';
 import { GetStaticPaths } from 'next/types';
 import { BuildManifest } from '../next-server/server/get-page-files';
+import type { UnwrapPromise } from '../lib/coalesced-function';
 export declare function collectPages(directory: string, pageExtensions: string[]): Promise<string[]>;
 export interface PageInfo {
     isHybridAmp?: boolean;
@@ -10,7 +11,7 @@ export interface PageInfo {
     static: boolean;
     isSsg: boolean;
     ssgPageRoutes: string[] | null;
-    hasSsgFallback: boolean;
+    initialRevalidateSeconds: number | false;
 }
 export declare function printTreeView(list: readonly string[], pageInfos: Map<string, PageInfo>, serverless: boolean, { distPath, buildId, pagesDir, pageExtensions, buildManifest, isModern, useStatic404, }: {
     distPath: string;
@@ -23,9 +24,8 @@ export declare function printTreeView(list: readonly string[], pageInfos: Map<st
 }): Promise<void>;
 export declare function printCustomRoutes({ redirects, rewrites, headers, }: CustomRoutes): void;
 export declare function getJsPageSizeInKb(page: string, distPath: string, buildManifest: BuildManifest, isModern: boolean): Promise<[number, number]>;
-export declare function buildStaticPaths(page: string, getStaticPaths: GetStaticPaths): Promise<{
+export declare function buildStaticPaths(page: string, getStaticPaths: GetStaticPaths): Promise<Omit<UnwrapPromise<ReturnType<GetStaticPaths>>, 'paths'> & {
     paths: string[];
-    fallback: boolean;
 }>;
 export declare function isPageStatic(page: string, serverBundle: string, runtimeEnvConfig: any): Promise<{
     isStatic?: boolean;
@@ -34,7 +34,7 @@ export declare function isPageStatic(page: string, serverBundle: string, runtime
     hasServerProps?: boolean;
     hasStaticProps?: boolean;
     prerenderRoutes?: string[] | undefined;
-    prerenderFallback?: boolean | undefined;
+    prerenderFallback?: boolean | 'unstable_blocking' | undefined;
 }>;
 export declare function hasCustomGetInitialProps(bundle: string, runtimeEnvConfig: any, checkingApp: boolean): boolean;
 export declare function getNamedExports(bundle: string, runtimeEnvConfig: any): Array<string>;

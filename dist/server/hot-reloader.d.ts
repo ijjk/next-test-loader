@@ -14,6 +14,8 @@ export default class HotReloader {
     private config;
     private stats;
     private serverStats;
+    private clientError;
+    private serverError;
     private serverPrevDocumentHash;
     private prevChunkNames?;
     private onDemandEntries;
@@ -32,7 +34,7 @@ export default class HotReloader {
     private getWebpackConfig;
     start(): Promise<void>;
     stop(): Promise<void>;
-    getCompilationErrors(page: string): Promise<any>;
+    getCompilationErrors(page: string): Promise<any[]>;
     private send;
     ensurePage(page: string): Promise<any>;
 }

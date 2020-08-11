@@ -1,5 +1,6 @@
 import AmpHtmlValidator from 'next/dist/compiled/amphtml-validator';
 import 'next/dist/next-server/server/node-polyfill-fetch';
+import { FontManifest } from '../next-server/server/font-utils';
 interface AmpValidation {
     page: string;
     result: {
@@ -24,6 +25,8 @@ interface ExportPageInput {
     serverRuntimeConfig: string;
     subFolders: string;
     serverless: boolean;
+    optimizeFonts: boolean;
+    optimizeImages: boolean;
 }
 interface ExportPageResults {
     ampValidations: AmpValidation[];
@@ -42,6 +45,9 @@ interface RenderOpts {
     ampSkipValidation?: boolean;
     hybridAmp?: boolean;
     inAmpMode?: boolean;
+    optimizeFonts?: boolean;
+    optimizeImages?: boolean;
+    fontManifest?: FontManifest;
 }
-export default function exportPage({ path, pathMap, distDir, outDir, pagesDataDir, renderOpts, buildExport, serverRuntimeConfig, subFolders, serverless, }: ExportPageInput): Promise<ExportPageResults>;
+export default function exportPage({ path, pathMap, distDir, outDir, pagesDataDir, renderOpts, buildExport, serverRuntimeConfig, subFolders, serverless, optimizeFonts, optimizeImages, }: ExportPageInput): Promise<ExportPageResults>;
 export {};

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-"use strict";exports.__esModule=true;exports.nextExport=void 0;var _path=require("path");var _fs=require("fs");var _index=_interopRequireDefault(require("next/dist/compiled/arg/index.js"));var _export=_interopRequireDefault(require("../export"));var _utils=require("../server/lib/utils");function _interopRequireDefault(obj){return obj&&obj.__esModule?obj:{default:obj};}const nextExport=argv=>{const args=(0,_index.default)({// Types
+"use strict";exports.__esModule=true;exports.nextExport=void 0;var _path=require("path");var _fs=require("fs");var _index=_interopRequireDefault(require("next/dist/compiled/arg/index.js"));var _export=_interopRequireDefault(require("../export"));var _utils=require("../server/lib/utils");function _interopRequireDefault(obj){return obj&&obj.__esModule?obj:{default:obj};}const nextExport=argv=>{const validArgs={// Types
 '--help':Boolean,'--silent':Boolean,'--outdir':String,'--threads':Number,// Aliases
-'-h':'--help','-s':'--silent','-o':'--outdir'},{argv});if(args['--help']){// tslint:disable-next-line
+'-h':'--help','-s':'--silent','-o':'--outdir'};let args;try{args=(0,_index.default)(validArgs,{argv});}catch(error){if(error.code==='ARG_UNKNOWN_OPTION'){return(0,_utils.printAndExit)(error.message,1);}throw error;}if(args['--help']){// tslint:disable-next-line
 console.log(`
       Description
         Exports the application for production deployment

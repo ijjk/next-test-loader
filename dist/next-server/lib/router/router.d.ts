@@ -4,14 +4,28 @@ import { ComponentType } from 'react';
 import { UrlObject } from 'url';
 import { MittEmitter } from '../mitt';
 import { NextPageContext } from '../utils';
+interface TransitionOptions {
+    shallow?: boolean;
+}
+interface NextHistoryState {
+    url: string;
+    as: string;
+    options: TransitionOptions;
+}
+export declare function hasBasePath(path: string): boolean;
 export declare function addBasePath(path: string): string;
 export declare function delBasePath(path: string): string;
+/**
+ * Detects whether a given url is routable by the Next.js router (browser only).
+ */
+export declare function isLocalURL(url: string): boolean;
 declare type Url = UrlObject | string;
 /**
  * Resolves a given hyperlink with a certain router state (basePath not included).
  * Preserves absolute urls.
  */
 export declare function resolveHref(currentPath: string, href: Url): string;
+export declare function markLoadingError(err: Error): Error;
 declare type ComponentRes = {
     page: ComponentType;
     mod: any;
@@ -36,7 +50,7 @@ declare type RouteInfo = {
     error?: any;
 };
 declare type Subscription = (data: RouteInfo, App?: ComponentType) => Promise<void>;
-declare type BeforePopStateCallback = (state: any) => boolean;
+declare type BeforePopStateCallback = (state: NextHistoryState) => boolean;
 declare type ComponentLoadCancel = (() => void) | null;
 declare type HistoryMethod = 'replaceState' | 'pushState';
 export default class Router implements BaseRouter {
@@ -74,7 +88,6 @@ export default class Router implements BaseRouter {
         err?: Error;
         isFallback: boolean;
     });
-    static _rewriteUrlForNextExport(url: string): string;
     onPopState: (e: PopStateEvent) => void;
     update(route: string, mod: any): void;
     reload(): void;
@@ -88,22 +101,22 @@ export default class Router implements BaseRouter {
      * @param as masks `url` for the browser
      * @param options object you can define `shallow` and other options
      */
-    push(url: Url, as?: Url, options?: {}): Promise<boolean>;
+    push(url: Url, as?: Url, options?: TransitionOptions): Promise<boolean>;
     /**
      * Performs a `replaceState` with arguments
      * @param url of the route
      * @param as masks `url` for the browser
      * @param options object you can define `shallow` and other options
      */
-    replace(url: Url, as?: Url, options?: {}): Promise<boolean>;
-    change(method: HistoryMethod, url: string, as: string, options: any): Promise<boolean>;
-    changeState(method: HistoryMethod, url: string, as: string, options?: {}): void;
+    replace(url: Url, as?: Url, options?: TransitionOptions): Promise<boolean>;
+    change(method: HistoryMethod, url: string, as: string, options: TransitionOptions): Promise<boolean>;
+    changeState(method: HistoryMethod, url: string, as: string, options?: TransitionOptions): void;
     handleRouteInfoError(err: Error & {
         code: any;
         cancelled: boolean;
-    }, pathname: string, query: any, as: string, loadErrorFail?: boolean): Promise<RouteInfo>;
+    }, pathname: string, query: ParsedUrlQuery, as: string, loadErrorFail?: boolean): Promise<RouteInfo>;
     getRouteInfo(route: string, pathname: string, query: any, as: string, shallow?: boolean): Promise<RouteInfo>;
-    set(route: string, pathname: string, query: any, as: string, data: RouteInfo): Promise<void>;
+    set(route: string, pathname: string, query: ParsedUrlQuery, as: string, data: RouteInfo): Promise<void>;
     /**
      * Callback to execute before replacing router state
      * @param cb callback to be executed

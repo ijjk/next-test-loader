@@ -13,7 +13,7 @@ export declare type __ApiPreviewProps = {
     previewModeEncryptionKey: string;
     previewModeSigningKey: string;
 };
-export declare function apiResolver(req: IncomingMessage, res: ServerResponse, params: any, resolverModule: any, apiContext: __ApiPreviewProps, propagateError: boolean, onError?: ({ err }: {
+export declare function apiResolver(req: IncomingMessage, res: ServerResponse, query: any, resolverModule: any, apiContext: __ApiPreviewProps, propagateError: boolean, onError?: ({ err }: {
     err: any;
 }) => Promise<void>): Promise<void>;
 /**

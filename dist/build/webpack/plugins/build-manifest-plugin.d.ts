@@ -6,5 +6,6 @@ export default class BuildManifestPlugin {
         buildId: string;
         modern: boolean;
     });
+    createAssets(compilation: any, assets: any): any;
     apply(compiler: Compiler): void;
 }

@@ -142,6 +142,7 @@ export declare type DocumentProps = DocumentInitialProps & {
     canonicalBase: string;
     headTags: any[];
     unstable_runtimeJS?: false;
+    devOnlyCacheBusterQueryString: string;
 };
 /**
  * Next `API` route request
@@ -184,7 +185,8 @@ export declare type NextApiResponse<T = any> = ServerResponse & {
      */
     json: Send<T>;
     status: (statusCode: number) => NextApiResponse<T>;
-    redirect: (statusOrUrl: string | number, url?: string) => NextApiResponse<T>;
+    redirect(url: string): NextApiResponse<T>;
+    redirect(status: number, url: string): NextApiResponse<T>;
     /**
      * Set preview data for Next.js' prerender mode
      */

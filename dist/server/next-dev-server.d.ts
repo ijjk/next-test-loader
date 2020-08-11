@@ -50,7 +50,7 @@ export default class DevServer extends Server {
     }): boolean;
     protected getStaticPaths(pathname: string): Promise<{
         staticPaths: string[] | undefined;
-        hasStaticFallback: boolean;
+        fallbackMode: false | 'static' | 'blocking';
     }>;
     protected ensureApiPage(pathname: string): Promise<any>;
     renderToHTML(req: IncomingMessage, res: ServerResponse, pathname: string, query: {

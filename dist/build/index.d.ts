@@ -7,7 +7,7 @@ export declare type SsgRoute = {
 };
 export declare type DynamicSsgRoute = {
     routeRegex: string;
-    fallback: string | false;
+    fallback: string | null | false;
     dataRoute: string;
     dataRouteRegex: string;
 };

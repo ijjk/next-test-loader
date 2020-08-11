@@ -1,5 +1,5 @@
 import PropTypes from 'prop-types';
-import React, { Component } from 'react';
+import React, { Component, ReactNode } from 'react';
 import { DocumentContext as DocumentComponentContext } from '../next-server/lib/document-context';
 import { DocumentContext, DocumentInitialProps, DocumentProps } from '../next-server/lib/utils';
 export { DocumentContext, DocumentInitialProps, DocumentProps };
@@ -23,10 +23,7 @@ export default class Document<P = {}> extends Component<DocumentProps & P> {
 }
 export declare function Html(props: React.DetailedHTMLProps<React.HtmlHTMLAttributes<HTMLHtmlElement>, HTMLHtmlElement>): JSX.Element;
 export declare class Head extends Component<OriginProps & React.DetailedHTMLProps<React.HTMLAttributes<HTMLHeadElement>, HTMLHeadElement>> {
-    static contextType: React.Context<{
-        readonly _documentProps: DocumentProps;
-        readonly _devOnlyInvalidateCacheQueryString: string;
-    }>;
+    static contextType: React.Context<DocumentProps>;
     static propTypes: {
         nonce: PropTypes.Requireable<string>;
         crossOrigin: PropTypes.Requireable<string>;
@@ -35,14 +32,12 @@ export declare class Head extends Component<OriginProps & React.DetailedHTMLProp
     getCssLinks(): JSX.Element[] | null;
     getPreloadDynamicChunks(): (JSX.Element | null)[];
     getPreloadMainLinks(): JSX.Element[] | null;
+    makeStylesheetInert(node: ReactNode): ReactNode;
     render(): JSX.Element;
 }
 export declare function Main(): JSX.Element;
 export declare class NextScript extends Component<OriginProps> {
-    static contextType: React.Context<{
-        readonly _documentProps: DocumentProps;
-        readonly _devOnlyInvalidateCacheQueryString: string;
-    }>;
+    static contextType: React.Context<DocumentProps>;
     static propTypes: {
         nonce: PropTypes.Requireable<string>;
         crossOrigin: PropTypes.Requireable<string>;

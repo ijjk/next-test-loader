@@ -17,4 +17,4 @@ export declare const GSSP_NO_RETURNED_VALUE = "Your `getServerSideProps` functio
 export declare const UNSTABLE_REVALIDATE_RENAME_ERROR: string;
 export declare const GSSP_COMPONENT_MEMBER_ERROR = "can not be attached to a page's component and must be exported from the page. See more info here: https://err.sh/next.js/gssp-component-member";
 export declare const NON_STANDARD_NODE_ENV = "You are using a non-standard \"NODE_ENV\" value in your environment. This creates inconsistencies in the project and is strongly advised against. Read more: https://err.sh/next.js/non-standard-node-env";
-export declare const SSG_FALLBACK_EXPORT_ERROR = "Pages with `fallback: true` in `getStaticPaths` can not be exported. See more info here: https://err.sh/next.js/ssg-fallback-true-export";
+export declare const SSG_FALLBACK_EXPORT_ERROR = "Pages with `fallback` enabled in `getStaticPaths` can not be exported. See more info here: https://err.sh/next.js/ssg-fallback-true-export";

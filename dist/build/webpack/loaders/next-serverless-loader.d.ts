@@ -9,6 +9,7 @@ export declare type ServerlessLoaderQuery = {
     buildId: string;
     assetPrefix: string;
     generateEtags: string;
+    poweredByHeader: string;
     canonicalBase: string;
     basePath: string;
     runtimeConfig: string;
