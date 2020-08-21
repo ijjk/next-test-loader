@@ -269,7 +269,7 @@ runtimeConfigSetter}
               !getStaticProps &&
               !getServerSideProps
             ) ? {}
-              normalizeDynamicRouteParams(
+              : normalizeDynamicRouteParams(
                 trustQuery
                   ? parsedUrl.query
                   : dynamicRouteMatcher(parsedUrl.pathname)
