@@ -1,15 +1,15 @@
 "use strict";exports.__esModule=true;exports.default=void 0;var _devalue=_interopRequireDefault(require("next/dist/compiled/devalue"));var _escapeStringRegexp=_interopRequireDefault(require("next/dist/compiled/escape-string-regexp"));var _path=require("path");var _querystring=require("querystring");var _constants=require("../../../lib/constants");var _constants2=require("../../../next-server/lib/constants");var _utils=require("../../../next-server/lib/router/utils");function _interopRequireDefault(obj){return obj&&obj.__esModule?obj:{default:obj};}const vercelHeader='x-vercel-id';const nextServerlessLoader=function(){const{distDir,absolutePagePath,page,buildId,canonicalBase,assetPrefix,absoluteAppPath,absoluteDocumentPath,absoluteErrorPath,generateEtags,poweredByHeader,basePath,runtimeConfig,previewProps,loadedEnvFiles}=typeof this.query==='string'?(0,_querystring.parse)(this.query.substr(1)):this.query;const buildManifest=(0,_path.join)(distDir,_constants2.BUILD_MANIFEST).replace(/\\/g,'/');const reactLoadableManifest=(0,_path.join)(distDir,_constants2.REACT_LOADABLE_MANIFEST).replace(/\\/g,'/');const routesManifest=(0,_path.join)(distDir,_constants2.ROUTES_MANIFEST).replace(/\\/g,'/');const escapedBuildId=(0,_escapeStringRegexp.default)(buildId);const pageIsDynamicRoute=(0,_utils.isDynamicRoute)(page);const encodedPreviewProps=(0,_devalue.default)(JSON.parse(previewProps));const defaultRouteRegex=pageIsDynamicRoute?`
       const defaultRouteRegex = getRouteRegex("${page}")
-    `:'';const collectDynamicRouteParams=pageIsDynamicRoute?`
-      function collectDynamicRouteParams(query) {
+    `:'';const normalizeDynamicRouteParams=pageIsDynamicRoute?`
+      function normalizeDynamicRouteParams(query) {
         return Object.keys(defaultRouteRegex.groups)
           .reduce((prev, key) => {
             let value = query[key]
-
+            console.log({ value, key })
             ${''// non-provided optional values should be undefined so normalize
 // them to undefined
 }
-            if(defaultRouteRegex.groups[key].optional && !value) {
+            if(defaultRouteRegex.groups[key].optional && (!value || value === ['index']) {
               value = undefined
               delete query[key]
             }
@@ -110,7 +110,7 @@
 
       ${defaultRouteRegex}
 
-      ${collectDynamicRouteParams}
+      ${normalizeDynamicRouteParams}
 
       ${handleRewrites}
 
@@ -126,9 +126,11 @@
           ${handleBasePath}
 
           const params = ${pageIsDynamicRoute?`
-              trustQuery
-                ? collectDynamicRouteParams(parsedUrl.query)
-                : dynamicRouteMatcher(parsedUrl.pathname)
+              normalizeDynamicRouteParams(
+                trustQuery
+                  ? parsedUrl.query
+                  : dynamicRouteMatcher(parsedUrl.pathname)
+              )
               `:`{}`}
 
           const resolver = require('${absolutePagePath}')
@@ -195,7 +197,7 @@ runtimeConfigSetter}
 
     ${dynamicRouteMatcher}
     ${defaultRouteRegex}
-    ${collectDynamicRouteParams}
+    ${normalizeDynamicRouteParams}
     ${handleRewrites}
 
     export const config = ComponentInfo['confi' + 'g'] || {}
@@ -267,9 +269,11 @@ runtimeConfigSetter}
               !getStaticProps &&
               !getServerSideProps
             ) ? {}
-              : trustQuery
-                ? collectDynamicRouteParams(parsedUrl.query)
-                : dynamicRouteMatcher(parsedUrl.pathname) || {};
+              normalizeDynamicRouteParams(
+                trustQuery
+                  ? parsedUrl.query
+                  : dynamicRouteMatcher(parsedUrl.pathname)
+              )
             `:`const params = {};`}
         ${// Temporary work around: `x-now-route-matches` is a platform header
 // _only_ set for `Prerender` requests. We should move this logic
