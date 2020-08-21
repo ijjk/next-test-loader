@@ -51,7 +51,7 @@ export declare type BaseContext = {
     [k: string]: any;
 };
 export declare type NEXT_DATA = {
-    props: any;
+    props: Record<string, any>;
     page: string;
     query: ParsedUrlQuery;
     buildId: string;
@@ -136,7 +136,6 @@ export declare type DocumentProps = DocumentInitialProps & {
     inAmpMode: boolean;
     hybridAmp: boolean;
     isDevelopment: boolean;
-    files: string[];
     dynamicImports: ManifestItem[];
     assetPrefix?: string;
     canonicalBase: string;

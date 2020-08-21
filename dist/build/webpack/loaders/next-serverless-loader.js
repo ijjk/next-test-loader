@@ -6,6 +6,8 @@
           .reduce((prev, key) => {
             let value = query[key]
 
+            console.log({ key, value, idk: defaultRouteRegex.groups[key] })
+
             ${''// non-provided optional values should be undefined so normalize
 // them to undefined
 }
@@ -48,7 +50,7 @@
     const { pathToRegexp, default: pathMatch } = require('next/dist/next-server/server/lib/path-match')
   `;const handleRewrites=`
     const getCustomRouteMatcher = pathMatch(true)
-    const {prepareDestination} = require('next/dist/next-server/server/router')
+    const prepareDestination = require('next/dist/next-server/lib/router/utils/prepare-destination').default
 
     function handleRewrites(parsedUrl) {
       for (const rewrite of rewrites) {
@@ -64,7 +66,7 @@
             "${basePath}"
           )
 
-          Object.assign(parsedUrl.query, parsedDestination.query, params)
+          Object.assign(parsedUrl.query, parsedDestination.query)
           delete parsedDestination.query
 
           Object.assign(parsedUrl, parsedDestination)
@@ -308,21 +310,34 @@ pageIsDynamicRoute?`const nowParams = req.headers && req.headers["x-now-route-ma
         // from the query which are added during routing
         ${pageIsDynamicRoute?`
           if (trustQuery) {
-            console.log('before cleaning', req.url)
-
             const _parsedUrl = parseUrl(req.url, true)
             delete _parsedUrl.search
-
-            console.log('parsed URL', _parsedUrl)
 
             for (const param of Object.keys(defaultRouteRegex.groups)) {
               delete _parsedUrl.query[param]
             }
             req.url = formatUrl(_parsedUrl)
-
-            console.log('after cleaning', req.url)
           }
         `:''}
+
+        // normalize request URL/asPath for fallback pages since the proxy
+        // sets the request URL to the output's path for fallback pages
+        ${pageIsDynamicRoute?`
+            if (nowParams) {
+              const _parsedUrl = parseUrl(req.url)
+
+              for (const param of Object.keys(defaultRouteRegex.groups)) {
+                const paramIdx = _parsedUrl.pathname.indexOf(\`[\${param}]\`)
+
+                if (paramIdx > -1) {
+                  _parsedUrl.pathname = _parsedUrl.pathname.substr(0, paramIdx) +
+                    encodeURI(nowParams[param]) +
+                    _parsedUrl.pathname.substr(paramIdx + param.length + 2)
+                }
+              }
+              req.url = formatUrl(_parsedUrl)
+            }
+          `:``}
 
         const isFallback = parsedUrl.query.__nextFallback
 
