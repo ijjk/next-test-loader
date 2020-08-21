@@ -6,8 +6,6 @@
           .reduce((prev, key) => {
             let value = query[key]
 
-            console.log({ key, value, idk: defaultRouteRegex.groups[key] })
-
             ${''// non-provided optional values should be undefined so normalize
 // them to undefined
 }
@@ -302,6 +300,9 @@ pageIsDynamicRoute?`const nowParams = req.headers && req.headers["x-now-route-ma
                 )(req.headers["x-now-route-matches"])
               : null;
           `:`const nowParams = null;`}
+
+        console.log({ params, nowParams, trustQuery })
+
         // make sure to set renderOpts to the correct params e.g. _params
         // if provided from worker or params if we're parsing them here
         renderOpts.params = _params || params
