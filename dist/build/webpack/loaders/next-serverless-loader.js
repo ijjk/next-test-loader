@@ -9,7 +9,7 @@
             ${''// non-provided optional values should be undefined so normalize
 // them to undefined
 }
-            if(defaultRouteRegex.groups[key].optional && (!value || value === ['index']) {
+            if(defaultRouteRegex.groups[key].optional && (!value || value === ['index'])) {
               value = undefined
               delete query[key]
             }
