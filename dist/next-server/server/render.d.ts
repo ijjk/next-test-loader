@@ -37,6 +37,7 @@ export declare type RenderOptsPartial = {
     fontManifest?: FontManifest;
     optimizeImages: boolean;
     devOnlyCacheBusterQueryString?: string;
+    normalizedAsPath?: string;
 };
 export declare type RenderOpts = LoadComponentsReturnType & RenderOptsPartial;
 export declare function renderToHTML(req: IncomingMessage, res: ServerResponse, pathname: string, query: ParsedUrlQuery, renderOpts: RenderOpts): Promise<string | null>;

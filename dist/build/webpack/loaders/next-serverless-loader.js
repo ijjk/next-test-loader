@@ -346,21 +346,17 @@ pageIsDynamicRoute?`const nowParams = req.headers && req.headers["x-now-route-ma
               }
               req.url = formatUrl(_parsedUrl)
             }
-          `:`
-            // make sure to normalize revalidate page paths for non-dynamic
-            // pages since the output path may not match the expected asPath
-            if (
-              !fromExport &&
-              getStaticProps &&
-              req.headers["${vercelHeader}"]
-            ) {
-              console.log('normalizing asPath')
-              console.log('before', req.url)
-              console.log('after', denormalizePagePath(req.url))
-              parsedUrl.pathname = denormalizePagePath(parsedUrl.pathname)
-              req.url = formatUrl(parsedUrl)
-            }
-          `}
+          `:``}
+
+        // make sure to normalize asPath for revalidate and _next/data requests
+        // since the asPath should match what is shown on the client
+        if (
+          !fromExport &&
+          (getStaticProps || getServerSideProps)
+        ) {
+          parsedUrl.pathname = denormalizePagePath(parsedUrl.pathname)
+          options.normalizedAsPath = formatUrl(parsedUrl)
+        }
 
         const isFallback = parsedUrl.query.__nextFallback
 
