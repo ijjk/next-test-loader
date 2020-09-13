@@ -355,7 +355,7 @@ pageIsDynamicRoute?`const nowParams = req.headers && req.headers["x-now-route-ma
           (getStaticProps || getServerSideProps)
         ) {
           parsedUrl.pathname = denormalizePagePath(parsedUrl.pathname)
-          options.normalizedAsPath = formatUrl(parsedUrl)
+          renderOpts.normalizedAsPath = formatUrl(parsedUrl)
         }
 
         const isFallback = parsedUrl.query.__nextFallback
