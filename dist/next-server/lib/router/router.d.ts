@@ -2,7 +2,7 @@
 import { ParsedUrlQuery } from 'querystring';
 import { ComponentType } from 'react';
 import { UrlObject } from 'url';
-import { GoodPageCache } from '../../../client/page-loader';
+import { GoodPageCache, StyleSheetTuple } from '../../../client/page-loader';
 import { MittEmitter } from '../mitt';
 import { NextPageContext } from '../utils';
 interface TransitionOptions {
@@ -21,11 +21,15 @@ export declare function delBasePath(path: string): string;
  */
 export declare function isLocalURL(url: string): boolean;
 declare type Url = UrlObject | string;
+export declare function interpolateAs(route: string, asPathname: string, query: ParsedUrlQuery): {
+    params: string[];
+    result: string;
+};
 /**
  * Resolves a given hyperlink with a certain router state (basePath not included).
  * Preserves absolute urls.
  */
-export declare function resolveHref(currentPath: string, href: Url): string;
+export declare function resolveHref(currentPath: string, href: Url, resolveAs?: boolean): string;
 export declare function markLoadingError(err: Error): Error;
 export declare type BaseRouter = {
     route: string;
@@ -40,7 +44,7 @@ export declare type PrefetchOptions = {
 };
 export declare type PrivateRouteInfo = {
     Component: ComponentType;
-    styleSheets: string[];
+    styleSheets: StyleSheetTuple[];
     __N_SSG?: boolean;
     __N_SSP?: boolean;
     props?: Record<string, any>;
@@ -79,13 +83,14 @@ export default class Router implements BaseRouter {
     isSsr: boolean;
     isFallback: boolean;
     _inFlightRoute?: string;
+    _shallow?: boolean;
     static events: MittEmitter;
     constructor(pathname: string, query: ParsedUrlQuery, as: string, { initialProps, pageLoader, App, wrapApp, Component, initialStyleSheets, err, subscription, isFallback, }: {
         subscription: Subscription;
         initialProps: any;
         pageLoader: any;
         Component: ComponentType;
-        initialStyleSheets: string[];
+        initialStyleSheets: StyleSheetTuple[];
         App: AppComponent;
         wrapApp: (App: AppComponent) => any;
         err?: Error;
@@ -127,7 +132,7 @@ export default class Router implements BaseRouter {
     onlyAHashChange(as: string): boolean;
     scrollToHash(as: string): void;
     urlIsNew(asPath: string): boolean;
-    _resolveHref(parsedHref: UrlObject, pages: string[]): UrlObject;
+    _resolveHref(parsedHref: UrlObject, pages: string[], applyBasePath?: boolean): UrlObject;
     /**
      * Prefetch page code, you may wait for the data during page rendering.
      * This feature only works in production!

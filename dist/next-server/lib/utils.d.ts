@@ -50,6 +50,9 @@ export declare type BaseContext = {
     res?: ServerResponse;
     [k: string]: any;
 };
+export declare type HeadEntry = [string, {
+    [key: string]: any;
+}];
 export declare type NEXT_DATA = {
     props: Record<string, any>;
     page: string;
@@ -71,6 +74,7 @@ export declare type NEXT_DATA = {
     customServer?: boolean;
     gip?: boolean;
     appGip?: boolean;
+    head: HeadEntry[];
 };
 /**
  * `Next` context
@@ -131,6 +135,12 @@ export declare type DocumentInitialProps = RenderPageResult & {
 export declare type DocumentProps = DocumentInitialProps & {
     __NEXT_DATA__: NEXT_DATA;
     dangerousAsPath: string;
+    docComponentsRendered: {
+        Html?: boolean;
+        Main?: boolean;
+        Head?: boolean;
+        NextScript?: boolean;
+    };
     buildManifest: BuildManifest;
     ampPath: string;
     inAmpMode: boolean;

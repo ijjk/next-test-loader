@@ -2,6 +2,7 @@ import React from 'react';
 import type Router from '../next-server/lib/router/router';
 import type { AppComponent, AppProps, PrivateRouteInfo } from '../next-server/lib/router/router';
 import type { NEXT_DATA } from '../next-server/lib/utils';
+import { StyleSheetTuple } from './page-loader';
 declare global {
     interface Window {
         __NEXT_HYDRATED?: boolean;
@@ -26,7 +27,7 @@ declare const _default: (opts?: {
     renderCtx: {
         App: React.ComponentType<AppProps>;
         Component: React.ComponentType<{}>;
-        styleSheets: string[];
+        styleSheets: StyleSheetTuple[];
         props: Record<string, any>;
         err: (Error & {
             statusCode?: number | undefined;
@@ -35,4 +36,4 @@ declare const _default: (opts?: {
 }>;
 export default _default;
 export declare function render(renderingProps: RenderRouteInfo): Promise<void>;
-export declare function renderError(renderErrorProps: RenderErrorProps): Promise<void>;
+export declare function renderError(renderErrorProps: RenderErrorProps): Promise<any>;

@@ -5,7 +5,7 @@
         return Object.keys(defaultRouteRegex.groups)
           .reduce((prev, key) => {
             let value = query[key]
-            console.log({ value, key })
+
             ${''// non-provided optional values should be undefined so normalize
 // them to undefined
 }
@@ -52,7 +52,7 @@
     const dynamicRouteMatcher = getRouteMatcher(getRouteRegex("${page}"))
   `:'';const rewriteImports=`
     const { rewrites } = require('${routesManifest}')
-    const { pathToRegexp, default: pathMatch } = require('next/dist/next-server/server/lib/path-match')
+    const { pathToRegexp, default: pathMatch } = require('next/dist/next-server/lib/router/utils/path-match')
   `;const handleRewrites=`
     const getCustomRouteMatcher = pathMatch(true)
     const prepareDestination = require('next/dist/next-server/lib/router/utils/prepare-destination').default
@@ -178,6 +178,7 @@ runtimeConfigSetter}
     const {parse: parseQs} = require('querystring')
     const { renderToHTML } = require('next/dist/next-server/server/render');
     const { tryGetPreviewData } = require('next/dist/next-server/server/api-utils');
+    const { denormalizePagePath } = require('next/dist/next-server/server/denormalize-page-path')
     const {sendPayload} = require('next/dist/next-server/server/send-payload');
     const buildManifest = require('${buildManifest}');
     const reactLoadableManifest = require('${reactLoadableManifest}');
@@ -272,9 +273,7 @@ runtimeConfigSetter}
 
         ${pageIsDynamicRoute?`
             const params = (
-              fromExport &&
-              !getStaticProps &&
-              !getServerSideProps
+              fromExport
             ) ? {}
               : normalizeDynamicRouteParams(
                 trustQuery
@@ -312,8 +311,6 @@ pageIsDynamicRoute?`const nowParams = req.headers && req.headers["x-now-route-ma
               : null;
           `:`const nowParams = null;`}
 
-        console.log({ params, nowParams, trustQuery })
-
         // make sure to set renderOpts to the correct params e.g. _params
         // if provided from worker or params if we're parsing them here
         renderOpts.params = _params || params
@@ -332,8 +329,8 @@ pageIsDynamicRoute?`const nowParams = req.headers && req.headers["x-now-route-ma
           }
         `:''}
 
-        // normalize request URL/asPath for fallback pages since the proxy
-        // sets the request URL to the output's path for fallback pages
+        // normalize request URL/asPath for fallback/revalidate pages since the
+        // proxy sets the request URL to the output's path for fallback pages
         ${pageIsDynamicRoute?`
             if (nowParams) {
               const _parsedUrl = parseUrl(req.url)
@@ -349,7 +346,21 @@ pageIsDynamicRoute?`const nowParams = req.headers && req.headers["x-now-route-ma
               }
               req.url = formatUrl(_parsedUrl)
             }
-          `:``}
+          `:`
+            // make sure to normalize revalidate page paths for non-dynamic
+            // pages since the output path may not match the expected asPath
+            if (
+              !fromExport &&
+              getStaticProps &&
+              req.headers["${vercelHeader}"]
+            ) {
+              console.log('normalizing asPath')
+              console.log('before', req.url)
+              console.log('after', denormalizePagePath(req.url))
+              parsedUrl.pathname = denormalizePagePath(parsedUrl.pathname)
+              req.url = formatUrl(parsedUrl)
+            }
+          `}
 
         const isFallback = parsedUrl.query.__nextFallback
 
