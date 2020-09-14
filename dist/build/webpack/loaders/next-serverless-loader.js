@@ -344,6 +344,7 @@ pageIsDynamicRoute?`const nowParams = req.headers && req.headers["x-now-route-ma
                     _parsedUrl.pathname.substr(paramIdx + param.length + 2)
                 }
               }
+              parsedUrl.pathname = _parsedUrl.pathname
               req.url = formatUrl(_parsedUrl)
             }
           `:``}
@@ -354,8 +355,25 @@ pageIsDynamicRoute?`const nowParams = req.headers && req.headers["x-now-route-ma
           !fromExport &&
           (getStaticProps || getServerSideProps)
         ) {
+          const curQuery = {...parsedUrl.query}
+
+          ${pageIsDynamicRoute?`
+              // don't include dynamic route params in query while normalizing
+              // asPath
+              if (trustQuery) {
+                delete parsedUrl.search
+
+                for (const param of Object.keys(defaultRouteRegex.groups)) {
+                  delete curQuery[param]
+                }
+              }
+            `:``}
+
           parsedUrl.pathname = denormalizePagePath(parsedUrl.pathname)
-          renderOpts.normalizedAsPath = formatUrl(parsedUrl)
+          renderOpts.normalizedAsPath = formatUrl({
+            ...parsedUrl,
+            query: curQuery
+          })
         }
 
         const isFallback = parsedUrl.query.__nextFallback
