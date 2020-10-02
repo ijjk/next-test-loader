@@ -6,6 +6,9 @@
           .reduce((prev, key) => {
             let value = query[key]
 
+            console.log({ key, value })
+            console.log(defaultRouteRegex.groups[key])
+
             ${''// non-provided optional values should be undefined so normalize
 // them to undefined
 }
