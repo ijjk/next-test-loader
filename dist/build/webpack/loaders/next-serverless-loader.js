@@ -17,7 +17,7 @@
               (!value || (
                 Array.isArray(value) &&
                 value.length === 1 &&
-                (value[0] === 'index' || value[0] === key)
+                (value[0] === 'index' || value[0] === \`[[...\${key}]]\`)
               ))
             ) {
               value = undefined
