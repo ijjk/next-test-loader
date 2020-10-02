@@ -14,7 +14,7 @@
               (!value || (
                 Array.isArray(value) &&
                 value.length === 1 &&
-                value[0] === 'index'
+                (value[0] === 'index' || value[0] === key)
               ))
             ) {
               value = undefined
@@ -38,7 +38,7 @@
           }, {})
       }
     `:'';const envLoading=`
-    const { processEnv } = require('next/dist/lib/load-env-config')
+    const { processEnv } = require('@next/env')
     processEnv(${Buffer.from(loadedEnvFiles,'base64').toString()})
   `;const runtimeConfigImports=runtimeConfig?`
       const { setConfig } = require('next/config')
@@ -237,22 +237,27 @@ runtimeConfigSetter}
         // We need to trust the dynamic route params from the proxy
         // to ensure we are using the correct values
         const trustQuery = !getStaticProps && req.headers['${vercelHeader}']
-        const parsedUrl = handleRewrites(parseUrl(req.url, true))
+        let parsedUrl = parseUrl(req.url, true)
+        let routeNoAssetPath = parsedUrl.pathname${basePath?`.replace(new RegExp('^${basePath}'), '') || '/'`:''}
+        const origQuery = Object.assign({}, parsedUrl.query)
+
+        parsedUrl = handleRewrites(parsedUrl)
 
         ${handleBasePath}
 
         if (parsedUrl.pathname.match(/_next\\/data/)) {
           const {
-            default: getRouteFromAssetPath,
+            default: getrouteNoAssetPath,
           } = require('next/dist/next-server/lib/router/utils/get-route-from-asset-path');
           _nextData = true;
-          parsedUrl.pathname = getRouteFromAssetPath(
+          parsedUrl.pathname = getrouteNoAssetPath(
             parsedUrl.pathname.replace(
               new RegExp('/_next/data/${escapedBuildId}/'),
               '/'
             ),
             '.json'
           );
+          routeNoAssetPath = parsedUrl.pathname
         }
 
         const renderOpts = Object.assign(
@@ -355,8 +360,6 @@ pageIsDynamicRoute?`const nowParams = req.headers && req.headers["x-now-route-ma
           !fromExport &&
           (getStaticProps || getServerSideProps)
         ) {
-          const curQuery = {...parsedUrl.query}
-
           ${pageIsDynamicRoute?`
               // don't include dynamic route params in query while normalizing
               // asPath
@@ -364,16 +367,26 @@ pageIsDynamicRoute?`const nowParams = req.headers && req.headers["x-now-route-ma
                 delete parsedUrl.search
 
                 for (const param of Object.keys(defaultRouteRegex.groups)) {
-                  delete curQuery[param]
+                  delete origQuery[param]
                 }
               }
             `:``}
 
           parsedUrl.pathname = denormalizePagePath(parsedUrl.pathname)
-          renderOpts.normalizedAsPath = formatUrl({
+          renderOpts.resolvedUrl = formatUrl({
             ...parsedUrl,
-            query: curQuery
+            query: origQuery
           })
+
+          // For getServerSideProps we need to ensure we use the original URL
+          // and not the resolved URL to prevent a hydration mismatch on asPath
+          renderOpts.resolvedAsPath = getServerSideProps
+            ? formatUrl({
+              ...parsedUrl,
+              pathname: routeNoAssetPath,
+              query: origQuery,
+            })
+            : renderOpts.resolvedUrl
         }
 
         const isFallback = parsedUrl.query.__nextFallback
