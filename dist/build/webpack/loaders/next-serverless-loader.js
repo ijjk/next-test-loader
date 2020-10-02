@@ -6,9 +6,6 @@
           .reduce((prev, key) => {
             let value = query[key]
 
-            console.log({ key, value })
-            console.log(defaultRouteRegex.groups[key])
-
             ${''// non-provided optional values should be undefined so normalize
 // them to undefined
 }
@@ -17,6 +14,9 @@
               (!value || (
                 Array.isArray(value) &&
                 value.length === 1 &&
+                ${''// fallback optional catch-all SSG pages have
+// [[...paramName]] for the root path on Vercel
+}
                 (value[0] === 'index' || value[0] === \`[[...\${key}]]\`)
               ))
             ) {
