@@ -39,6 +39,9 @@ export declare type RenderOptsPartial = {
     devOnlyCacheBusterQueryString?: string;
     resolvedUrl?: string;
     resolvedAsPath?: string;
+    locale?: string;
+    locales?: string[];
+    defaultLocale?: string;
 };
 export declare type RenderOpts = LoadComponentsReturnType & RenderOptsPartial;
 export declare function renderToHTML(req: IncomingMessage, res: ServerResponse, pathname: string, query: ParsedUrlQuery, renderOpts: RenderOpts): Promise<string | null>;

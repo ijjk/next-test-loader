@@ -75,6 +75,9 @@ export declare type NEXT_DATA = {
     gip?: boolean;
     appGip?: boolean;
     head: HeadEntry[];
+    locale?: string;
+    locales?: string[];
+    defaultLocale?: string;
 };
 /**
  * `Next` context
@@ -152,6 +155,7 @@ export declare type DocumentProps = DocumentInitialProps & {
     headTags: any[];
     unstable_runtimeJS?: false;
     devOnlyCacheBusterQueryString: string;
+    locale?: string;
 };
 /**
  * Next `API` route request

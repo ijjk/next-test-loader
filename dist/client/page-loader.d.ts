@@ -29,12 +29,12 @@ export default class PageLoader {
      * @param {string} href the route href (file-system path)
      * @param {string} asPath the URL as shown in browser (virtual path); used for dynamic routes
      */
-    getDataHref(href: string, asPath: string, ssg: boolean): string;
+    getDataHref(href: string, asPath: string, ssg: boolean, locale?: string): string;
     /**
      * @param {string} href the route href (file-system path)
      * @param {string} asPath the URL as shown in browser (virtual path); used for dynamic routes
      */
-    prefetchData(href: string, asPath: string): Promise<any>;
+    prefetchData(href: string, asPath: string, locale?: string): Promise<any>;
     loadPage(route: string): Promise<GoodPageCache>;
     registerPage(route: string, regFn: () => any): void;
     /**

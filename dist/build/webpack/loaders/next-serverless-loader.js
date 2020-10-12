@@ -1,4 +1,4 @@
-"use strict";exports.__esModule=true;exports.default=void 0;var _devalue=_interopRequireDefault(require("next/dist/compiled/devalue"));var _escapeStringRegexp=_interopRequireDefault(require("next/dist/compiled/escape-string-regexp"));var _path=require("path");var _querystring=require("querystring");var _constants=require("../../../lib/constants");var _constants2=require("../../../next-server/lib/constants");var _utils=require("../../../next-server/lib/router/utils");function _interopRequireDefault(obj){return obj&&obj.__esModule?obj:{default:obj};}const vercelHeader='x-vercel-id';const nextServerlessLoader=function(){const{distDir,absolutePagePath,page,buildId,canonicalBase,assetPrefix,absoluteAppPath,absoluteDocumentPath,absoluteErrorPath,generateEtags,poweredByHeader,basePath,runtimeConfig,previewProps,loadedEnvFiles}=typeof this.query==='string'?(0,_querystring.parse)(this.query.substr(1)):this.query;const buildManifest=(0,_path.join)(distDir,_constants2.BUILD_MANIFEST).replace(/\\/g,'/');const reactLoadableManifest=(0,_path.join)(distDir,_constants2.REACT_LOADABLE_MANIFEST).replace(/\\/g,'/');const routesManifest=(0,_path.join)(distDir,_constants2.ROUTES_MANIFEST).replace(/\\/g,'/');const escapedBuildId=(0,_escapeStringRegexp.default)(buildId);const pageIsDynamicRoute=(0,_utils.isDynamicRoute)(page);const encodedPreviewProps=(0,_devalue.default)(JSON.parse(previewProps));const defaultRouteRegex=pageIsDynamicRoute?`
+"use strict";exports.__esModule=true;exports.default=void 0;var _devalue=_interopRequireDefault(require("next/dist/compiled/devalue"));var _escapeStringRegexp=_interopRequireDefault(require("next/dist/compiled/escape-string-regexp"));var _path=require("path");var _querystring=require("querystring");var _constants=require("../../../lib/constants");var _constants2=require("../../../next-server/lib/constants");var _utils=require("../../../next-server/lib/router/utils");function _interopRequireDefault(obj){return obj&&obj.__esModule?obj:{default:obj};}const vercelHeader='x-vercel-id';const nextServerlessLoader=function(){const{distDir,absolutePagePath,page,buildId,canonicalBase,assetPrefix,absoluteAppPath,absoluteDocumentPath,absoluteErrorPath,generateEtags,poweredByHeader,basePath,runtimeConfig,previewProps,loadedEnvFiles,i18n}=typeof this.query==='string'?(0,_querystring.parse)(this.query.substr(1)):this.query;const buildManifest=(0,_path.join)(distDir,_constants2.BUILD_MANIFEST).replace(/\\/g,'/');const reactLoadableManifest=(0,_path.join)(distDir,_constants2.REACT_LOADABLE_MANIFEST).replace(/\\/g,'/');const routesManifest=(0,_path.join)(distDir,_constants2.ROUTES_MANIFEST).replace(/\\/g,'/');const escapedBuildId=(0,_escapeStringRegexp.default)(buildId);const pageIsDynamicRoute=(0,_utils.isDynamicRoute)(page);const encodedPreviewProps=(0,_devalue.default)(JSON.parse(previewProps));const i18nEnabled=!!i18n;const defaultRouteRegex=pageIsDynamicRoute?`
       const defaultRouteRegex = getRouteRegex("${page}")
     `:'';const normalizeDynamicRouteParams=pageIsDynamicRoute?`
       function normalizeDynamicRouteParams(query) {
@@ -101,7 +101,76 @@
     // always strip the basePath if configured since it is required
     req.url = req.url.replace(new RegExp('^${basePath}'), '') || '/'
     parsedUrl.pathname = parsedUrl.pathname.replace(new RegExp('^${basePath}'), '') || '/'
-  `:'';if(page.match(_constants.API_ROUTE)){return`
+  `:'';const handleLocale=i18nEnabled?`
+      // get pathname from URL with basePath stripped for locale detection
+      const i18n = ${i18n}
+      const accept = require('@hapi/accept')
+      const { detectLocaleCookie } = require('next/dist/next-server/lib/i18n/detect-locale-cookie')
+      const { detectDomainLocales } = require('next/dist/next-server/lib/i18n/detect-domain-locales')
+      const { normalizeLocalePath } = require('next/dist/next-server/lib/i18n/normalize-locale-path')
+      let detectedLocale = detectLocaleCookie(req, i18n.locales)
+
+      const { defaultLocale, locales } = detectDomainLocales(
+        req,
+        i18n.domains,
+        i18n.locales,
+        i18n.defaultLocale,
+      )
+
+      if (!detectedLocale) {
+        detectedLocale = accept.language(
+          req.headers['accept-language'],
+          locales
+        )
+      }
+
+      const denormalizedPagePath = denormalizePagePath(parsedUrl.pathname || '/')
+      const detectedDefaultLocale = !detectedLocale || detectedLocale.toLowerCase() === defaultLocale.toLowerCase()
+      const shouldStripDefaultLocale =
+        detectedDefaultLocale &&
+        denormalizedPagePath.toLowerCase() === \`/\${defaultLocale.toLowerCase()}\`
+      const shouldAddLocalePrefix =
+        !detectedDefaultLocale && denormalizedPagePath === '/'
+
+      detectedLocale = detectedLocale || defaultLocale
+
+      if (
+        !fromExport &&
+        !nextStartMode &&
+        i18n.localeDetection !== false &&
+        (shouldAddLocalePrefix || shouldStripDefaultLocale)
+      ) {
+        res.setHeader(
+          'Location',
+          formatUrl({
+            // make sure to include any query values when redirecting
+            ...parsedUrl,
+            pathname: shouldStripDefaultLocale ? '/' : \`/\${detectedLocale}\`,
+          })
+        )
+        res.statusCode = 307
+        res.end()
+        return
+      }
+
+      const localePathResult = normalizeLocalePath(parsedUrl.pathname, locales)
+
+      if (localePathResult.detectedLocale) {
+        detectedLocale = localePathResult.detectedLocale
+        req.url = formatUrl({
+          ...parsedUrl,
+          pathname: localePathResult.pathname,
+        })
+        parsedUrl.pathname = localePathResult.pathname
+      }
+
+      detectedLocale = detectedLocale || defaultLocale
+    `:`
+      const i18n = {}
+      const detectedLocale = undefined
+      const defaultLocale = undefined
+      const locales = undefined
+    `;if(page.match(_constants.API_ROUTE)){return`
       import initServer from 'next-plugin-loader?middleware=on-init-server!'
       import onError from 'next-plugin-loader?middleware=on-error-server!'
       import 'next/dist/next-server/server/node-polyfill-fetch'
@@ -182,6 +251,7 @@ runtimeConfigSetter}
     const { renderToHTML } = require('next/dist/next-server/server/render');
     const { tryGetPreviewData } = require('next/dist/next-server/server/api-utils');
     const { denormalizePagePath } = require('next/dist/next-server/server/denormalize-page-path')
+    const { setLazyProp, getCookieParser } = require('next/dist/next-server/server/api-utils')
     const {sendPayload} = require('next/dist/next-server/server/send-payload');
     const buildManifest = require('${buildManifest}');
     const reactLoadableManifest = require('${reactLoadableManifest}');
@@ -215,6 +285,9 @@ runtimeConfigSetter}
     export const _app = App
     export async function renderReqToHTML(req, res, renderMode, _renderOpts, _params) {
       const fromExport = renderMode === 'export' || renderMode === true;
+      const nextStartMode = renderMode === 'passthrough'
+
+      setLazyProp({ req }, 'cookies', getCookieParser(req))
 
       const options = {
         App,
@@ -263,12 +336,17 @@ runtimeConfigSetter}
           routeNoAssetPath = parsedUrl.pathname
         }
 
+        ${handleLocale}
+
         const renderOpts = Object.assign(
           {
             Component,
             pageConfig: config,
             nextExport: fromExport,
             isDataReq: _nextData,
+            locale: detectedLocale,
+            locales,
+            defaultLocale,
           },
           options,
         )

@@ -1,0 +1,3 @@
+"use strict";exports.__esModule=true;exports.detectDomainLocales=detectDomainLocales;function detectDomainLocales(req,domainItems,locales,defaultLocale){let curDefaultLocale=defaultLocale;let curLocales=locales;const{host}=req.headers;if(host&&domainItems){// remove port from host and remove port if present
+const hostname=host.split(':')[0].toLowerCase();for(const item of domainItems){if(hostname===item.domain.toLowerCase()){curDefaultLocale=item.defaultLocale;curLocales=item.locales;break;}}}return{defaultLocale:curDefaultLocale,locales:curLocales};}
+//# sourceMappingURL=detect-domain-locales.js.map
