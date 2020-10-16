@@ -221,7 +221,16 @@
         res.end()
         return
       }
+
+      console.log({
+        detectedLocale,
+        defaultLocale,
+        localePathResult,
+        detectedDomain,
+        routeNoAssetPath
+      })
       detectedLocale = detectedLocale || defaultLocale
+
     `:`
       const i18n = {}
       const detectedLocale = undefined
@@ -414,10 +423,10 @@ runtimeConfigSetter}
 
         if (parsedUrl.pathname.match(/_next\\/data/)) {
           const {
-            default: getrouteNoAssetPath,
+            default: getRouteNoAssetPath,
           } = require('next/dist/next-server/lib/router/utils/get-route-from-asset-path');
           _nextData = true;
-          parsedUrl.pathname = getrouteNoAssetPath(
+          parsedUrl.pathname = getRouteNoAssetPath(
             parsedUrl.pathname.replace(
               new RegExp('/_next/data/${escapedBuildId}/'),
               '/'
