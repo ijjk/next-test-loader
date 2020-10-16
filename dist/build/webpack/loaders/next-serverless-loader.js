@@ -476,31 +476,35 @@ runtimeConfigSetter}
 pageIsDynamicRoute?`const nowParams = req.headers && req.headers["x-now-route-matches"]
               ? getRouteMatcher(
                   (function() {
-                    const { re, groups } = getRouteRegex("${page}");
+                    const { re, groups, routeKeys } = getRouteRegex("${page}");
                     return {
                       re: {
                         // Simulate a RegExp match from the \`req.url\` input
                         exec: str => {
                           const obj = parseQs(str);
-                          let keyOffset = 0
+
+                          console.log({
+                            parsedRouteMatches: obj,
+                            routeKeys,
+                            groups
+                          })
+
+                          // favor named matches if available
+                          const routeKeyNames = Object.keys(routeKeys)
+
+                          if (routeKeyNames.every(name => obj[name])) {
+                            console.log('favoring named matches')
+                            return routeKeyNames.reduce((prev, keyName) => {
+                              prev[routeKeys[keyName]] = obj[keyName]
+                              return prev
+                            }, {})
+                          }
 
                           return Object.keys(obj).reduce(
-                            (prev, key) => {
-                              ${i18n?`
-                                if (
-                                  key === 0 &&
-                                  i18n.locales.some(locale =>
-                                    locale.toLowerCase() === obj[key].toLowerCase()
-                                  )
-                                ) {
-                                  keyOffset++
-                                  return prev
-                                }
-                              `:``}
-                              return Object.assign(prev, {
-                                [key - keyOffset]: obj[key]
-                              })
-                            },
+                            (prev, key) =>
+                              Object.assign(prev, {
+                                [key]: obj[key]
+                              }),
                             {}
                           );
                         }
