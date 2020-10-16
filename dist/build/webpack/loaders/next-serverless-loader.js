@@ -224,13 +224,6 @@
         return
       }
 
-      console.log({
-        detectedLocale,
-        defaultLocale,
-        localePathResult,
-        detectedDomain,
-        routeNoAssetPath
-      })
       detectedLocale = detectedLocale || defaultLocale
     `:`
       const i18n = {}
@@ -483,17 +476,10 @@ pageIsDynamicRoute?`const nowParams = req.headers && req.headers["x-now-route-ma
                         exec: str => {
                           const obj = parseQs(str);
 
-                          console.log({
-                            parsedRouteMatches: obj,
-                            routeKeys,
-                            groups
-                          })
-
                           // favor named matches if available
                           const routeKeyNames = Object.keys(routeKeys)
 
                           if (routeKeyNames.every(name => obj[name])) {
-                            console.log('favoring named matches')
                             return routeKeyNames.reduce((prev, keyName) => {
                               const paramName = routeKeys[keyName]
                               prev[groups[paramName].pos] = obj[keyName]
@@ -516,13 +502,6 @@ pageIsDynamicRoute?`const nowParams = req.headers && req.headers["x-now-route-ma
                 )(req.headers["x-now-route-matches"])
               : null;
           `:`const nowParams = null;`}
-
-        console.log({
-          params,
-          nowParams,
-          query: parsedUrl.query,
-          routeMatches: req.headers['x-now-route-matches']
-        })
 
         // make sure to set renderOpts to the correct params e.g. _params
         // if provided from worker or params if we're parsing them here
