@@ -132,6 +132,8 @@
       let localeDomainRedirect
       const localePathResult = normalizeLocalePath(parsedUrl.pathname, i18n.locales)
 
+      routeNoAssetPath = normalizeLocalePath(routeNoAssetPath, i18n.locales).pathname
+
       if (localePathResult.detectedLocale) {
         detectedLocale = localePathResult.detectedLocale
         req.url = formatUrl({
@@ -230,7 +232,6 @@
         routeNoAssetPath
       })
       detectedLocale = detectedLocale || defaultLocale
-
     `:`
       const i18n = {}
       const detectedLocale = undefined
@@ -481,11 +482,25 @@ pageIsDynamicRoute?`const nowParams = req.headers && req.headers["x-now-route-ma
                         // Simulate a RegExp match from the \`req.url\` input
                         exec: str => {
                           const obj = parseQs(str);
+                          let keyOffset = 0
+
                           return Object.keys(obj).reduce(
-                            (prev, key) =>
-                              Object.assign(prev, {
-                                [key]: obj[key]
-                              }),
+                            (prev, key) => {
+                              ${i18n?`
+                                if (
+                                  key === 0 &&
+                                  i18n.locales.some(locale =>
+                                    locale.toLowerCase() === obj[key].toLowerCase()
+                                  )
+                                ) {
+                                  keyOffset++
+                                  return prev
+                                }
+                              `:``}
+                              return Object.assign(prev, {
+                                [key - keyOffset]: obj[key]
+                              })
+                            },
                             {}
                           );
                         }
