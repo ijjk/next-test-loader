@@ -495,7 +495,8 @@ pageIsDynamicRoute?`const nowParams = req.headers && req.headers["x-now-route-ma
                           if (routeKeyNames.every(name => obj[name])) {
                             console.log('favoring named matches')
                             return routeKeyNames.reduce((prev, keyName) => {
-                              prev[routeKeys[keyName]] = obj[keyName]
+                              const paramName = routeKeys[keyName]
+                              prev[groups[paramName].pos] = obj[keyName]
                               return prev
                             }, {})
                           }
