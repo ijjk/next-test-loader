@@ -54,6 +54,7 @@ export default class Server {
         };
         basePath: string;
         optimizeFonts: boolean;
+        images: string;
         fontManifest: FontManifest;
         optimizeImages: boolean;
         locale?: string;

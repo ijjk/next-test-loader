@@ -1,0 +1,4 @@
+"use strict";exports.__esModule=true;exports.detectDomainLocale=detectDomainLocale;function detectDomainLocale(domainItems,req,detectedLocale){let domainItem;if(domainItems){const{host}=(req==null?void 0:req.headers)||{};// remove port from host and remove port if present
+const hostname=host==null?void 0:host.split(':')[0].toLowerCase();for(const item of domainItems){var _item$domain;// remove port if present
+const domainHostname=(_item$domain=item.domain)==null?void 0:_item$domain.split(':')[0].toLowerCase();if(hostname===domainHostname||(detectedLocale==null?void 0:detectedLocale.toLowerCase())===item.defaultLocale.toLowerCase()){domainItem=item;break;}}}return domainItem;}
+//# sourceMappingURL=detect-domain-locale.js.map

@@ -2,9 +2,10 @@
 import LRUCache from 'next/dist/compiled/lru-cache';
 import { PrerenderManifest } from '../../build';
 declare type IncrementalCacheValue = {
-    html: string;
-    pageData: any;
+    html?: string;
+    pageData?: any;
     isStale?: boolean;
+    isNotFound?: boolean;
     curRevalidate?: number | false;
     revalidateAfter: number | false;
 };
@@ -29,8 +30,9 @@ export declare class IncrementalCache {
     getFallback(page: string): Promise<string>;
     get(pathname: string): Promise<IncrementalCacheValue | void>;
     set(pathname: string, data: {
-        html: string;
-        pageData: any;
+        html?: string;
+        pageData?: any;
+        isNotFound?: boolean;
     }, revalidateSeconds?: number | false): Promise<void>;
 }
 export {};

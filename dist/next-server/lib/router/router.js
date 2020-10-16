@@ -19,7 +19,7 @@ interpolatedRoute=interpolatedRoute.replace(replaced,repeat?value.map(_escapePat
 const base=new URL(currentPath,'http://n');const urlAsString=typeof href==='string'?href:(0,_utils.formatWithValidation)(href);try{const finalUrl=new URL(urlAsString,base);finalUrl.pathname=(0,_normalizeTrailingSlash.normalizePathTrailingSlash)(finalUrl.pathname);let interpolatedAs='';if((0,_isDynamic.isDynamicRoute)(finalUrl.pathname)&&finalUrl.searchParams&&resolveAs){const query=(0,_querystring.searchParamsToUrlQuery)(finalUrl.searchParams);const{result,params}=interpolateAs(finalUrl.pathname,finalUrl.pathname,query);if(result){interpolatedAs=(0,_utils.formatWithValidation)({pathname:result,hash:finalUrl.hash,query:omitParmsFromQuery(query,params)});}}// if the origin didn't change, it means we received a relative href
 const resolvedHref=finalUrl.origin===base.origin?finalUrl.href.slice(finalUrl.origin.length):finalUrl.href;return resolveAs?[resolvedHref,interpolatedAs||resolvedHref]:resolvedHref;}catch(_){return resolveAs?[urlAsString]:urlAsString;}}const PAGE_LOAD_ERROR=Symbol('PAGE_LOAD_ERROR');function markLoadingError(err){return Object.defineProperty(err,PAGE_LOAD_ERROR,{});}function prepareUrlAs(router,url,as){// If url and as provided as an object representation,
 // we'll format them into the string version here.
-return{url:addBasePath(resolveHref(router.pathname,url)),as:as?addBasePath(resolveHref(router.pathname,as)):as};}const manualScrollRestoration=process.env.__NEXT_SCROLL_RESTORATION&&typeof window!=='undefined'&&'scrollRestoration'in window.history;function fetchRetry(url,attempts){return fetch(url,{// Cookies are required to be present for Next.js' SSG "Preview Mode".
+return{url:addBasePath(resolveHref(router.pathname,url)),as:as?addBasePath(resolveHref(router.pathname,as)):as};}const manualScrollRestoration=process.env.__NEXT_SCROLL_RESTORATION&&typeof window!=='undefined'&&'scrollRestoration'in window.history;const SSG_DATA_NOT_FOUND_ERROR='SSG Data NOT_FOUND';function fetchRetry(url,attempts){return fetch(url,{// Cookies are required to be present for Next.js' SSG "Preview Mode".
 // Cookies may also be required for `getServerSideProps`.
 //
 // > `fetch` won’t send cookies, unless you set the credentials init
@@ -30,10 +30,12 @@ return{url:addBasePath(resolveHref(router.pathname,url)),as:as?addBasePath(resol
 // > receiving cookies, always supply the `credentials: 'same-origin'`
 // > option instead of relying on the default.
 // https://github.com/github/fetch#caveats
-credentials:'same-origin'}).then(res=>{if(!res.ok){if(attempts>1&&res.status>=500){return fetchRetry(url,attempts-1);}throw new Error(`Failed to load static props`);}return res.json();});}function fetchNextData(dataHref,isServerRender){return fetchRetry(dataHref,isServerRender?3:1).catch(err=>{// We should only trigger a server-side transition if this was caused
+credentials:'same-origin'}).then(res=>{if(!res.ok){if(attempts>1&&res.status>=500){return fetchRetry(url,attempts-1);}if(res.status===404){// TODO: handle reloading in development from fallback returning 200
+// to on-demand-entry-handler causing it to reload periodically
+throw new Error(SSG_DATA_NOT_FOUND_ERROR);}throw new Error(`Failed to load static props`);}return res.json();});}function fetchNextData(dataHref,isServerRender){return fetchRetry(dataHref,isServerRender?3:1).catch(err=>{// We should only trigger a server-side transition if this was caused
 // on a client-side transition. Otherwise, we'd get into an infinite
 // loop.
-if(!isServerRender){markLoadingError(err);}throw err;});}class Router{/**
+if(!isServerRender||err.message==='SSG Data NOT_FOUND'){markLoadingError(err);}throw err;});}class Router{/**
    * Map of all components loaded in `Router`
    */ // Static Data Cache
 constructor(_pathname,_query,_as,{initialProps,pageLoader,App,wrapApp,Component,initialStyleSheets,err,subscription,isFallback,locale,locales,defaultLocale}){this.route=void 0;this.pathname=void 0;this.query=void 0;this.asPath=void 0;this.basePath=void 0;this.components=void 0;this.sdc={};this.sub=void 0;this.clc=void 0;this.pageLoader=void 0;this._bps=void 0;this.events=void 0;this._wrapApp=void 0;this.isSsr=void 0;this.isFallback=void 0;this._inFlightRoute=void 0;this._shallow=void 0;this.locale=void 0;this.locales=void 0;this.defaultLocale=void 0;this.onPopState=e=>{const state=e.state;if(!state){// We get state as undefined for two reasons.
@@ -79,7 +81,7 @@ if(process.env.__NEXT_SCROLL_RESTORATION){if(manualScrollRestoration){window.his
    * @param url of the route
    * @param as masks `url` for the browser
    * @param options object you can define `shallow` and other options
-   */replace(url,as=url,options={}){;({url,as}=prepareUrlAs(this,url,as));return this.change('replaceState',url,as,options);}async change(method,url,as,options){if(!isLocalURL(url)){window.location.href=url;return false;}if(!options._h){this.isSsr=false;}// marking route changes as a navigation start entry
+   */replace(url,as=url,options={}){;({url,as}=prepareUrlAs(this,url,as));return this.change('replaceState',url,as,options);}async change(method,url,as,options){if(!isLocalURL(url)){window.location.href=url;return false;}this.locale=options.locale||this.locale;if(!options._h){this.isSsr=false;}// marking route changes as a navigation start entry
 if(_utils.ST){performance.mark('routeChange');}if(this._inFlightRoute){this.abortComponentLoad(this._inFlightRoute);}as=addLocale(as,this.locale,this.defaultLocale);const cleanedAs=delLocale(hasBasePath(as)?delBasePath(as):as,this.locale);this._inFlightRoute=as;// If the url change is only related to a hash change
 // We should not proceed. We should only change the state.
 // WARNING: `_h` is an internal option for handing Next.js client-side
@@ -115,7 +117,9 @@ throw err;}if(PAGE_LOAD_ERROR in err||loadErrorFail){Router.events.emit('routeCh
 //  2. Page does exist in a different zone
 //  3. Internal error while loading the page
 // So, doing a hard reload is the proper way to deal with this.
-window.location.href=as;// Changing the URL doesn't block executing the current code path.
+if(process.env.NODE_ENV==='development'){// append __next404 query to prevent fallback from being re-served
+// on reload in development
+if(err.message===SSG_DATA_NOT_FOUND_ERROR&&this.isSsr){as+=`${as.indexOf('?')>-1?'&':'?'}__next404=1`;}}window.location.href=as;// Changing the URL doesn't block executing the current code path.
 // So let's throw a cancellation error stop the routing logic.
 throw buildCancellationError();}try{const{page:Component,styleSheets}=await this.fetchComponent('/_error');const routeInfo={Component,styleSheets,err,error:err};try{routeInfo.props=await this.getInitialProps(Component,{err,pathname,query});}catch(gipErr){console.error('Error in error page `getInitialProps`: ',gipErr);routeInfo.props={};}return routeInfo;}catch(routeInfoErr){return this.handleRouteInfoError(routeInfoErr,pathname,query,as,true);}}async getRouteInfo(route,pathname,query,as,shallow=false){try{const cachedRouteInfo=this.components[route];if(shallow&&cachedRouteInfo&&this.route===route){return cachedRouteInfo;}const routeInfo=cachedRouteInfo?cachedRouteInfo:await this.fetchComponent(route).then(res=>({Component:res.page,styleSheets:res.styleSheets,__N_SSG:res.mod.__N_SSG,__N_SSP:res.mod.__N_SSP}));const{Component,__N_SSG,__N_SSP}=routeInfo;if(process.env.NODE_ENV!=='production'){const{isValidElementType}=require('react-is');if(!isValidElementType(Component)){throw new Error(`The default export is not a React Component in page: "${pathname}"`);}}let dataHref;if(__N_SSG||__N_SSP){dataHref=this.pageLoader.getDataHref((0,_utils.formatWithValidation)({pathname,query}),delBasePath(as),__N_SSG,this.locale);}const props=await this._getData(()=>__N_SSG?this._getStaticData(dataHref):__N_SSP?this._getServerData(dataHref):this.getInitialProps(Component,// we provide AppTree later so this needs to be `any`
 {pathname,query,asPath:as}));routeInfo.props=props;this.components[route]=routeInfo;return routeInfo;}catch(err){return this.handleRouteInfoError(err,pathname,query,as);}}set(route,pathname,query,as,data){this.isFallback=false;this.route=route;this.pathname=pathname;this.query=query;this.asPath=as;return this.notify(data);}/**

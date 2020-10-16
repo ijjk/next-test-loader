@@ -7,6 +7,7 @@ import { MittEmitter } from '../mitt';
 import { NextPageContext } from '../utils';
 interface TransitionOptions {
     shallow?: boolean;
+    locale?: string;
 }
 interface NextHistoryState {
     url: string;

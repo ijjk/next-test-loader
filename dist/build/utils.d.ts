@@ -37,5 +37,5 @@ export declare function isPageStatic(page: string, serverBundle: string, runtime
     prerenderRoutes?: string[] | undefined;
     prerenderFallback?: boolean | 'unstable_blocking' | undefined;
 }>;
-export declare function hasCustomGetInitialProps(bundle: string, runtimeEnvConfig: any, checkingApp: boolean): boolean;
+export declare function hasCustomGetInitialProps(bundle: string, runtimeEnvConfig: any, checkingApp: boolean): Promise<boolean>;
 export declare function getNamedExports(bundle: string, runtimeEnvConfig: any): Array<string>;
