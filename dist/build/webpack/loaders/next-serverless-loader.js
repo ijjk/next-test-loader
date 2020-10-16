@@ -512,6 +512,13 @@ pageIsDynamicRoute?`const nowParams = req.headers && req.headers["x-now-route-ma
               : null;
           `:`const nowParams = null;`}
 
+        console.log({
+          params,
+          nowParams,
+          query: parsedUrl.query,
+          routeMatches: req.headers['x-now-route-matches']
+        })
+
         // make sure to set renderOpts to the correct params e.g. _params
         // if provided from worker or params if we're parsing them here
         renderOpts.params = _params || params
