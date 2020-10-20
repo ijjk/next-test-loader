@@ -117,9 +117,9 @@
         i18n.locales
       )
 
-      const { host } = req?.headers || {}
+      const { host } = req.headers || {}
       // remove port from host and remove port if present
-      const hostname = host?.split(':')[0].toLowerCase()
+      const hostname = host && host.split(':')[0].toLowerCase()
 
       const detectedDomain = detectDomainLocale(
         i18n.domains,
