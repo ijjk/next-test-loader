@@ -175,6 +175,7 @@
       if (
         !fromExport &&
         !nextStartMode &&
+        !req.headers["${vercelHeader}"] &&
         i18n.localeDetection !== false &&
         (
           localeDomainRedirect ||

@@ -69,7 +69,7 @@ export default class Server {
     protected customRoutes: CustomRoutes;
     constructor({ dir, quiet, conf, dev, customServer, }?: ServerConstructor);
     protected currentPhase(): string;
-    private logError;
+    logError(err: Error): void;
     private handleRequest;
     getRequestHandler(): (req: IncomingMessage, res: ServerResponse, parsedUrl?: UrlWithParsedQuery | undefined) => Promise<void>;
     setAssetPrefix(prefix?: string): void;
