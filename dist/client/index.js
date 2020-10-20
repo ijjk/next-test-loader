@@ -3,10 +3,11 @@
 __webpack_public_path__=`${prefix}/_next/`;//eslint-disable-line
 // Initialize next/config with the environment configuration
 envConfig.setConfig({serverRuntimeConfig:{},publicRuntimeConfig:runtimeConfig||{}});let asPath=(0,_utils.getURL)();// make sure not to attempt stripping basePath for 404s
-if((0,_router.hasBasePath)(asPath)){asPath=(0,_router.delBasePath)(asPath);}if(process.env.__NEXT_i18n_SUPPORT){const{normalizeLocalePath}=require('../next-server/lib/i18n/normalize-locale-path');if(locales){const localePathResult=normalizeLocalePath(asPath,locales);if(localePathResult.detectedLocale){asPath=asPath.substr(localePathResult.detectedLocale.length+1)||'/';}else{// derive the default locale if it wasn't detected in the asPath
+if((0,_router.hasBasePath)(asPath)){asPath=(0,_router.delBasePath)(asPath);}if(process.env.__NEXT_I18N_SUPPORT){const{normalizeLocalePath}=require('../next-server/lib/i18n/normalize-locale-path');const{detectDomainLocale}=require('../next-server/lib/i18n/detect-domain-locale');if(locales){const localePathResult=normalizeLocalePath(asPath,locales);if(localePathResult.detectedLocale){asPath=asPath.substr(localePathResult.detectedLocale.length+1)||'/';}else{// derive the default locale if it wasn't detected in the asPath
 // since we don't prerender static pages with all possible default
 // locales
-defaultLocale=locale;}}}const pageLoader=new _pageLoader.default(buildId,prefix,page);const register=([r,f])=>pageLoader.registerPage(r,f);if(window.__NEXT_P){// Defer page registration for another tick. This will increase the overall
+defaultLocale=locale;}// attempt detecting default locale based on hostname
+const detectedDomain=detectDomainLocale(process.env.__NEXT_I18N_DOMAINS,window.location.hostname);if(detectedDomain){defaultLocale=detectedDomain.defaultLocale;}}}const pageLoader=new _pageLoader.default(buildId,prefix,page);const register=([r,f])=>pageLoader.registerPage(r,f);if(window.__NEXT_P){// Defer page registration for another tick. This will increase the overall
 // latency in hydrating the page, but reduce the total blocking time.
 window.__NEXT_P.map(p=>setTimeout(()=>register(p),0));}window.__NEXT_P=[];window.__NEXT_P.push=register;const headManager=(0,_headManager.default)(initialHeadData);const appElement=document.getElementById('__next');let lastAppProps;let lastRenderReject;let webpackHMR;let router;exports.router=router;let CachedComponent;let cachedStyleSheets;let CachedApp,onPerfEntry;class Container extends _react.default.Component{componentDidCatch(componentErr,info){this.props.fn(componentErr,info);}componentDidMount(){this.scrollToHash();// We need to replace the router state if:
 // - the page was (auto) exported and has a query string or search (hash)
