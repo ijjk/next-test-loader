@@ -10,7 +10,7 @@ sourceMap:true,sassOptions,additionalData:sassPrependData||sassAdditionalData}},
 // correct.
 // To fix this, we use `resolve-url-loader` to rewrite the CSS
 // imports to real file paths.
-{loader:require.resolve('resolve-url-loader'),options:{// Source maps are not required here, but we may as well emit
+{loader:require.resolve('next/dist/compiled/resolve-url-loader'),options:{// Source maps are not required here, but we may as well emit
 // them.
 sourceMap:true}}];const fns=[(0,_helpers.loader)({oneOf:[{// Impossible regex expression
 test:/a^/,loader:'noop-loader',options:{__next_css_remove:true}}]})];const postCssPlugins=await(0,_plugins.getPostCssPlugins)(ctx.rootDirectory,ctx.isProduction,// TODO: In the future, we should stop supporting old CSS setups and
