@@ -1,4 +1,4 @@
-"use strict";exports.__esModule=true;exports.default=void 0;var _devalue=_interopRequireDefault(require("next/dist/compiled/devalue"));var _escapeStringRegexp=_interopRequireDefault(require("next/dist/compiled/escape-string-regexp"));var _path=require("path");var _querystring=require("querystring");var _constants=require("../../../lib/constants");var _constants2=require("../../../next-server/lib/constants");var _utils=require("../../../next-server/lib/router/utils");function _interopRequireDefault(obj){return obj&&obj.__esModule?obj:{default:obj};}const vercelHeader='x-vercel-id';const nextServerlessLoader=function(){const{distDir,absolutePagePath,page,buildId,canonicalBase,assetPrefix,absoluteAppPath,absoluteDocumentPath,absoluteErrorPath,generateEtags,poweredByHeader,basePath,runtimeConfig,previewProps,loadedEnvFiles,i18n}=typeof this.query==='string'?(0,_querystring.parse)(this.query.substr(1)):this.query;const buildManifest=(0,_path.join)(distDir,_constants2.BUILD_MANIFEST).replace(/\\/g,'/');const reactLoadableManifest=(0,_path.join)(distDir,_constants2.REACT_LOADABLE_MANIFEST).replace(/\\/g,'/');const routesManifest=(0,_path.join)(distDir,_constants2.ROUTES_MANIFEST).replace(/\\/g,'/');const escapedBuildId=(0,_escapeStringRegexp.default)(buildId);const pageIsDynamicRoute=(0,_utils.isDynamicRoute)(page);const encodedPreviewProps=(0,_devalue.default)(JSON.parse(previewProps));const i18nEnabled=!!i18n;const defaultRouteRegex=pageIsDynamicRoute?`
+"use strict";exports.__esModule=true;exports.default=void 0;var _devalue=_interopRequireDefault(require("next/dist/compiled/devalue"));var _escapeStringRegexp=_interopRequireDefault(require("next/dist/compiled/escape-string-regexp"));var _path=require("path");var _querystring=require("querystring");var _constants=require("../../../lib/constants");var _constants2=require("../../../next-server/lib/constants");var _utils=require("../../../next-server/lib/router/utils");function _interopRequireDefault(obj){return obj&&obj.__esModule?obj:{default:obj};}const vercelHeader='x-vercel-id';const nextServerlessLoader=function(){const{distDir,absolutePagePath,page,buildId,canonicalBase,assetPrefix,absoluteAppPath,absoluteDocumentPath,absoluteErrorPath,absolute404Path,generateEtags,poweredByHeader,basePath,runtimeConfig,previewProps,loadedEnvFiles,i18n}=typeof this.query==='string'?(0,_querystring.parse)(this.query.substr(1)):this.query;const buildManifest=(0,_path.join)(distDir,_constants2.BUILD_MANIFEST).replace(/\\/g,'/');const reactLoadableManifest=(0,_path.join)(distDir,_constants2.REACT_LOADABLE_MANIFEST).replace(/\\/g,'/');const routesManifest=(0,_path.join)(distDir,_constants2.ROUTES_MANIFEST).replace(/\\/g,'/');const escapedBuildId=(0,_escapeStringRegexp.default)(buildId);const pageIsDynamicRoute=(0,_utils.isDynamicRoute)(page);const encodedPreviewProps=(0,_devalue.default)(JSON.parse(previewProps));const i18nEnabled=!!i18n;const defaultRouteRegex=pageIsDynamicRoute?`
       const defaultRouteRegex = getRouteRegex("${page}")
     `:'';const normalizeDynamicRouteParams=pageIsDynamicRoute?`
       function normalizeDynamicRouteParams(query) {
@@ -148,18 +148,30 @@
 
         // check if the locale prefix matches a domain's defaultLocale
         // and we're on a locale specific domain if so redirect to that domain
-        if (detectedDomain) {
-          const matchedDomain = detectDomainLocale(
-            i18n.domains,
-            undefined,
-            detectedLocale
-          )
+        // if (detectedDomain) {
+        //   const matchedDomain = detectDomainLocale(
+        //     i18n.domains,
+        //     undefined,
+        //     detectedLocale
+        //   )
 
-          if (matchedDomain) {
-            localeDomainRedirect = \`http\${
-              matchedDomain.http ? '' : 's'
-            }://\${matchedDomain.domain}\`
-          }
+        //   if (matchedDomain) {
+        //     localeDomainRedirect = \`http\${
+        //       matchedDomain.http ? '' : 's'
+        //     }://\${matchedDomain.domain}\`
+        //   }
+        // }
+      } else if (detectedDomain) {
+        const matchedDomain = detectDomainLocale(
+          i18n.domains,
+          undefined,
+          acceptPreferredLocale
+        )
+
+        if (matchedDomain && matchedDomain.domain !== detectedDomain.domain) {
+          localeDomainRedirect = \`http\${matchedDomain.http ? '' : 's'}://\${
+            matchedDomain.domain
+          }\`
         }
       }
 
@@ -167,9 +179,9 @@
       const detectedDefaultLocale =
         !detectedLocale ||
         detectedLocale.toLowerCase() === defaultLocale.toLowerCase()
-      const shouldStripDefaultLocale =
-        detectedDefaultLocale &&
-        denormalizedPagePath.toLowerCase() === \`/\${i18n.defaultLocale.toLowerCase()}\`
+      const shouldStripDefaultLocale = false
+        // detectedDefaultLocale &&
+        // denormalizedPagePath.toLowerCase() === \`/\${i18n.defaultLocale.toLowerCase()}\`
 
       const shouldAddLocalePrefix =
         !detectedDefaultLocale && denormalizedPagePath === '/'
@@ -351,6 +363,7 @@ runtimeConfigSetter}
     export async function renderReqToHTML(req, res, renderMode, _renderOpts, _params) {
       let Document
       let Error
+      let NotFound
       ;[
         getStaticProps,
         getServerSideProps,
@@ -359,7 +372,8 @@ runtimeConfigSetter}
         App,
         config,
         { default: Document },
-        { default: Error }
+        { default: Error },
+        ${absolute404Path?`{ default: NotFound }, `:''}
       ] = await Promise.all([
         getStaticProps,
         getServerSideProps,
@@ -368,7 +382,8 @@ runtimeConfigSetter}
         App,
         config,
         require('${absoluteDocumentPath}'),
-        require('${absoluteErrorPath}')
+        require('${absoluteErrorPath}'),
+        ${absolute404Path?`require("${absolute404Path}"),`:''}
       ])
 
       const fromExport = renderMode === 'export' || renderMode === true;
@@ -598,12 +613,35 @@ pageIsDynamicRoute?`const nowParams = req.headers && req.headers["x-now-route-ma
 
         if (!renderMode) {
           if (_nextData || getStaticProps || getServerSideProps) {
-            sendPayload(req, res, _nextData ? JSON.stringify(renderOpts.pageData) : result, _nextData ? 'json' : 'html', ${generateEtags==='true'?true:false}, {
-              private: isPreviewMode,
-              stateful: !!getServerSideProps,
-              revalidate: renderOpts.revalidate,
-            })
-            return null
+            if (renderOpts.ssgNotFound) {
+              res.statusCode = 404
+
+              const NotFoundComponent = ${absolute404Path?'NotFound':'Error'}
+
+              const errPathname = "${absolute404Path?'/404':'/_error'}"
+
+              const result = await renderToHTML(req, res, errPathname, parsedUrl.query, Object.assign({}, options, {
+                getStaticProps: undefined,
+                getStaticPaths: undefined,
+                getServerSideProps: undefined,
+                Component: NotFoundComponent,
+                err: undefined
+              }))
+
+              sendPayload(req, res, result, 'html', ${generateEtags==='true'?true:false}, {
+                private: isPreviewMode,
+                stateful: !!getServerSideProps,
+                revalidate: renderOpts.revalidate,
+              })
+              return null
+            } else {
+              sendPayload(req, res, _nextData ? JSON.stringify(renderOpts.pageData) : result, _nextData ? 'json' : 'html', ${generateEtags==='true'?true:false}, {
+                private: isPreviewMode,
+                stateful: !!getServerSideProps,
+                revalidate: renderOpts.revalidate,
+              })
+              return null
+            }
           }
         } else if (isPreviewMode) {
           res.setHeader(

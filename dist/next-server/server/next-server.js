@@ -19,7 +19,22 @@ const{pathname,...parsed}=(0,_url.parse)(req.url||'/');let defaultLocale=i18n.de
 const hostname=host==null?void 0:host.split(':')[0].toLowerCase();const detectedDomain=(0,_detectDomainLocale.detectDomainLocale)(i18n.domains,hostname);if(detectedDomain){defaultLocale=detectedDomain.defaultLocale;detectedLocale=defaultLocale;}// if not domain specific locale use accept-language preferred
 detectedLocale=detectedLocale||acceptPreferredLocale;let localeDomainRedirect;const localePathResult=(0,_normalizeLocalePath.normalizeLocalePath)(pathname,i18n.locales);if(localePathResult.detectedLocale){detectedLocale=localePathResult.detectedLocale;req.url=(0,_url.format)({...parsed,pathname:localePathResult.pathname});req.__nextStrippedLocale=true;parsedUrl.pathname=localePathResult.pathname;// check if the locale prefix matches a domain's defaultLocale
 // and we're on a locale specific domain if so redirect to that domain
-if(detectedDomain){const matchedDomain=(0,_detectDomainLocale.detectDomainLocale)(i18n.domains,undefined,detectedLocale);if(matchedDomain){localeDomainRedirect=`http${matchedDomain.http?'':'s'}://${matchedDomain==null?void 0:matchedDomain.domain}`;}}}const denormalizedPagePath=(0,_denormalizePagePath.denormalizePagePath)(pathname||'/');const detectedDefaultLocale=!detectedLocale||detectedLocale.toLowerCase()===defaultLocale.toLowerCase();const shouldStripDefaultLocale=detectedDefaultLocale&&denormalizedPagePath.toLowerCase()===`/${i18n.defaultLocale.toLowerCase()}`;const shouldAddLocalePrefix=!detectedDefaultLocale&&denormalizedPagePath==='/';detectedLocale=detectedLocale||i18n.defaultLocale;if(i18n.localeDetection!==false&&(localeDomainRedirect||shouldAddLocalePrefix||shouldStripDefaultLocale)){// set the NEXT_LOCALE cookie when a user visits the default locale
+// if (detectedDomain) {
+//   const matchedDomain = detectDomainLocale(
+//     i18n.domains,
+//     undefined,
+//     detectedLocale
+//   )
+//   if (matchedDomain) {
+//     localeDomainRedirect = `http${matchedDomain.http ? '' : 's'}://${
+//       matchedDomain?.domain
+//     }`
+//   }
+// }
+}else if(detectedDomain){const matchedDomain=(0,_detectDomainLocale.detectDomainLocale)(i18n.domains,undefined,acceptPreferredLocale);if(matchedDomain&&matchedDomain.domain!==detectedDomain.domain){localeDomainRedirect=`http${matchedDomain.http?'':'s'}://${matchedDomain.domain}`;}}const denormalizedPagePath=(0,_denormalizePagePath.denormalizePagePath)(pathname||'/');const detectedDefaultLocale=!detectedLocale||detectedLocale.toLowerCase()===defaultLocale.toLowerCase();const shouldStripDefaultLocale=false;// detectedDefaultLocale &&
+// denormalizedPagePath.toLowerCase() ===
+//   `/${i18n.defaultLocale.toLowerCase()}`
+const shouldAddLocalePrefix=!detectedDefaultLocale&&denormalizedPagePath==='/';detectedLocale=detectedLocale||i18n.defaultLocale;if(i18n.localeDetection!==false&&(localeDomainRedirect||shouldAddLocalePrefix||shouldStripDefaultLocale)){// set the NEXT_LOCALE cookie when a user visits the default locale
 // with the locale prefix so that they aren't redirected back to
 // their accept-language preferred locale
 if(shouldStripDefaultLocale&&acceptPreferredLocale!==defaultLocale){const previous=res.getHeader('set-cookie');res.setHeader('set-cookie',[...(typeof previous==='string'?[previous]:Array.isArray(previous)?previous:[]),_cookie.default.serialize('NEXT_LOCALE',defaultLocale,{httpOnly:true,path:'/'})]);}res.setHeader('Location',(0,_url.format)({// make sure to include any query values when redirecting
