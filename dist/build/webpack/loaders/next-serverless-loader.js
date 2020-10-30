@@ -3,6 +3,8 @@
     `:'';const normalizeDynamicRouteParams=pageIsDynamicRoute?`
       let hasValidParams = true
 
+      console.log({ defaultRouteMatches, defaultRouteRegex })
+
       function normalizeDynamicRouteParams(query) {
         return Object.keys(defaultRouteRegex.groups)
           .reduce((prev, key) => {
@@ -11,7 +13,7 @@
             // if the value matches the default value we can't rely
             // on the parsed params, this is used to signal if we need
             // to parse x-now-route-matches or not
-            if (value === defaultRouteRegex.groups[key]) {
+            if (value === defaultRouteMatches[defaultRouteRegex.groups[key].pos]) {
               hasValidParams = false
             } else {
               console.log(
@@ -68,6 +70,7 @@
       const { getRouteRegex } = require('next/dist/next-server/lib/router/utils/route-regex');
   `:'';const dynamicRouteMatcher=pageIsDynamicRoute?`
     const dynamicRouteMatcher = getRouteMatcher(getRouteRegex("${page}"))
+    const defaultRouteMatches = dynamicRouteMatcher("${page}")
   `:'';const rewriteImports=`
     const { rewrites } = require('${routesManifest}')
     const { pathToRegexp, default: pathMatch } = require('next/dist/next-server/lib/router/utils/path-match')
