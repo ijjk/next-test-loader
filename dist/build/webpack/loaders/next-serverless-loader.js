@@ -55,7 +55,7 @@
             return prev
           }, {})
       }
-    `:'';const envLoading=`
+    `:'let hasValidParams';const envLoading=`
     const { processEnv } = require('@next/env')
     processEnv(${Buffer.from(loadedEnvFiles,'base64').toString()})
   `;const runtimeConfigImports=runtimeConfig?`
