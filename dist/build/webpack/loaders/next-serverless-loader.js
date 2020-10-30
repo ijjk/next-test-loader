@@ -495,12 +495,14 @@ runtimeConfigSetter}
               )
             `:`const params = {};`}
 
+        console.log({ hasValidParams, params })
+
         ${// Temporary work around: `x-now-route-matches` is a platform header
 // _only_ set for `Prerender` requests. We should move this logic
 // into our builder to ensure we're decoupled. However, this entails
 // removing reliance on `req.url` and using `req.query` instead
 // (which is needed for "custom routes" anyway).
-pageIsDynamicRoute?`nowParams = !hasValidParams && req.headers && req.headers["x-now-route-matches"]
+pageIsDynamicRoute?`const nowParams = !hasValidParams && req.headers && req.headers["x-now-route-matches"]
               ? getRouteMatcher(
                   (function() {
                     const { re, groups, routeKeys } = getRouteRegex("${page}");
