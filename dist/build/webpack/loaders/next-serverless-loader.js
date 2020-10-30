@@ -382,6 +382,8 @@ runtimeConfigSetter}
         ${absolute404Path?`require("${absolute404Path}"),`:''}
       ])
 
+      console.log({ url: req.url, headers: req.headers })
+
       const fromExport = renderMode === 'export' || renderMode === true;
       const nextStartMode = renderMode === 'passthrough'
 

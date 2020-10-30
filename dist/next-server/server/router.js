@@ -14,7 +14,8 @@ const pageChecks={};const memoizedPageChecker=async p=>{if(pageChecks[p]){return
 // in the pathname here to allow custom-routes to require containing
 // it or not, filesystem routes and pages must always include the basePath
 // if it is set
-let currentPathname=parsedUrlUpdated.pathname;const originalPathname=currentPathname;const requireBasePath=testRoute.requireBasePath!==false;const isCustomRoute=customRouteTypes.has(testRoute.type);const isPublicFolderCatchall=testRoute.name==='public folder catchall';const keepBasePath=isCustomRoute||isPublicFolderCatchall;if(!keepBasePath){currentPathname=replaceBasePath(this.basePath,currentPathname);}const newParams=testRoute.match(currentPathname);// Check if the match function matched
+let currentPathname=parsedUrlUpdated.pathname;const originalPathname=currentPathname;const requireBasePath=testRoute.requireBasePath!==false;const isCustomRoute=customRouteTypes.has(testRoute.type);const isPublicFolderCatchall=testRoute.name==='public folder catchall';const keepBasePath=isCustomRoute||isPublicFolderCatchall;if(!keepBasePath){currentPathname=replaceBasePath(this.basePath,currentPathname);}// re-add locale for custom-routes to allow matching against
+if(isCustomRoute&&req.__nextStrippedLocale&&parsedUrl.query.__nextLocale){currentPathname=`/${parsedUrl.query.__nextLocale}${currentPathname==='/'?'':currentPathname}`;}const newParams=testRoute.match(currentPathname);// Check if the match function matched
 if(newParams){// since we require basePath be present for non-custom-routes we
 // 404 here when we matched an fs route
 if(!keepBasePath){if(!originallyHadBasePath&&!req._nextDidRewrite){if(requireBasePath){// consider this a non-match so the 404 renders
