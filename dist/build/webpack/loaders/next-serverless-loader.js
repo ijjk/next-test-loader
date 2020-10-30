@@ -1,8 +1,6 @@
 "use strict";exports.__esModule=true;exports.default=void 0;var _devalue=_interopRequireDefault(require("next/dist/compiled/devalue"));var _escapeStringRegexp=_interopRequireDefault(require("next/dist/compiled/escape-string-regexp"));var _path=require("path");var _querystring=require("querystring");var _constants=require("../../../lib/constants");var _constants2=require("../../../next-server/lib/constants");var _utils=require("../../../next-server/lib/router/utils");function _interopRequireDefault(obj){return obj&&obj.__esModule?obj:{default:obj};}const vercelHeader='x-vercel-id';const nextServerlessLoader=function(){const{distDir,absolutePagePath,page,buildId,canonicalBase,assetPrefix,absoluteAppPath,absoluteDocumentPath,absoluteErrorPath,absolute404Path,generateEtags,poweredByHeader,basePath,runtimeConfig,previewProps,loadedEnvFiles,i18n}=typeof this.query==='string'?(0,_querystring.parse)(this.query.substr(1)):this.query;const buildManifest=(0,_path.join)(distDir,_constants2.BUILD_MANIFEST).replace(/\\/g,'/');const reactLoadableManifest=(0,_path.join)(distDir,_constants2.REACT_LOADABLE_MANIFEST).replace(/\\/g,'/');const routesManifest=(0,_path.join)(distDir,_constants2.ROUTES_MANIFEST).replace(/\\/g,'/');const escapedBuildId=(0,_escapeStringRegexp.default)(buildId);const pageIsDynamicRoute=(0,_utils.isDynamicRoute)(page);const encodedPreviewProps=(0,_devalue.default)(JSON.parse(previewProps));const i18nEnabled=!!i18n;const defaultRouteRegex=pageIsDynamicRoute?`
       const defaultRouteRegex = getRouteRegex("${page}")
     `:'';const normalizeDynamicRouteParams=pageIsDynamicRoute?`
-      console.log({ defaultRouteMatches, defaultRouteRegex })
-
       function normalizeDynamicRouteParams(query) {
         return Object.keys(defaultRouteRegex.groups)
           .reduce((prev, key) => {
@@ -17,13 +15,6 @@
 
             if (isDefaultValue) {
               hasValidParams = false
-              console.log('invalid params', { key, value, })
-            } else {
-              console.log(
-                'valid param', {
-                  value, defaultValue: defaultRouteMatches[key]
-                }
-              )
             }
 
             ${''// non-provided optional values should be undefined so normalize
@@ -430,8 +421,6 @@ runtimeConfigSetter}
       let _nextData = false
       let parsedUrl
 
-      console.log({ fromExport, nextStartMode, headers: req.headers, url: req.url, page: "${page}" })
-
       try {
         // We need to trust the dynamic route params from the proxy
         // to ensure we are using the correct values
@@ -502,8 +491,6 @@ runtimeConfigSetter}
                   : dynamicRouteMatcher(parsedUrl.pathname)
               )
             `:`const params = {};`}
-
-        console.log({ hasValidParams, params })
 
         ${// Temporary work around: `x-now-route-matches` is a platform header
 // _only_ set for `Prerender` requests. We should move this logic
