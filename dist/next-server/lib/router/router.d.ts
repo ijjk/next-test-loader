@@ -47,7 +47,6 @@ export declare type BaseRouter = {
 export declare type NextRouter = BaseRouter & Pick<Router, 'push' | 'replace' | 'reload' | 'back' | 'prefetch' | 'beforePopState' | 'events' | 'isFallback'>;
 export declare type PrefetchOptions = {
     priority?: boolean;
-    locale?: string | false;
 };
 export declare type PrivateRouteInfo = {
     Component: ComponentType;

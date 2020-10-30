@@ -382,8 +382,6 @@ runtimeConfigSetter}
         ${absolute404Path?`require("${absolute404Path}"),`:''}
       ])
 
-      console.log({ url: req.url, headers: req.headers })
-
       const fromExport = renderMode === 'export' || renderMode === true;
       const nextStartMode = renderMode === 'passthrough'
 
@@ -408,6 +406,8 @@ runtimeConfigSetter}
       }
       let _nextData = false
       let parsedUrl
+
+      console.log({ fromExport, nextStartMode, headers: req.headers, url: req.url, page: "${page}" })
 
       try {
         // We need to trust the dynamic route params from the proxy
@@ -623,7 +623,10 @@ pageIsDynamicRoute?`const nowParams = req.headers && req.headers["x-now-route-ma
                 getStaticPaths: undefined,
                 getServerSideProps: undefined,
                 Component: NotFoundComponent,
-                err: undefined
+                err: undefined,
+                locale: detectedLocale,
+                locales,
+                defaultLocale: i18n.defaultLocale,
               }))
 
               sendPayload(req, res, result, 'html', ${generateEtags==='true'?true:false}, {
