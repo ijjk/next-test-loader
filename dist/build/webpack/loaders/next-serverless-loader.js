@@ -1,8 +1,6 @@
 "use strict";exports.__esModule=true;exports.default=void 0;var _devalue=_interopRequireDefault(require("next/dist/compiled/devalue"));var _escapeStringRegexp=_interopRequireDefault(require("next/dist/compiled/escape-string-regexp"));var _path=require("path");var _querystring=require("querystring");var _constants=require("../../../lib/constants");var _constants2=require("../../../next-server/lib/constants");var _utils=require("../../../next-server/lib/router/utils");function _interopRequireDefault(obj){return obj&&obj.__esModule?obj:{default:obj};}const vercelHeader='x-vercel-id';const nextServerlessLoader=function(){const{distDir,absolutePagePath,page,buildId,canonicalBase,assetPrefix,absoluteAppPath,absoluteDocumentPath,absoluteErrorPath,absolute404Path,generateEtags,poweredByHeader,basePath,runtimeConfig,previewProps,loadedEnvFiles,i18n}=typeof this.query==='string'?(0,_querystring.parse)(this.query.substr(1)):this.query;const buildManifest=(0,_path.join)(distDir,_constants2.BUILD_MANIFEST).replace(/\\/g,'/');const reactLoadableManifest=(0,_path.join)(distDir,_constants2.REACT_LOADABLE_MANIFEST).replace(/\\/g,'/');const routesManifest=(0,_path.join)(distDir,_constants2.ROUTES_MANIFEST).replace(/\\/g,'/');const escapedBuildId=(0,_escapeStringRegexp.default)(buildId);const pageIsDynamicRoute=(0,_utils.isDynamicRoute)(page);const encodedPreviewProps=(0,_devalue.default)(JSON.parse(previewProps));const i18nEnabled=!!i18n;const defaultRouteRegex=pageIsDynamicRoute?`
       const defaultRouteRegex = getRouteRegex("${page}")
     `:'';const normalizeDynamicRouteParams=pageIsDynamicRoute?`
-      let hasValidParams = true
-
       console.log({ defaultRouteMatches, defaultRouteRegex })
 
       function normalizeDynamicRouteParams(query) {
@@ -13,12 +11,17 @@
             // if the value matches the default value we can't rely
             // on the parsed params, this is used to signal if we need
             // to parse x-now-route-matches or not
-            if (value === defaultRouteMatches[defaultRouteRegex.groups[key].pos]) {
+            const isDefaultValue = Array.isArray(value)
+              ? value.every((val, idx) => val === defaultRouteMatches[key][idx])
+              : value === defaultRouteMatches[key]
+
+            if (isDefaultValue) {
               hasValidParams = false
+              console.log('invalid params', { key, value, })
             } else {
               console.log(
                 'valid param', {
-                  value, defaultValue: defaultRouteRegex.groups[key]
+                  value, defaultValue: defaultRouteMatches[key]
                 }
               )
             }
@@ -57,7 +60,7 @@
             return prev
           }, {})
       }
-    `:'let hasValidParams';const envLoading=`
+    `:'';const envLoading=`
     const { processEnv } = require('@next/env')
     processEnv(${Buffer.from(loadedEnvFiles,'base64').toString()})
   `;const runtimeConfigImports=runtimeConfig?`
@@ -280,8 +283,6 @@
 
       ${defaultRouteRegex}
 
-      ${normalizeDynamicRouteParams}
-
       ${handleRewrites}
 
       export default async (req, res) => {
@@ -292,7 +293,9 @@
           // to ensure we are using the correct values
           const trustQuery = req.headers['${vercelHeader}']
           const parsedUrl = handleRewrites(parseUrl(req.url, true))
+          let hasValidParams = true
 
+          ${normalizeDynamicRouteParams}
           ${handleBasePath}
 
           const params = ${pageIsDynamicRoute?`
@@ -369,7 +372,6 @@ runtimeConfigSetter}
 
     ${dynamicRouteMatcher}
     ${defaultRouteRegex}
-    ${normalizeDynamicRouteParams}
     ${handleRewrites}
 
     export let config = compMod['confi' + 'g'] || (compMod.then && compMod.then(mod => mod['confi' + 'g'])) || {}
@@ -402,6 +404,9 @@ runtimeConfigSetter}
 
       const fromExport = renderMode === 'export' || renderMode === true;
       const nextStartMode = renderMode === 'passthrough'
+      let hasValidParams = true
+
+      ${normalizeDynamicRouteParams}
 
       setLazyProp({ req }, 'cookies', getCookieParser(req))
 
