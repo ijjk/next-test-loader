@@ -1,5 +1,6 @@
 import { ComponentType } from 'react';
 export declare const looseToArray: <T extends {}>(input: any) => T[];
+export declare const INITIAL_CSS_LOAD_ERROR: unique symbol;
 export declare type StyleSheetTuple = {
     href: string;
     text: string;
@@ -17,6 +18,7 @@ export default class PageLoader {
     private buildId;
     private assetPrefix;
     private pageCache;
+    private cssc;
     private pageRegisterEvents;
     private loadingRoutes;
     private promisedBuildManifest?;
@@ -24,17 +26,17 @@ export default class PageLoader {
     private promisedDevPagesManifest?;
     constructor(buildId: string, assetPrefix: string, initialPage: string);
     getPageList(): any;
+    private fetchStyleSheet;
     private getDependencies;
     /**
      * @param {string} href the route href (file-system path)
      * @param {string} asPath the URL as shown in browser (virtual path); used for dynamic routes
      */
-    getDataHref(href: string, asPath: string, ssg: boolean, locale?: string): string;
+    getDataHref(href: string, asPath: string, ssg: boolean, locale?: string | false): string;
     /**
      * @param {string} href the route href (file-system path)
-     * @param {string} asPath the URL as shown in browser (virtual path); used for dynamic routes
      */
-    prefetchData(href: string, asPath: string, locale?: string): Promise<any>;
+    _isSsg(href: string): Promise<boolean>;
     loadPage(route: string): Promise<GoodPageCache>;
     registerPage(route: string, regFn: () => any): void;
     /**

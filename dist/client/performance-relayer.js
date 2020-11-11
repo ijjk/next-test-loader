@@ -1,4 +1,4 @@
-"use strict";exports.__esModule=true;exports.default=void 0;var _webVitals=require("web-vitals");const initialHref=location.href;let isRegistered=false;let userReportHandler;function onReport(metric){if(userReportHandler){userReportHandler(metric);}// This code is not shipped, executed, or present in the client-side
+"use strict";exports.__esModule=true;exports.default=void 0;var _webVitals=require("next/dist/compiled/web-vitals");const initialHref=location.href;let isRegistered=false;let userReportHandler;function onReport(metric){if(userReportHandler){userReportHandler(metric);}// This code is not shipped, executed, or present in the client-side
 // JavaScript bundle unless explicitly enabled in your application.
 //
 // When this feature is enabled, we'll make it very clear by printing a

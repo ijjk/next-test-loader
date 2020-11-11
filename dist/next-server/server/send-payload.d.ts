@@ -13,3 +13,4 @@ export declare function sendPayload(req: IncomingMessage, res: ServerResponse, p
     stateful: false;
     revalidate: number | false;
 }): void;
+export declare function sendEtagResponse(req: IncomingMessage, res: ServerResponse, etag: string | undefined): boolean;

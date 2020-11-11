@@ -6,6 +6,7 @@ declare type IncrementalCacheValue = {
     pageData?: any;
     isStale?: boolean;
     isNotFound?: boolean;
+    isRedirect?: boolean;
     curRevalidate?: number | false;
     revalidateAfter: number | false;
 };
@@ -33,6 +34,7 @@ export declare class IncrementalCache {
         html?: string;
         pageData?: any;
         isNotFound?: boolean;
+        isRedirect?: boolean;
     }, revalidateSeconds?: number | false): Promise<void>;
 }
 export {};

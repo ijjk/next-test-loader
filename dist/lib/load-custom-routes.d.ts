@@ -15,7 +15,11 @@ export declare type Header = {
         value: string;
     }>;
 };
-export declare function getRedirectStatus(route: Redirect): number;
+export declare const allowedStatusCodes: Set<number>;
+export declare function getRedirectStatus(route: {
+    statusCode?: number;
+    permanent?: boolean;
+}): number;
 export declare function normalizeRouteRegex(regex: string): string;
 export declare type RouteType = 'rewrite' | 'redirect' | 'header';
 export interface CustomRoutes {
