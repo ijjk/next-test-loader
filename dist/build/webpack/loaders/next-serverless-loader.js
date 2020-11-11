@@ -630,6 +630,12 @@ pageIsDynamicRoute?`const nowParams = !hasValidParams && req.headers && req.head
 
         const isFallback = parsedUrl.query.__nextFallback
 
+        console.log('after normalize', {
+          pathname: parsedUrl.pathname,
+          nowParams,
+          params
+        })
+
         const previewData = tryGetPreviewData(req, res, options.previewProps)
         const isPreviewMode = previewData !== false
         if (process.env.__NEXT_OPTIMIZE_FONTS) {
