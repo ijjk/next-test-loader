@@ -547,7 +547,11 @@ pageIsDynamicRoute?`const nowParams = !hasValidParams && req.headers && req.head
                                     ? val.length === 0
                                     : true
                                 }
-                              `:''}
+                              `:'console.log("no i18n")'}
+                            console.log("not locale item", {
+                              val,
+                              locales
+                            })
                             return false
                           }
 
@@ -563,10 +567,14 @@ pageIsDynamicRoute?`const nowParams = !hasValidParams && req.headers && req.head
                           }
 
                           return Object.keys(obj).reduce(
-                            (prev, key) =>
-                              Object.assign(prev, {
-                                [key]: obj[key]
-                              }),
+                            (prev, key) => {
+                              if (!filterLocaleItem(obj[key])) {
+                                return Object.assign(prev, {
+                                  [key]: obj[key]
+                                })
+                              }
+                              return prev
+                            },
                             {}
                           );
                         }
