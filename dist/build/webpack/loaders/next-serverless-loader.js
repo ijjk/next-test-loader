@@ -152,12 +152,6 @@
 
       routeNoAssetPath = normalizeLocalePath(routeNoAssetPath, i18n.locales).pathname
 
-      console.log('handleLocale', {
-        localePathResult,
-        routeNoAssetPath,
-        detectedLocale
-      })
-
       if (localePathResult.detectedLocale) {
         detectedLocale = localePathResult.detectedLocale
         req.url = formatUrl({
@@ -473,8 +467,6 @@ runtimeConfigSetter}
           routeNoAssetPath = parsedUrl.pathname
         }
 
-        console.log('before handleLocale', {parsedUrl, routeNoAssetPath, headers: req.headers})
-
         ${handleLocale}
 
         const renderOpts = Object.assign(
@@ -527,15 +519,24 @@ pageIsDynamicRoute?`const nowParams = !hasValidParams && req.headers && req.head
 
                           const filterLocaleItem = val => {
                             ${i18nEnabled?`
+                                // locale items can be included in route-matches
+                                // for fallback SSG pages so ensure they are
+                                // filtered
                                 const isCatchAll = Array.isArray(val)
                                 const _val = isCatchAll ? val[0] : val
+
                                 if (
                                   typeof _val === 'string' &&
                                   locales.some(
-                                    item => item.toLowerCase() === _val.toLowerCase()
+                                    item => {
+                                      if (item.toLowerCase() === _val.toLowerCase()) {
+                                        detectedLocale = item
+                                        renderOpts.locale = detectedLocale
+                                        return true
+                                      }
+                                    }
                                   )
                                 ) {
-                                  console.log('found locale item')
                                   // remove the locale item from the match
                                   if (isCatchAll) {
                                     val.splice(0, 1)
@@ -547,11 +548,7 @@ pageIsDynamicRoute?`const nowParams = !hasValidParams && req.headers && req.head
                                     ? val.length === 0
                                     : true
                                 }
-                              `:'console.log("no i18n")'}
-                            console.log("not locale item", {
-                              val,
-                              locales
-                            })
+                              `:''}
                             return false
                           }
 
@@ -590,8 +587,6 @@ pageIsDynamicRoute?`const nowParams = !hasValidParams && req.headers && req.head
         // if provided from worker or params if we're parsing them here
         renderOpts.params = _params || params
 
-        console.log('renderOpts.params', renderOpts.params)
-
         // make sure to normalize req.url on Vercel to strip dynamic params
         // from the query which are added during routing
         ${pageIsDynamicRoute?`
@@ -606,12 +601,6 @@ pageIsDynamicRoute?`const nowParams = !hasValidParams && req.headers && req.head
           }
         `:''}
 
-        console.log('params', {
-          pathname: parsedUrl.pathname,
-          nowParams,
-          params
-        })
-
         // normalize request URL/asPath for fallback/revalidate pages since the
         // proxy sets the request URL to the output's path for fallback pages
         ${pageIsDynamicRoute?`
@@ -619,12 +608,19 @@ pageIsDynamicRoute?`const nowParams = !hasValidParams && req.headers && req.head
               const _parsedUrl = parseUrl(req.url)
 
               for (const param of Object.keys(defaultRouteRegex.groups)) {
-                const paramIdx = _parsedUrl.pathname.indexOf(\`[\${param}]\`)
+                const { optional, repeat } = defaultRouteRegex.groups[param]
+                let builtParam = \`[\${repeat ? '...' : ''}\${param}]\`
+
+                if (optional) {
+                  builtParam = \`[\${builtParam}]\`
+                }
+
+                const paramIdx = _parsedUrl.pathname.indexOf(builtParam)
 
                 if (paramIdx > -1) {
                   _parsedUrl.pathname = _parsedUrl.pathname.substr(0, paramIdx) +
-                    encodeURI(nowParams[param]) +
-                    _parsedUrl.pathname.substr(paramIdx + param.length + 2)
+                    encodeURI(nowParams[param] || '') +
+                    _parsedUrl.pathname.substr(paramIdx + builtParam.length + 2)
                 }
               }
               parsedUrl.pathname = _parsedUrl.pathname
@@ -668,12 +664,6 @@ pageIsDynamicRoute?`const nowParams = !hasValidParams && req.headers && req.head
         }
 
         const isFallback = parsedUrl.query.__nextFallback
-
-        console.log('after normalize', {
-          pathname: parsedUrl.pathname,
-          nowParams,
-          params
-        })
 
         const previewData = tryGetPreviewData(req, res, options.previewProps)
         const isPreviewMode = previewData !== false
