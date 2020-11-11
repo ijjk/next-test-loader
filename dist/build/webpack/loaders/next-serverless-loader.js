@@ -525,10 +525,39 @@ pageIsDynamicRoute?`const nowParams = !hasValidParams && req.headers && req.head
                           // favor named matches if available
                           const routeKeyNames = Object.keys(routeKeys)
 
+                          const filterLocaleItem = val => {
+                            ${i18nEnabled?`
+                                const isCatchAll = Array.isArray(val)
+                                const _val = isCatchAll ? val[0] : val
+                                if (
+                                  typeof _val === 'string' &&
+                                  locales.some(
+                                    item => item.toLowerCase() === _val.toLowerCase()
+                                  )
+                                ) {
+                                  console.log('found locale item')
+                                  // remove the locale item from the match
+                                  if (isCatchAll) {
+                                    val.splice(0, 1)
+                                  }
+
+                                  // the value is only a locale item and
+                                  // shouldn't be added
+                                  return isCatchAll
+                                    ? val.length === 0
+                                    : true
+                                }
+                              `:''}
+                            return false
+                          }
+
                           if (routeKeyNames.every(name => obj[name])) {
                             return routeKeyNames.reduce((prev, keyName) => {
                               const paramName = routeKeys[keyName]
-                              prev[groups[paramName].pos] = obj[keyName]
+
+                              if (!filterLocaleItem(obj[keyName])) {
+                                prev[groups[paramName].pos] = obj[keyName]
+                              }
                               return prev
                             }, {})
                           }
