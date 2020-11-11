@@ -473,7 +473,7 @@ runtimeConfigSetter}
           routeNoAssetPath = parsedUrl.pathname
         }
 
-        console.log('before handleLocale', {parsedUrl, routeNoAssetPath})
+        console.log('before handleLocale', {parsedUrl, routeNoAssetPath, headers: req.headers})
 
         ${handleLocale}
 
