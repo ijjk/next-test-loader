@@ -553,6 +553,8 @@ pageIsDynamicRoute?`const nowParams = !hasValidParams && req.headers && req.head
         // if provided from worker or params if we're parsing them here
         renderOpts.params = _params || params
 
+        console.log('renderOpts.params', renderOpts.params)
+
         // make sure to normalize req.url on Vercel to strip dynamic params
         // from the query which are added during routing
         ${pageIsDynamicRoute?`
