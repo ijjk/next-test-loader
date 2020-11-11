@@ -567,6 +567,12 @@ pageIsDynamicRoute?`const nowParams = !hasValidParams && req.headers && req.head
           }
         `:''}
 
+        console.log('params', {
+          pathname: parsedUrl.pathname,
+          nowParams,
+          params
+        })
+
         // normalize request URL/asPath for fallback/revalidate pages since the
         // proxy sets the request URL to the output's path for fallback pages
         ${pageIsDynamicRoute?`
