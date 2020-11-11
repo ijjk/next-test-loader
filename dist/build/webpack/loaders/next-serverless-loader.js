@@ -152,11 +152,11 @@
 
       routeNoAssetPath = normalizeLocalePath(routeNoAssetPath, i18n.locales).pathname
 
-      console.log(JSON.stringify({
+      console.log('handleLocale', {
         localePathResult,
         routeNoAssetPath,
         detectedLocale
-      }))
+      })
 
       if (localePathResult.detectedLocale) {
         detectedLocale = localePathResult.detectedLocale
@@ -473,10 +473,7 @@ runtimeConfigSetter}
           routeNoAssetPath = parsedUrl.pathname
         }
 
-        console.log(JSON.stringify({
-          parsedUrl,
-          routeNoAssetPath,
-        }, null, 2))
+        console.log('before handleLocale', {parsedUrl, routeNoAssetPath})
 
         ${handleLocale}
 
