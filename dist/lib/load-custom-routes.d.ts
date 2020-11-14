@@ -2,18 +2,20 @@ export declare type Rewrite = {
     source: string;
     destination: string;
     basePath?: false;
-};
-export declare type Redirect = Rewrite & {
-    statusCode?: number;
-    permanent?: boolean;
+    locale?: false;
 };
 export declare type Header = {
     source: string;
     basePath?: false;
+    locale?: false;
     headers: Array<{
         key: string;
         value: string;
     }>;
+};
+export declare type Redirect = Rewrite & {
+    statusCode?: number;
+    permanent?: boolean;
 };
 export declare const allowedStatusCodes: Set<number>;
 export declare function getRedirectStatus(route: {

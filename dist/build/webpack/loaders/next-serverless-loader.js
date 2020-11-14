@@ -82,8 +82,7 @@
             rewrite.destination,
             params,
             parsedUrl.query,
-            true,
-            "${basePath}"
+            true
           )
 
           Object.assign(parsedUrl.query, parsedDestination.query)
@@ -91,11 +90,33 @@
 
           Object.assign(parsedUrl, parsedDestination)
 
-          if (parsedUrl.pathname === '${page}'){
+          let fsPathname = parsedUrl.pathname
+
+          ${basePath?`
+            fsPathname = fsPathname.replace(
+              new RegExp('^${basePath}'),
+              ''
+            ) || '/'
+          `:''}
+
+          ${i18n?`
+            const destLocalePathResult = normalizeLocalePath(
+              fsPathname,
+              i18n.locales
+            )
+            fsPathname = destLocalePathResult.pathname
+
+            parsedUrl.query.nextInternalLocale = (
+              destLocalePathResult.detectedLocale ||
+              params.nextInternalLocale
+            )
+          `:''}
+
+          if (fsPathname === '${page}'){
             break
           }
           ${pageIsDynamicRoute?`
-            const dynamicParams = dynamicRouteMatcher(parsedUrl.pathname);\
+            const dynamicParams = dynamicRouteMatcher(fsPathname);\
             if (dynamicParams) {
               parsedUrl.query = {
                 ...parsedUrl.query,
@@ -115,12 +136,10 @@
     parsedUrl.pathname = parsedUrl.pathname.replace(new RegExp('^${basePath}'), '') || '/'
   `:'';const handleLocale=i18nEnabled?`
       // get pathname from URL with basePath stripped for locale detection
-      const i18n = ${i18n}
       const accept = require('@hapi/accept')
       const cookie = require('next/dist/compiled/cookie')
       const { detectLocaleCookie } = require('next/dist/next-server/lib/i18n/detect-locale-cookie')
       const { detectDomainLocale } = require('next/dist/next-server/lib/i18n/detect-domain-locale')
-      const { normalizeLocalePath } = require('next/dist/next-server/lib/i18n/normalize-locale-path')
       let locales = i18n.locales
       let defaultLocale = i18n.defaultLocale
       let detectedLocale = detectLocaleCookie(req, i18n.locales)
@@ -242,11 +261,11 @@
               localeDomainRedirect
                 ? localeDomainRedirect
                 : shouldStripDefaultLocale
-                  ? '/'
-                  : \`/\${detectedLocale}\`,
+                  ? "${basePath}" || '/'
+                  : \`${basePath}/\${detectedLocale}\`,
           })
         )
-        res.statusCode = 307
+        res.statusCode = ${_constants2.TEMPORARY_REDIRECT_STATUS}
         res.end()
         return
       }
@@ -273,6 +292,9 @@
       ${dynamicRouteImports}
       const { parse: parseUrl } = require('url')
       const { apiResolver } = require('next/dist/next-server/server/api-utils')
+      const { normalizeLocalePath } = require('next/dist/next-server/lib/i18n/normalize-locale-path')
+      const i18n = ${i18n||'{}'}
+
       ${rewriteImports}
 
       ${dynamicRouteMatcher}
@@ -289,6 +311,12 @@
           // to ensure we are using the correct values
           const trustQuery = req.headers['${vercelHeader}']
           const parsedUrl = handleRewrites(parseUrl(req.url, true))
+
+          if (parsedUrl.query.nextInternalLocale) {
+            detectedLocale = parsedUrl.query.nextInternalLocale
+            delete parsedUrl.query.nextInternalLocale
+          }
+
           let hasValidParams = true
 
           ${normalizeDynamicRouteParams}
@@ -347,6 +375,8 @@ runtimeConfigSetter}
     const {PERMANENT_REDIRECT_STATUS} = require('next/dist/next-server/lib/constants')
     const buildManifest = require('${buildManifest}');
     const reactLoadableManifest = require('${reactLoadableManifest}');
+    const { normalizeLocalePath } = require('next/dist/next-server/lib/i18n/normalize-locale-path')
+    const i18n = ${i18n||'{}'}
 
     const appMod = require('${absoluteAppPath}')
     let App = appMod.default || appMod.then && appMod.then(mod => mod.default);
@@ -468,6 +498,11 @@ runtimeConfigSetter}
         }
 
         ${handleLocale}
+
+        if (parsedUrl.query.nextInternalLocale) {
+          detectedLocale = parsedUrl.query.nextInternalLocale
+          delete parsedUrl.query.nextInternalLocale
+        }
 
         const renderOpts = Object.assign(
           {
@@ -620,7 +655,7 @@ pageIsDynamicRoute?`const nowParams = !hasValidParams && req.headers && req.head
                 if (paramIdx > -1) {
                   _parsedUrl.pathname = _parsedUrl.pathname.substr(0, paramIdx) +
                     encodeURI(nowParams[param] || '') +
-                    _parsedUrl.pathname.substr(paramIdx + builtParam.length + 2)
+                    _parsedUrl.pathname.substr(paramIdx + builtParam.length)
                 }
               }
               parsedUrl.pathname = _parsedUrl.pathname
@@ -695,7 +730,7 @@ pageIsDynamicRoute?`const nowParams = !hasValidParams && req.headers && req.head
                 err: undefined,
                 locale: detectedLocale,
                 locales,
-                defaultLocale: i18n.defaultLocale,
+                defaultLocale,
               }))
 
               sendPayload(req, res, result, 'html', ${generateEtags==='true'?true:false}, {
@@ -707,9 +742,14 @@ pageIsDynamicRoute?`const nowParams = !hasValidParams && req.headers && req.head
             } else if (renderOpts.isRedirect && !_nextData) {
               const redirect = {
                 destination: renderOpts.pageData.pageProps.__N_REDIRECT,
-                statusCode: renderOpts.pageData.pageProps.__N_REDIRECT_STATUS
+                statusCode: renderOpts.pageData.pageProps.__N_REDIRECT_STATUS,
+                basePath: renderOpts.pageData.pageProps.__N_REDIRECT_BASE_PATH
               }
               const statusCode = getRedirectStatus(redirect)
+
+              if ("${basePath}" && redirect.basePath !== false) {
+                redirect.destination = \`${basePath}\${redirect.destination}\`
+              }
 
               if (statusCode === PERMANENT_REDIRECT_STATUS) {
                 res.setHeader('Refresh', \`0;url=\${redirect.destination}\`)

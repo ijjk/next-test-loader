@@ -33,7 +33,6 @@ export declare function interpolateAs(route: string, asPathname: string, query: 
  * Preserves absolute urls.
  */
 export declare function resolveHref(currentPath: string, href: Url, resolveAs?: boolean): string;
-export declare function markLoadingError(err: Error): Error;
 export declare type BaseRouter = {
     route: string;
     pathname: string;
@@ -49,7 +48,10 @@ export declare type PrefetchOptions = {
     priority?: boolean;
     locale?: string | false;
 };
-export declare type PrivateRouteInfo = {
+export declare type PrivateRouteInfo = (Omit<CompletePrivateRouteInfo, 'styleSheets'> & {
+    initial: true;
+}) | CompletePrivateRouteInfo;
+export declare type CompletePrivateRouteInfo = {
     Component: ComponentType;
     styleSheets: StyleSheetTuple[];
     __N_SSG?: boolean;
@@ -58,7 +60,7 @@ export declare type PrivateRouteInfo = {
     err?: Error;
     error?: any;
 };
-export declare type AppProps = Pick<PrivateRouteInfo, 'Component' | 'err'> & {
+export declare type AppProps = Pick<CompletePrivateRouteInfo, 'Component' | 'err'> & {
     router: Router;
 } & Record<string, any>;
 export declare type AppComponent = ComponentType<AppProps>;
@@ -95,12 +97,11 @@ export default class Router implements BaseRouter {
     locales?: string[];
     defaultLocale?: string;
     static events: MittEmitter;
-    constructor(pathname: string, query: ParsedUrlQuery, as: string, { initialProps, pageLoader, App, wrapApp, Component, initialStyleSheets, err, subscription, isFallback, locale, locales, defaultLocale, }: {
+    constructor(pathname: string, query: ParsedUrlQuery, as: string, { initialProps, pageLoader, App, wrapApp, Component, err, subscription, isFallback, locale, locales, defaultLocale, }: {
         subscription: Subscription;
         initialProps: any;
         pageLoader: any;
         Component: ComponentType;
-        initialStyleSheets: StyleSheetTuple[];
         App: AppComponent;
         wrapApp: (App: AppComponent) => any;
         err?: Error;
@@ -134,7 +135,7 @@ export default class Router implements BaseRouter {
     handleRouteInfoError(err: Error & {
         code: any;
         cancelled: boolean;
-    }, pathname: string, query: ParsedUrlQuery, as: string, loadErrorFail?: boolean): Promise<PrivateRouteInfo>;
+    }, pathname: string, query: ParsedUrlQuery, as: string, loadErrorFail?: boolean): Promise<CompletePrivateRouteInfo>;
     getRouteInfo(route: string, pathname: string, query: any, as: string, shallow?: boolean): Promise<PrivateRouteInfo>;
     set(route: string, pathname: string, query: ParsedUrlQuery, as: string, data: PrivateRouteInfo): Promise<void>;
     /**

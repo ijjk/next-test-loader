@@ -95,6 +95,7 @@ export default class Server {
         pageChecker: PageChecker;
         useFileSystemPublicRoutes: boolean;
         dynamicRoutes: DynamicRoutes | undefined;
+        locales: string[];
     };
     private getPagePath;
     protected hasPage(pathname: string): Promise<boolean>;

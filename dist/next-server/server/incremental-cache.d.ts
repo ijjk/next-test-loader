@@ -19,12 +19,14 @@ export declare class IncrementalCache {
     };
     prerenderManifest: PrerenderManifest;
     cache: LRUCache<string, IncrementalCacheValue>;
-    constructor({ max, dev, distDir, pagesDir, flushToDisk, }: {
+    locales?: string[];
+    constructor({ max, dev, distDir, pagesDir, flushToDisk, locales, }: {
         dev: boolean;
         max?: number;
         distDir: string;
         pagesDir: string;
         flushToDisk?: boolean;
+        locales?: string[];
     });
     private getSeedPath;
     private calculateRevalidate;

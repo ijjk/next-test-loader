@@ -1,6 +1,5 @@
 import { ComponentType } from 'react';
-export declare const looseToArray: <T extends {}>(input: any) => T[];
-export declare const INITIAL_CSS_LOAD_ERROR: unique symbol;
+import { RouteLoader } from './route-loader';
 export declare type StyleSheetTuple = {
     href: string;
     text: string;
@@ -10,24 +9,14 @@ export declare type GoodPageCache = {
     mod: any;
     styleSheets: StyleSheetTuple[];
 };
-export declare type PageCacheEntry = {
-    error: any;
-} | GoodPageCache;
 export default class PageLoader {
-    private initialPage;
     private buildId;
     private assetPrefix;
-    private pageCache;
-    private cssc;
-    private pageRegisterEvents;
-    private loadingRoutes;
-    private promisedBuildManifest?;
     private promisedSsgManifest?;
     private promisedDevPagesManifest?;
-    constructor(buildId: string, assetPrefix: string, initialPage: string);
+    routeLoader: RouteLoader;
+    constructor(buildId: string, assetPrefix: string);
     getPageList(): any;
-    private fetchStyleSheet;
-    private getDependencies;
     /**
      * @param {string} href the route href (file-system path)
      * @param {string} asPath the URL as shown in browser (virtual path); used for dynamic routes
@@ -38,10 +27,5 @@ export default class PageLoader {
      */
     _isSsg(href: string): Promise<boolean>;
     loadPage(route: string): Promise<GoodPageCache>;
-    registerPage(route: string, regFn: () => any): void;
-    /**
-     * @param {string} route
-     * @param {boolean} [isDependency]
-     */
-    prefetch(route: string, isDependency?: boolean): Promise<void>;
+    prefetch(route: string): Promise<void>;
 }
