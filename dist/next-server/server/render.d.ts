@@ -36,9 +36,11 @@ export declare type RenderOptsPartial = {
     optimizeFonts: boolean;
     fontManifest?: FontManifest;
     optimizeImages: boolean;
+    optimizeCss: any;
     devOnlyCacheBusterQueryString?: string;
     resolvedUrl?: string;
     resolvedAsPath?: string;
+    distDir?: string;
     locale?: string;
     locales?: string[];
     defaultLocale?: string;

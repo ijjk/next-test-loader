@@ -6,11 +6,11 @@ import { PrerenderManifest } from '../../build';
 import { CustomRoutes } from '../../lib/load-custom-routes';
 import { getRouteMatcher } from '../lib/router/utils';
 import { __ApiPreviewProps } from './api-utils';
+import { NextConfig } from './config';
 import Router, { DynamicRoutes, PageChecker, Params, Route } from './router';
 import './node-polyfill-fetch';
 import { PagesManifest } from '../../build/webpack/plugins/pages-manifest-plugin';
 import { FontManifest } from './font-utils';
-declare type NextConfig = any;
 declare type DynamicRouteItem = {
     page: string;
     match: ReturnType<typeof getRouteMatcher>;
@@ -27,7 +27,7 @@ export declare type ServerConstructor = {
     /**
      * Object what you would use in next.config.js - @default {}
      */
-    conf?: NextConfig;
+    conf?: NextConfig | null;
     dev?: boolean;
     customServer?: boolean;
 };
@@ -62,6 +62,7 @@ export default class Server {
         images: string;
         fontManifest: FontManifest;
         optimizeImages: boolean;
+        optimizeCss: any;
         locale?: string;
         locales?: string[];
         defaultLocale?: string;
@@ -121,10 +122,10 @@ export default class Server {
     }>;
     private renderToHTMLWithComponents;
     renderToHTML(req: IncomingMessage, res: ServerResponse, pathname: string, query?: ParsedUrlQuery): Promise<string | null>;
-    renderError(err: Error | null, req: IncomingMessage, res: ServerResponse, pathname: string, query?: ParsedUrlQuery): Promise<void>;
+    renderError(err: Error | null, req: IncomingMessage, res: ServerResponse, pathname: string, query?: ParsedUrlQuery, setHeaders?: boolean): Promise<void>;
     private customErrorNo404Warn;
     renderErrorToHTML(err: Error | null, req: IncomingMessage, res: ServerResponse, _pathname: string, query?: ParsedUrlQuery): Promise<string | null>;
-    render404(req: IncomingMessage, res: ServerResponse, parsedUrl?: UrlWithParsedQuery): Promise<void>;
+    render404(req: IncomingMessage, res: ServerResponse, parsedUrl?: UrlWithParsedQuery, setHeaders?: boolean): Promise<void>;
     serveStatic(req: IncomingMessage, res: ServerResponse, path: string, parsedUrl?: UrlWithParsedQuery): Promise<void>;
     private _validFilesystemPathSet;
     private getFilesystemPaths;

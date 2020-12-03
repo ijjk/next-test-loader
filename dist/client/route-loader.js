@@ -3,7 +3,9 @@
 // wrong beyond this point, and then fall-back to a full page transition to
 // show the user something of value.
 const MS_MAX_IDLE_DELAY=3800;function withFuture(key,map,generator){let entry=map.get(key);if(entry){if('future'in entry){return entry.future;}return Promise.resolve(entry);}let resolver;const prom=new Promise(resolve=>{resolver=resolve;});map.set(key,entry={resolve:resolver,future:prom});return generator?// eslint-disable-next-line no-sequences
-generator().then(value=>(resolver(value),value)):prom;}function hasPrefetch(link){try{link=document.createElement('link');return link.relList.supports('prefetch');}catch(_unused){return false;}}const canPrefetch=hasPrefetch();function prefetchViaDom(href,as,link){return new Promise((res,rej)=>{if(document.querySelector(`link[rel="prefetch"][href^="${href}"]`)){return res();}link=document.createElement('link');// The order of property assignment here is intentional:
+generator().then(value=>(resolver(value),value)):prom;}function hasPrefetch(link){try{link=document.createElement('link');return(// detect IE11 since it supports prefetch but isn't detected
+// with relList.support
+!!window.MSInputMethodContext&&!!document.documentMode||link.relList.supports('prefetch'));}catch(_unused){return false;}}const canPrefetch=hasPrefetch();function prefetchViaDom(href,as,link){return new Promise((res,rej)=>{if(document.querySelector(`link[rel="prefetch"][href^="${href}"]`)){return res();}link=document.createElement('link');// The order of property assignment here is intentional:
 if(as)link.as=as;link.rel=`prefetch`;link.crossOrigin=process.env.__NEXT_CROSS_ORIGIN;link.onload=res;link.onerror=rej;// `href` should always be last:
 link.href=href;document.head.appendChild(link);});}const ASSET_LOAD_ERROR=Symbol('ASSET_LOAD_ERROR');// TODO: unexport
 function markAssetError(err){return Object.defineProperty(err,ASSET_LOAD_ERROR,{});}function isAssetError(err){return err&&ASSET_LOAD_ERROR in err;}function appendScript(src,script){return new Promise((resolve,reject)=>{script=document.createElement('script');// The order of property assignment here is intentional.
