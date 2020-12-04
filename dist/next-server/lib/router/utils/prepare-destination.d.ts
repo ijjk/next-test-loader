@@ -4,7 +4,7 @@ declare type Params = {
     [param: string]: any;
 };
 export declare function compileNonPath(value: string, params: Params): string;
-export default function prepareDestination(destination: string, params: Params, query: ParsedUrlQuery, appendParamsToQuery: boolean): {
+export default function prepareDestination(destination: string, params: Params, query: ParsedUrlQuery, appendParamsToQuery: boolean, basePath: string): {
     newUrl: string;
     parsedDestination: {
         query?: ParsedUrlQuery | undefined;

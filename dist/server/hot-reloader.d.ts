@@ -3,7 +3,6 @@ import { IncomingMessage, ServerResponse } from 'http';
 import { UrlObject } from 'url';
 import { __ApiPreviewProps } from '../next-server/server/api-utils';
 import { Rewrite } from '../lib/load-custom-routes';
-import { NextConfig } from '../next-server/server/config';
 export declare function renderScriptError(res: ServerResponse, error: Error, { verbose }?: {
     verbose?: boolean | undefined;
 }): Promise<void>;
@@ -25,7 +24,7 @@ export default class HotReloader {
     private watcher;
     private rewrites;
     constructor(dir: string, { config, pagesDir, buildId, previewProps, rewrites, }: {
-        config: NextConfig;
+        config: object;
         pagesDir: string;
         buildId: string;
         previewProps: __ApiPreviewProps;
