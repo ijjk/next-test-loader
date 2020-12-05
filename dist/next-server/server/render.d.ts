@@ -33,7 +33,6 @@ export declare type RenderOptsPartial = {
     previewProps: __ApiPreviewProps;
     basePath: string;
     unstable_runtimeJS?: false;
-    optimizeFonts: boolean;
     fontManifest?: FontManifest;
     optimizeImages: boolean;
     optimizeCss: any;

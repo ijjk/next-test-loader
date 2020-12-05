@@ -6,6 +6,7 @@ import { Rewrite } from '../../../../lib/load-custom-routes';
 import { __ApiPreviewProps } from '../../../../next-server/server/api-utils';
 import { BuildManifest } from '../../../../next-server/server/get-page-files';
 import { GetServerSideProps, GetStaticPaths, GetStaticProps } from '../../../../types';
+import { NextConfig } from '../../../../next-server/server/config';
 export declare const vercelHeader = "x-vercel-id";
 export declare type ServerlessHandlerCtx = {
     page: string;
@@ -33,16 +34,7 @@ export declare type ServerlessHandlerCtx = {
     poweredByHeader: boolean;
     canonicalBase: string;
     encodedPreviewProps: __ApiPreviewProps;
-    i18n?: {
-        localeDetection?: false;
-        locales: string[];
-        defaultLocale: string;
-        domains: Array<{
-            domain: string;
-            locales: string[];
-            defaultLocale: string;
-        }>;
-    };
+    i18n?: NextConfig['i18n'];
     experimental: {
         initServer: () => Promise<any>;
         onError: ({ err }: {
