@@ -50,7 +50,13 @@ export declare type ServerlessHandlerCtx = {
         }) => Promise<any>;
     };
 };
-export declare function getUtils({ page, i18n, basePath, rewrites, pageIsDynamic, }: ServerlessHandlerCtx): {
+export declare function getUtils({ page, i18n, basePath, rewrites, pageIsDynamic, }: {
+    page: ServerlessHandlerCtx['page'];
+    i18n?: ServerlessHandlerCtx['i18n'];
+    basePath: ServerlessHandlerCtx['basePath'];
+    rewrites: ServerlessHandlerCtx['rewrites'];
+    pageIsDynamic: ServerlessHandlerCtx['pageIsDynamic'];
+}): {
     handleLocale: (req: IncomingMessage, res: ServerResponse, parsedUrl: UrlWithParsedQuery, routeNoAssetPath: string, shouldNotRedirect: boolean) => {
         defaultLocale: string;
         detectedLocale: string;
@@ -72,6 +78,8 @@ export declare function getUtils({ page, i18n, basePath, rewrites, pageIsDynamic
         [paramName: string]: string | string[];
     }) | undefined;
     defaultRouteMatches: ParsedUrlQuery | undefined;
+    interpolateDynamicPath: (pathname: string, params: ParsedUrlQuery) => string;
+    getParamsFromRouteMatches: (req: IncomingMessage, renderOpts?: any, detectedLocale?: string | undefined) => ParsedUrlQuery;
     normalizeDynamicRouteParams: (params: ParsedUrlQuery) => {
         params: ParsedUrlQuery;
         hasValidParams: boolean;
