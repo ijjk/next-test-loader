@@ -7,7 +7,9 @@ modules:'auto',exclude:['transform-typeof-symbol'],include:['@babel/plugin-propo
 if((isServer||isTest)&&(!presetEnvConfig.targets||!(typeof presetEnvConfig.targets==='object'&&'node'in presetEnvConfig.targets))){presetEnvConfig.targets={// Targets the current process' version of Node. This requires apps be
 // built and deployed on the same version of Node.
 node:'current'};}// specify a preset to use instead of @babel/preset-env
-const customModernPreset=isLaxModern&&options['experimental-modern-preset'];return{sourceType:'unambiguous',presets:[customModernPreset||[require('next/dist/compiled/babel/preset-env'),presetEnvConfig],[require('next/dist/compiled/babel/preset-react'),{// This adds @babel/plugin-transform-react-jsx-source and
+const customModernPreset=isLaxModern&&options['experimental-modern-preset'];console.log('presetReact opts',{// This adds @babel/plugin-transform-react-jsx-source and
+// @babel/plugin-transform-react-jsx-self automatically in development
+development:isDevelopment||isTest,...(useJsxRuntime?{runtime:'automatic'}:{pragma:'__jsx'}),...options['preset-react']});return{sourceType:'unambiguous',presets:[customModernPreset||[require('next/dist/compiled/babel/preset-env'),presetEnvConfig],[require('next/dist/compiled/babel/preset-react'),{// This adds @babel/plugin-transform-react-jsx-source and
 // @babel/plugin-transform-react-jsx-self automatically in development
 development:isDevelopment||isTest,...(useJsxRuntime?{runtime:'automatic'}:{pragma:'__jsx'}),...options['preset-react']}],[require('next/dist/compiled/babel/preset-typescript'),{allowNamespaces:true,...options['preset-typescript']}]],plugins:[!useJsxRuntime&&[require('./plugins/jsx-pragma'),{// This produces the following injected import for modules containing JSX:
 //   import React from 'react';
