@@ -66,6 +66,7 @@ export declare function getUtils({ page, i18n, basePath, rewrites, pageIsDynamic
             [groupName: string]: import("../../../../next-server/lib/router/utils/route-regex").Group;
         };
     } | undefined;
+    normalizeVercelUrl: (req: IncomingMessage, trustQuery: boolean) => void;
     dynamicRouteMatcher: ((pathname: string | null | undefined) => false | {
         [paramName: string]: string | string[];
     }) | undefined;
