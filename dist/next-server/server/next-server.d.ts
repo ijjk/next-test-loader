@@ -6,7 +6,7 @@ import { PrerenderManifest } from '../../build';
 import { CustomRoutes } from '../../lib/load-custom-routes';
 import { getRouteMatcher } from '../lib/router/utils';
 import { __ApiPreviewProps } from './api-utils';
-import { NextConfig } from './config';
+import { DomainLocales, NextConfig } from './config';
 import Router, { DynamicRoutes, PageChecker, Params, Route } from './router';
 import './node-polyfill-fetch';
 import { PagesManifest } from '../../build/webpack/plugins/pages-manifest-plugin';
@@ -59,6 +59,7 @@ export default class Server {
             [key: string]: any;
         };
         basePath: string;
+        optimizeFonts: boolean;
         images: string;
         fontManifest: FontManifest;
         optimizeImages: boolean;
@@ -66,6 +67,7 @@ export default class Server {
         locale?: string;
         locales?: string[];
         defaultLocale?: string;
+        domainLocales?: DomainLocales;
     };
     private compression?;
     private onErrorMiddleware?;

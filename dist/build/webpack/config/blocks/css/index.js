@@ -13,10 +13,7 @@ sourceMap:true,sassOptions,additionalData:sassPrependData||sassAdditionalData}},
 {loader:require.resolve('resolve-url-loader'),options:{// Source maps are not required here, but we may as well emit
 // them.
 sourceMap:true}}];const fns=[(0,_helpers.loader)({oneOf:[{// Impossible regex expression
-test:/a^/,loader:'noop-loader',options:{__next_css_remove:true}}]})];const postCssPlugins=await(0,_plugins.getPostCssPlugins)(ctx.rootDirectory,ctx.isProduction,// TODO: In the future, we should stop supporting old CSS setups and
-// unconditionally inject ours. When that happens, we should remove this
-// function argument.
-true);// CSS cannot be imported in _document. This comes before everything because
+test:/a^/,loader:'noop-loader',options:{__next_css_remove:true}}]})];const postCssPlugins=await(0,_plugins.getPostCssPlugins)(ctx.rootDirectory,ctx.isProduction,!ctx.future.strictPostcssConfiguration);// CSS cannot be imported in _document. This comes before everything because
 // global CSS nor CSS modules work in said file.
 fns.push((0,_helpers.loader)({oneOf:[{test:regexLikeCss,// Use a loose regex so we don't have to crawl the file system to
 // find the real file name (if present).

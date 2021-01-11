@@ -24,7 +24,7 @@ return{};}try{return JSON.parse(str);}catch(e){throw new ApiError(400,'Invalid J
  * @param res response object
  * @param [statusOrUrl] `HTTP` status code of redirect
  * @param url URL of redirect
- */function redirect(res,statusOrUrl,url){if(typeof statusOrUrl==='string'){url=statusOrUrl;statusOrUrl=307;}if(typeof statusOrUrl!=='number'||typeof url!=='string'){throw new Error(`Invalid redirect arguments. Please use a single argument URL, e.g. res.redirect('/destination') or use a status code and URL, e.g. res.redirect(307, '/destination').`);}res.writeHead(statusOrUrl,{Location:url}).end();return res;}/**
+ */function redirect(res,statusOrUrl,url){if(typeof statusOrUrl==='string'){url=statusOrUrl;statusOrUrl=307;}if(typeof statusOrUrl!=='number'||typeof url!=='string'){throw new Error(`Invalid redirect arguments. Please use a single argument URL, e.g. res.redirect('/destination') or use a status code and URL, e.g. res.redirect(307, '/destination').`);}res.writeHead(statusOrUrl,{Location:url});res.write('');res.end();return res;}/**
  * Send `any` body to response
  * @param req request object
  * @param res response object

@@ -8,6 +8,6 @@ export default class BuildManifestPlugin {
         buildId: string;
         rewrites: Rewrite[];
     });
-    createAssets(compilation: any, assets: any): any;
+    createAssets(compiler: any, compilation: any, assets: any): any;
     apply(compiler: Compiler): void;
 }
