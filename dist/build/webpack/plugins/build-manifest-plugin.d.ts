@@ -1,4 +1,4 @@
-import { Compiler } from 'webpack';
+import { webpack } from 'next/dist/compiled/webpack/webpack';
 import { Rewrite } from '../../../lib/load-custom-routes';
 export declare type ClientBuildManifest = Record<string, string[]>;
 export default class BuildManifestPlugin {
@@ -9,5 +9,5 @@ export default class BuildManifestPlugin {
         rewrites: Rewrite[];
     });
     createAssets(compiler: any, compilation: any, assets: any): any;
-    apply(compiler: Compiler): void;
+    apply(compiler: webpack.Compiler): void;
 }

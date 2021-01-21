@@ -1,4 +1,4 @@
-import webpack from 'webpack';
+import { webpack } from 'next/dist/compiled/webpack/webpack';
 import { Rewrite } from '../lib/load-custom-routes';
 import { WebpackEntrypoints } from './entries';
 import { NextConfig } from '../next-server/server/config';

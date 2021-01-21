@@ -21,6 +21,7 @@ export declare type NextConfig = {
     future: {
         strictPostcssConfiguration: boolean;
         excludeDefaultMomentLocales: boolean;
+        webpack5: boolean;
     };
 };
 export declare function normalizeConfig(phase: string, config: any): any;
