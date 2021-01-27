@@ -155,7 +155,7 @@ export default class Router implements BaseRouter {
         code: any;
         cancelled: boolean;
     }, pathname: string, query: ParsedUrlQuery, as: string, routeProps: RouteProperties, loadErrorFail?: boolean): Promise<CompletePrivateRouteInfo>;
-    getRouteInfo(route: string, pathname: string, query: any, as: string, routeProps: RouteProperties): Promise<PrivateRouteInfo>;
+    getRouteInfo(route: string, pathname: string, query: any, as: string, resolvedAs: string, routeProps: RouteProperties): Promise<PrivateRouteInfo>;
     set(route: string, pathname: string, query: ParsedUrlQuery, as: string, data: PrivateRouteInfo, resetScroll: {
         x: number;
         y: number;

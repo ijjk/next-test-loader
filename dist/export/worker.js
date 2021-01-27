@@ -12,7 +12,7 @@ if(renderedDuringBuild(mod.getStaticProps))return results;if(mod.getStaticProps&
 htmlFilename+='.html';htmlFilepath+='.html';}renderMethod=mod.renderReqToHTML;const result=await renderMethod(req,res,'export',{ampPath:renderAmpPath,/// @ts-ignore
 optimizeFonts,/// @ts-ignore
 optimizeImages,/// @ts-ignore
-optimizeCss,fontManifest:optimizeFonts?(0,_require.requireFontManifest)(distDir,serverless):null,locale:locale,locales:renderOpts.locales},// @ts-ignore
+optimizeCss,distDir,fontManifest:optimizeFonts?(0,_require.requireFontManifest)(distDir,serverless):null,locale:locale,locales:renderOpts.locales},// @ts-ignore
 params);curRenderOpts=result.renderOpts||{};html=result.html;}if(!html&&!curRenderOpts.isNotFound){throw new Error(`Failed to render serverless page`);}}else{const components=await(0,_loadComponents.loadComponents)(distDir,page,serverless);if(components.getServerSideProps){throw new Error(`Error for page ${page}: ${_constants.SERVER_PROPS_EXPORT_ERROR}`);}// for non-dynamic SSG pages we should have already
 // prerendered the file
 if(renderedDuringBuild(components.getStaticProps)){return results;}// TODO: de-dupe the logic here between serverless and server mode
