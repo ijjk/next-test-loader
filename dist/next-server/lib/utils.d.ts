@@ -76,6 +76,7 @@ export declare type NEXT_DATA = {
     locales?: string[];
     defaultLocale?: string;
     domainLocales?: DomainLocales;
+    isPreview?: boolean;
 };
 /**
  * `Next` context

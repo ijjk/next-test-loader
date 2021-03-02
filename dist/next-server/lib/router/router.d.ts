@@ -54,8 +54,9 @@ export declare type BaseRouter = {
     locales?: string[];
     defaultLocale?: string;
     domainLocales?: DomainLocales;
+    isLocaleDomain: boolean;
 };
-export declare type NextRouter = BaseRouter & Pick<Router, 'push' | 'replace' | 'reload' | 'back' | 'prefetch' | 'beforePopState' | 'events' | 'isFallback' | 'isReady'>;
+export declare type NextRouter = BaseRouter & Pick<Router, 'push' | 'replace' | 'reload' | 'back' | 'prefetch' | 'beforePopState' | 'events' | 'isFallback' | 'isReady' | 'isPreview'>;
 export declare type PrefetchOptions = {
     priority?: boolean;
     locale?: string | false;
@@ -113,9 +114,11 @@ export default class Router implements BaseRouter {
     defaultLocale?: string;
     domainLocales?: DomainLocales;
     isReady: boolean;
+    isPreview: boolean;
+    isLocaleDomain: boolean;
     private _idx;
     static events: MittEmitter;
-    constructor(pathname: string, query: ParsedUrlQuery, as: string, { initialProps, pageLoader, App, wrapApp, Component, err, subscription, isFallback, locale, locales, defaultLocale, domainLocales, }: {
+    constructor(pathname: string, query: ParsedUrlQuery, as: string, { initialProps, pageLoader, App, wrapApp, Component, err, subscription, isFallback, locale, locales, defaultLocale, domainLocales, isPreview, }: {
         subscription: Subscription;
         initialProps: any;
         pageLoader: any;
@@ -128,6 +131,7 @@ export default class Router implements BaseRouter {
         locales?: string[];
         defaultLocale?: string;
         domainLocales?: DomainLocales;
+        isPreview?: boolean;
     });
     onPopState: (e: PopStateEvent) => void;
     reload(): void;
@@ -168,7 +172,6 @@ export default class Router implements BaseRouter {
     onlyAHashChange(as: string): boolean;
     scrollToHash(as: string): void;
     urlIsNew(asPath: string): boolean;
-    _resolveHref(parsedHref: UrlObject, pages: string[], applyBasePath?: boolean): UrlObject;
     /**
      * Prefetch page code, you may wait for the data during page rendering.
      * This feature only works in production!

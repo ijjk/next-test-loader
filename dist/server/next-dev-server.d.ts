@@ -5,6 +5,7 @@ import { CustomRoutes } from '../lib/load-custom-routes';
 import { __ApiPreviewProps } from '../next-server/server/api-utils';
 import Server, { ServerConstructor } from '../next-server/server/next-server';
 import { Params } from '../next-server/server/router';
+import { NextConfig } from '../next-server/server/config';
 export default class DevServer extends Server {
     private devReady;
     private setDevReady?;
@@ -16,9 +17,9 @@ export default class DevServer extends Server {
         loadStaticPaths: typeof import('./static-paths-worker').loadStaticPaths;
     };
     constructor(options: ServerConstructor & {
+        conf: NextConfig;
         isNextDevCommand?: boolean;
     });
-    protected currentPhase(): string;
     protected readBuildId(): string;
     addExportPathMapRoutes(): Promise<void>;
     startWatcher(): Promise<void>;

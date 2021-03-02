@@ -68,6 +68,7 @@ export default class Server {
         locales?: string[];
         defaultLocale?: string;
         domainLocales?: DomainLocales;
+        distDir: string;
     };
     private compression?;
     private onErrorMiddleware?;
@@ -75,10 +76,10 @@ export default class Server {
     router: Router;
     protected dynamicRoutes?: DynamicRoutes;
     protected customRoutes: CustomRoutes;
-    constructor({ dir, quiet, conf, dev, minimalMode, customServer, }?: ServerConstructor & {
+    constructor({ dir, quiet, conf, dev, minimalMode, customServer, }: ServerConstructor & {
+        conf: NextConfig;
         minimalMode?: boolean;
     });
-    protected currentPhase(): string;
     logError(err: Error): void;
     private handleRequest;
     getRequestHandler(): (req: IncomingMessage, res: ServerResponse, parsedUrl?: UrlWithParsedQuery | undefined) => Promise<void>;

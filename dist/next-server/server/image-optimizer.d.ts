@@ -1,6 +1,6 @@
 /// <reference types="node" />
-import { UrlWithParsedQuery } from 'url';
 import { IncomingMessage, ServerResponse } from 'http';
+import { UrlWithParsedQuery } from 'url';
 import Server from './next-server';
 export declare function imageOptimizer(server: Server, req: IncomingMessage, res: ServerResponse, parsedUrl: UrlWithParsedQuery): Promise<{
     finished: boolean;

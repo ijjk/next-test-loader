@@ -42,3 +42,4 @@ export declare function isPageStatic(page: string, serverBundle: string, runtime
 export declare function hasCustomGetInitialProps(bundle: string, runtimeEnvConfig: any, checkingApp: boolean): Promise<boolean>;
 export declare function getNamedExports(bundle: string, runtimeEnvConfig: any): Array<string>;
 export declare function detectConflictingPaths(combinedPages: string[], ssgPages: Set<string>, additionalSsgPaths: Map<string, string[]>): void;
+export declare function getCssFilePaths(buildManifest: BuildManifest): string[];
