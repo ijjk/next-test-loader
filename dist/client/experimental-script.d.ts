@@ -1,6 +1,6 @@
 import React from 'react';
 import { ScriptHTMLAttributes } from 'react';
-interface Props extends ScriptHTMLAttributes<HTMLScriptElement> {
+export interface Props extends ScriptHTMLAttributes<HTMLScriptElement> {
     strategy?: 'defer' | 'lazy' | 'dangerouslyBlockRendering' | 'eager';
     id?: string;
     onLoad?: () => void;
@@ -8,5 +8,6 @@ interface Props extends ScriptHTMLAttributes<HTMLScriptElement> {
     children?: React.ReactNode;
     preload?: boolean;
 }
-export default function Script(props: Props): JSX.Element | null;
-export {};
+export declare function initScriptLoader(scriptLoaderItems: Props[]): void;
+declare function Script(props: Props): JSX.Element | null;
+export default Script;

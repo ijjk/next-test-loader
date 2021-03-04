@@ -47,6 +47,8 @@
 runtimeConfigSetter}
       import { getPageHandler } from 'next/dist/build/webpack/loaders/next-serverless-loader/page-handler'
 
+      const documentModule = require("${absoluteDocumentPath}")
+
       const appMod = require('${absoluteAppPath}')
       let App = appMod.default || appMod.then && appMod.then(mod => mod.default);
 
@@ -72,7 +74,7 @@ runtimeConfigSetter}
         pageComponent: Component,
         pageConfig: config,
         appModule: App,
-        documentModule: require("${absoluteDocumentPath}"),
+        documentModule: documentModule,
         errorModule: require("${absoluteErrorPath}"),
         notFoundModule: ${absolute404Path?`require("${absolute404Path}")`:undefined},
         pageGetStaticProps: getStaticProps,

@@ -28,7 +28,7 @@ export declare function buildStaticPaths(page: string, getStaticPaths: GetStatic
     paths: string[];
     encodedPaths: string[];
 }>;
-export declare function isPageStatic(page: string, serverBundle: string, runtimeEnvConfig: any, locales?: string[], defaultLocale?: string, spanContext?: any): Promise<{
+export declare function isPageStatic(page: string, distDir: string, serverless: boolean, runtimeEnvConfig: any, locales?: string[], defaultLocale?: string, spanContext?: any): Promise<{
     isStatic?: boolean;
     isAmpOnly?: boolean;
     isHybridAmp?: boolean;

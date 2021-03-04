@@ -4,7 +4,11 @@ export declare type PagesManifest = {
 };
 export default class PagesManifestPlugin implements webpack.Plugin {
     serverless: boolean;
-    constructor(serverless: boolean);
+    dev: boolean;
+    constructor({ serverless, dev }: {
+        serverless: boolean;
+        dev: boolean;
+    });
     createAssets(compilation: any, assets: any): void;
     apply(compiler: webpack.Compiler): void;
 }

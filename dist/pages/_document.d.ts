@@ -37,6 +37,7 @@ export declare class Head extends Component<OriginProps & React.DetailedHTMLProp
     getCssLinks(files: DocumentFiles): JSX.Element[] | null;
     getPreloadDynamicChunks(): (JSX.Element | null)[];
     getPreloadMainLinks(files: DocumentFiles): JSX.Element[] | null;
+    handleDocumentScriptLoaderItems(children: React.ReactNode): ReactNode[];
     makeStylesheetInert(node: ReactNode): ReactNode[];
     render(): JSX.Element;
 }

@@ -21,6 +21,7 @@ export declare type LoadComponentsReturnType = {
     getStaticProps?: GetStaticProps;
     getStaticPaths?: GetStaticPaths;
     getServerSideProps?: GetServerSideProps;
+    ComponentMod: any;
 };
 export declare function loadComponents(distDir: string, pathname: string, serverless: boolean): Promise<LoadComponentsReturnType>;
 export {};
