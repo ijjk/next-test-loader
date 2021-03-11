@@ -1,7 +1,6 @@
 /// <reference types="node" />
 import { IncomingMessage, ServerResponse } from 'http';
 import { NextApiRequest, NextApiResponse } from '../lib/utils';
-import { Params } from './router';
 export declare type NextApiRequestCookies = {
     [key: string]: string;
 };
@@ -70,7 +69,6 @@ export declare class ApiError extends Error {
 export declare function sendError(res: NextApiResponse, statusCode: number, message: string): void;
 interface LazyProps {
     req: NextApiRequest;
-    params?: Params | boolean;
 }
 /**
  * Execute getter function only if its needed
@@ -78,5 +76,5 @@ interface LazyProps {
  * @param prop name of property
  * @param getter function to get data
  */
-export declare function setLazyProp<T>({ req, params }: LazyProps, prop: string, getter: () => T): void;
+export declare function setLazyProp<T>({ req }: LazyProps, prop: string, getter: () => T): void;
 export {};

@@ -99,6 +99,9 @@ export default class Router implements BaseRouter {
     sdc: {
         [asPath: string]: object;
     };
+    sdr: {
+        [asPath: string]: Promise<object>;
+    };
     sub: Subscription;
     clc: ComponentLoadCancel;
     pageLoader: any;

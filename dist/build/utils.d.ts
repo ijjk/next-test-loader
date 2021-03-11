@@ -28,7 +28,7 @@ export declare function buildStaticPaths(page: string, getStaticPaths: GetStatic
     paths: string[];
     encodedPaths: string[];
 }>;
-export declare function isPageStatic(page: string, distDir: string, serverless: boolean, runtimeEnvConfig: any, locales?: string[], defaultLocale?: string, spanContext?: any): Promise<{
+export declare function isPageStatic(page: string, distDir: string, serverless: boolean, runtimeEnvConfig: any, locales?: string[], defaultLocale?: string, parentId?: any): Promise<{
     isStatic?: boolean;
     isAmpOnly?: boolean;
     isHybridAmp?: boolean;
@@ -39,7 +39,7 @@ export declare function isPageStatic(page: string, distDir: string, serverless: 
     prerenderFallback?: boolean | 'blocking';
     isNextImageImported?: boolean;
 }>;
-export declare function hasCustomGetInitialProps(bundle: string, runtimeEnvConfig: any, checkingApp: boolean): Promise<boolean>;
-export declare function getNamedExports(bundle: string, runtimeEnvConfig: any): Array<string>;
+export declare function hasCustomGetInitialProps(page: string, distDir: string, isLikeServerless: boolean, runtimeEnvConfig: any, checkingApp: boolean): Promise<boolean>;
+export declare function getNamedExports(page: string, distDir: string, isLikeServerless: boolean, runtimeEnvConfig: any): Promise<Array<string>>;
 export declare function detectConflictingPaths(combinedPages: string[], ssgPages: Set<string>, additionalSsgPaths: Map<string, string[]>): void;
 export declare function getCssFilePaths(buildManifest: BuildManifest): string[];

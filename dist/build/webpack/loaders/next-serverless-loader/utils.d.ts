@@ -54,7 +54,7 @@ export declare function getUtils({ page, i18n, basePath, rewrites, pageIsDynamic
         detectedLocale: string;
         routeNoAssetPath: string;
     } | undefined;
-    handleRewrites: (parsedUrl: UrlWithParsedQuery) => UrlWithParsedQuery;
+    handleRewrites: (req: IncomingMessage, parsedUrl: UrlWithParsedQuery) => UrlWithParsedQuery;
     handleBasePath: (req: IncomingMessage, parsedUrl: UrlWithParsedQuery) => void;
     defaultRouteRegex: {
         re: RegExp;

@@ -64,6 +64,6 @@ expires:new Date(0),httpOnly:true,sameSite:process.env.NODE_ENV!=='development'?
  * @param LazyProps `req` and `params` for lazyProp
  * @param prop name of property
  * @param getter function to get data
- */function setLazyProp({req,params},prop,getter){const opts={configurable:true,enumerable:true};const optsReset={...opts,writable:true};Object.defineProperty(req,prop,{...opts,get:()=>{let value=getter();if(params&&typeof params!=='boolean'){value={...value,...params};}// we set the property on the object to avoid recalculating it
+ */function setLazyProp({req},prop,getter){const opts={configurable:true,enumerable:true};const optsReset={...opts,writable:true};Object.defineProperty(req,prop,{...opts,get:()=>{const value=getter();// we set the property on the object to avoid recalculating it
 Object.defineProperty(req,prop,{...optsReset,value});return value;},set:value=>{Object.defineProperty(req,prop,{...optsReset,value});}});}
 //# sourceMappingURL=api-utils.js.map

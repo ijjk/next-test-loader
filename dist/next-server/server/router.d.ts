@@ -1,6 +1,7 @@
 /// <reference types="node" />
 import { IncomingMessage, ServerResponse } from 'http';
 import { UrlWithParsedQuery } from 'url';
+import { RouteHas } from '../../lib/load-custom-routes';
 export declare const route: (path: string) => (pathname: string | null | undefined, params?: any) => any;
 export declare type Params = {
     [param: string]: any;
@@ -15,6 +16,7 @@ declare type RouteResult = {
 };
 export declare type Route = {
     match: RouteMatch;
+    has?: RouteHas[];
     type: string;
     check?: boolean;
     statusCode?: number;

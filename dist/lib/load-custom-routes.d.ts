@@ -1,9 +1,15 @@
 import { NextConfig } from '../next-server/server/config';
+export declare type RouteHas = {
+    type: 'header' | 'query' | 'cookie';
+    key: string;
+    value?: string;
+};
 export declare type Rewrite = {
     source: string;
     destination: string;
     basePath?: false;
     locale?: false;
+    has?: RouteHas[];
 };
 export declare type Header = {
     source: string;
@@ -13,6 +19,7 @@ export declare type Header = {
         key: string;
         value: string;
     }>;
+    has?: RouteHas[];
 };
 export declare type Redirect = Rewrite & {
     statusCode?: number;
