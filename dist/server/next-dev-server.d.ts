@@ -13,7 +13,7 @@ export default class DevServer extends Server {
     private hotReloader?;
     private isCustomServer;
     protected sortedRoutes?: string[];
-    protected staticPathsWorker: import('jest-worker').default & {
+    protected staticPathsWorker: import('jest-worker').Worker & {
         loadStaticPaths: typeof import('./static-paths-worker').loadStaticPaths;
     };
     constructor(options: ServerConstructor & {

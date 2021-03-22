@@ -55,6 +55,7 @@ interface RenderOpts {
     locales?: string[];
     locale?: string;
     defaultLocale?: string;
+    trailingSlash?: boolean;
 }
 export default function exportPage({ parentSpanId, path, pathMap, distDir, outDir, pagesDataDir, renderOpts, buildExport, serverRuntimeConfig, subFolders, serverless, optimizeFonts, optimizeImages, optimizeCss, }: ExportPageInput): Promise<ExportPageResults>;
 export {};
