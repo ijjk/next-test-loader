@@ -25,6 +25,7 @@ export declare type ServerlessHandlerCtx = {
     reactLoadableManifest?: any;
     basePath: string;
     rewrites: Rewrite[];
+    overrideRewrites: Rewrite[];
     pageIsDynamic: boolean;
     generateEtags: boolean;
     distDir: string;
@@ -42,11 +43,12 @@ export declare type ServerlessHandlerCtx = {
         }) => Promise<any>;
     };
 };
-export declare function getUtils({ page, i18n, basePath, rewrites, pageIsDynamic, }: {
+export declare function getUtils({ page, i18n, basePath, rewrites, overrideRewrites, pageIsDynamic, }: {
     page: ServerlessHandlerCtx['page'];
     i18n?: ServerlessHandlerCtx['i18n'];
     basePath: ServerlessHandlerCtx['basePath'];
     rewrites: ServerlessHandlerCtx['rewrites'];
+    overrideRewrites: ServerlessHandlerCtx['rewrites'];
     pageIsDynamic: ServerlessHandlerCtx['pageIsDynamic'];
 }): {
     handleLocale: (req: IncomingMessage, res: ServerResponse, parsedUrl: UrlWithParsedQuery, routeNoAssetPath: string, shouldNotRedirect: boolean) => {

@@ -39,6 +39,7 @@ export default class DevServer extends Server {
         redirects: import("../next-server/server/router").Route[];
         catchAllRoute: import("../next-server/server/router").Route;
         pageChecker: import("../next-server/server/router").PageChecker;
+        overrideRewrites: import("../next-server/server/router").Route[];
         useFileSystemPublicRoutes: boolean;
         dynamicRoutes: import("../next-server/server/router").DynamicRoutes | undefined;
         locales: string[];

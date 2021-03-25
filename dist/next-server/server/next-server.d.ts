@@ -99,6 +99,7 @@ export default class Server {
         redirects: Route[];
         catchAllRoute: Route;
         pageChecker: PageChecker;
+        overrideRewrites: Route[];
         useFileSystemPublicRoutes: boolean;
         dynamicRoutes: DynamicRoutes | undefined;
         locales: string[];

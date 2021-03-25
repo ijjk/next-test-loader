@@ -38,16 +38,18 @@ export default class Router {
     redirects: Route[];
     catchAllRoute: Route;
     pageChecker: PageChecker;
+    overrideRewrites: Route[];
     dynamicRoutes: DynamicRoutes;
     useFileSystemPublicRoutes: boolean;
     locales: string[];
-    constructor({ basePath, headers, fsRoutes, rewrites, redirects, catchAllRoute, dynamicRoutes, pageChecker, useFileSystemPublicRoutes, locales, }: {
+    constructor({ basePath, headers, fsRoutes, rewrites, redirects, catchAllRoute, dynamicRoutes, pageChecker, overrideRewrites, useFileSystemPublicRoutes, locales, }: {
         basePath: string;
         headers: Route[];
         fsRoutes: Route[];
         rewrites: Route[];
         redirects: Route[];
         catchAllRoute: Route;
+        overrideRewrites: Route[];
         dynamicRoutes: DynamicRoutes | undefined;
         pageChecker: PageChecker;
         useFileSystemPublicRoutes: boolean;

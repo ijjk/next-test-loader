@@ -3,6 +3,10 @@ export declare type RouteHas = {
     type: 'header' | 'query' | 'cookie';
     key: string;
     value?: string;
+} | {
+    type: 'host';
+    key?: undefined;
+    value: string;
 };
 export declare type Rewrite = {
     source: string;
@@ -10,6 +14,7 @@ export declare type Rewrite = {
     basePath?: false;
     locale?: false;
     has?: RouteHas[];
+    override?: true;
 };
 export declare type Header = {
     source: string;
@@ -21,7 +26,12 @@ export declare type Header = {
     }>;
     has?: RouteHas[];
 };
-export declare type Redirect = Rewrite & {
+export declare type Redirect = {
+    source: string;
+    destination: string;
+    basePath?: false;
+    locale?: false;
+    has?: RouteHas[];
     statusCode?: number;
     permanent?: boolean;
 };
@@ -36,5 +46,6 @@ export interface CustomRoutes {
     headers: Header[];
     rewrites: Rewrite[];
     redirects: Redirect[];
+    overrideRewrites: Rewrite[];
 }
 export default function loadCustomRoutes(config: NextConfig): Promise<CustomRoutes>;

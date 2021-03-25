@@ -21,7 +21,7 @@ export declare function printTreeView(list: readonly string[], pageInfos: Map<st
     buildManifest: BuildManifest;
     useStatic404: boolean;
 }): Promise<void>;
-export declare function printCustomRoutes({ redirects, rewrites, headers, }: CustomRoutes): void;
+export declare function printCustomRoutes({ redirects, rewrites, headers, overrideRewrites }: CustomRoutes): void;
 export declare function difference<T>(main: T[] | Set<T>, sub: T[] | Set<T>): T[];
 export declare function getJsPageSizeInKb(page: string, distPath: string, buildManifest: BuildManifest): Promise<[number, number]>;
 export declare function buildStaticPaths(page: string, getStaticPaths: GetStaticPaths, locales?: string[], defaultLocale?: string): Promise<Omit<UnwrapPromise<ReturnType<GetStaticPaths>>, 'paths'> & {

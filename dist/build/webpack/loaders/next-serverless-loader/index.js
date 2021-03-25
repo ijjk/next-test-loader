@@ -22,6 +22,7 @@
         const apiHandler = getApiHandler({
           pageModule: require("${absolutePagePath}"),
           rewrites: routesManifest.rewrites,
+          overrideRewrites: routesManifest.overrideRewrites,
           i18n: ${i18n||'undefined'},
           page: "${page}",
           basePath: "${basePath}",
@@ -91,6 +92,7 @@ runtimeConfigSetter}
         reactLoadableManifest,
 
         rewrites: routesManifest.rewrites,
+        overrideRewrites: routesManifest.overrideRewrites,
         i18n: ${i18n||'undefined'},
         page: "${page}",
         buildId: "${buildId}",
