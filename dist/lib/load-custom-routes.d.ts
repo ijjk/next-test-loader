@@ -14,7 +14,6 @@ export declare type Rewrite = {
     basePath?: false;
     locale?: false;
     has?: RouteHas[];
-    override?: true;
 };
 export declare type Header = {
     source: string;
@@ -44,8 +43,11 @@ export declare function normalizeRouteRegex(regex: string): string;
 export declare type RouteType = 'rewrite' | 'redirect' | 'header';
 export interface CustomRoutes {
     headers: Header[];
-    rewrites: Rewrite[];
+    rewrites: {
+        fallback: Rewrite[];
+        afterFiles: Rewrite[];
+        beforeFiles: Rewrite[];
+    };
     redirects: Redirect[];
-    overrideRewrites: Rewrite[];
 }
 export default function loadCustomRoutes(config: NextConfig): Promise<CustomRoutes>;

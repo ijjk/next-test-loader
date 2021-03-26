@@ -94,12 +94,15 @@ export default class Server {
     protected generateRoutes(): {
         basePath: string;
         headers: Route[];
-        rewrites: Route[];
+        rewrites: {
+            beforeFiles: Route[];
+            afterFiles: Route[];
+            fallback: Route[];
+        };
         fsRoutes: Route[];
         redirects: Route[];
         catchAllRoute: Route;
         pageChecker: PageChecker;
-        overrideRewrites: Route[];
         useFileSystemPublicRoutes: boolean;
         dynamicRoutes: DynamicRoutes | undefined;
         locales: string[];

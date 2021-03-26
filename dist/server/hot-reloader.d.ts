@@ -2,8 +2,8 @@
 import { IncomingMessage, ServerResponse } from 'http';
 import { UrlObject } from 'url';
 import { __ApiPreviewProps } from '../next-server/server/api-utils';
-import { Rewrite } from '../lib/load-custom-routes';
 import { NextConfig } from '../next-server/server/config';
+import { CustomRoutes } from '../lib/load-custom-routes';
 export declare function renderScriptError(res: ServerResponse, error: Error, { verbose }?: {
     verbose?: boolean | undefined;
 }): Promise<void>;
@@ -29,7 +29,7 @@ export default class HotReloader {
         pagesDir: string;
         buildId: string;
         previewProps: __ApiPreviewProps;
-        rewrites: Rewrite[];
+        rewrites: CustomRoutes['rewrites'];
     });
     run(req: IncomingMessage, res: ServerResponse, parsedUrl: UrlObject): Promise<{
         finished?: true;
