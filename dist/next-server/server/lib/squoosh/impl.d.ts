@@ -1,13 +1,12 @@
 /// <reference types="node" />
-declare type RotateOperation = {
-    type: 'rotate';
-    numRotations: number;
-};
-declare type ResizeOperation = {
-    type: 'resize';
-    width: number;
-};
-export declare type Operation = RotateOperation | ResizeOperation;
-export declare type Encoding = 'jpeg' | 'png' | 'webp';
-export declare function processBuffer(buffer: Buffer | Uint8Array, operations: Operation[], encoding: Encoding, quality: number): Promise<Buffer | Uint8Array>;
-export {};
+import ImageData from './image_data';
+export declare function decodeBuffer(_buffer: Buffer | Uint8Array): Promise<ImageData>;
+export declare function rotate(image: ImageData, numRotations: number): Promise<ImageData>;
+export declare function resize(image: ImageData, width: number): Promise<ImageData>;
+export declare function encodeJpeg(image: ImageData, { quality }: {
+    quality: number;
+}): Promise<Buffer | Uint8Array>;
+export declare function encodeWebp(image: ImageData, { quality }: {
+    quality: number;
+}): Promise<Buffer | Uint8Array>;
+export declare function encodePng(image: ImageData): Promise<Buffer | Uint8Array>;

@@ -4,10 +4,14 @@ import http from 'http';
 export declare class WebpackHotMiddleware {
     eventStream: EventStream;
     latestStats: webpack.Stats | null;
+    clientLatestStats: webpack.Stats | null;
     closed: boolean;
-    constructor(compiler: webpack.Compiler);
-    onInvalid: () => void;
-    onDone: (statsResult: webpack.Stats) => void;
+    serverError: boolean;
+    constructor(compilers: webpack.Compiler[]);
+    onServerInvalid: () => void;
+    onClientInvalid: () => void;
+    onServerDone: (statsResult: webpack.Stats) => void;
+    onClientDone: (statsResult: webpack.Stats) => void;
     middleware: (req: http.IncomingMessage, res: http.ServerResponse, next: () => void) => void;
     publishStats: (action: string, statsResult: webpack.Stats) => void;
     publish: (payload: any) => void;

@@ -21,7 +21,7 @@ export declare const createRouter: (pathname: string, query: import("querystring
     pageLoader: any;
     Component: React.ComponentType<{}>;
     App: React.ComponentType<import("../next-server/lib/router/router").AppProps>;
-    wrapApp: (App: React.ComponentType<import("../next-server/lib/router/router").AppProps>) => any;
+    wrapApp: (WrapAppComponent: React.ComponentType<import("../next-server/lib/router/router").AppProps>) => any;
     err?: Error | undefined;
     isFallback: boolean;
     locale?: string | undefined;

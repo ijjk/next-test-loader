@@ -24,6 +24,8 @@ export default class HotReloader {
     private previewProps;
     private watcher;
     private rewrites;
+    private fallbackWatcher;
+    isWebpack5: any;
     constructor(dir: string, { config, pagesDir, buildId, previewProps, rewrites, }: {
         config: NextConfig;
         pagesDir: string;
@@ -36,6 +38,7 @@ export default class HotReloader {
     }>;
     private clean;
     private getWebpackConfig;
+    buildFallbackError(): Promise<void>;
     start(): Promise<void>;
     stop(): Promise<void>;
     getCompilationErrors(page: string): Promise<any[]>;

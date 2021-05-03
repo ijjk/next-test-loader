@@ -1,5 +1,6 @@
 /// <reference types="node" />
 import { IncomingMessage, ServerResponse } from 'http';
+import { PreviewData } from 'next/types';
 import { NextApiRequest, NextApiResponse } from '../lib/utils';
 export declare type NextApiRequestCookies = {
     [key: string]: string;
@@ -12,9 +13,7 @@ export declare type __ApiPreviewProps = {
     previewModeEncryptionKey: string;
     previewModeSigningKey: string;
 };
-export declare function apiResolver(req: IncomingMessage, res: ServerResponse, query: any, resolverModule: any, apiContext: __ApiPreviewProps, propagateError: boolean, onError?: ({ err }: {
-    err: any;
-}) => Promise<void>): Promise<void>;
+export declare function apiResolver(req: IncomingMessage, res: ServerResponse, query: any, resolverModule: any, apiContext: __ApiPreviewProps, propagateError: boolean): Promise<void>;
 /**
  * Parse incoming message like `json` or `urlencoded`
  * @param req request object
@@ -52,7 +51,7 @@ export declare function sendData(req: NextApiRequest, res: NextApiResponse, body
  */
 export declare function sendJson(res: NextApiResponse, jsonBody: any): void;
 export declare const SYMBOL_PREVIEW_DATA: unique symbol;
-export declare function tryGetPreviewData(req: IncomingMessage, res: ServerResponse, options: __ApiPreviewProps): object | string | false;
+export declare function tryGetPreviewData(req: IncomingMessage, res: ServerResponse, options: __ApiPreviewProps): PreviewData;
 /**
  * Custom error class
  */

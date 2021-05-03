@@ -35,7 +35,6 @@ export declare type NextConfig = {
         reactMode?: 'legacy' | 'concurrent' | 'blocking';
         workerThreads?: boolean;
         pageEnv?: boolean;
-        optimizeFonts?: boolean;
         optimizeImages?: boolean;
         optimizeCss?: boolean;
         scrollRestoration?: boolean;
@@ -50,6 +49,10 @@ export declare type NextConfig = {
             validator?: string;
             skipValidation?: boolean;
         };
+        turboMode: boolean;
+        eslint?: boolean;
+        reactRoot: boolean;
+        enableBlurryPlaceholder: boolean;
     };
 };
 export declare const defaultConfig: NextConfig;

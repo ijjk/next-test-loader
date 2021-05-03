@@ -1,5 +1,6 @@
 /// <reference types="node" />
-import Server, { ServerConstructor } from '../next-server/server/next-server';
+import '../next-server/server/node-polyfill-fetch';
+import type { default as Server, ServerConstructor } from '../next-server/server/next-server';
 import { IncomingMessage, ServerResponse } from 'http';
 import { UrlWithParsedQuery } from 'url';
 declare type NextServerConstructor = ServerConstructor & {

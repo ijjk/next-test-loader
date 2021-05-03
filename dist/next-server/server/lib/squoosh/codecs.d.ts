@@ -117,9 +117,7 @@ export declare const codecs: {
         readonly name: "OxiPNG";
         readonly extension: "png";
         readonly detectors: readonly [RegExp];
-        readonly dec: () => Promise<{
-            decode: any;
-        }>;
+        readonly dec: () => Promise<any>;
         readonly enc: () => Promise<{
             encode: (buffer: Uint8Array | Buffer, width: number, height: number, opts: any) => any;
         }>;

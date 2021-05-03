@@ -21,8 +21,10 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWAR
 import { webpack } from 'next/dist/compiled/webpack/webpack';
 export declare class ReactLoadablePlugin {
     private filename;
+    private pagesDir;
     constructor(opts: {
         filename: string;
+        pagesDir: string;
     });
     createAssets(compiler: any, compilation: any, assets: any): any;
     apply(compiler: webpack.Compiler): void;

@@ -46,8 +46,6 @@ interface RenderOpts {
     ampPath?: string;
     ampValidatorPath?: string;
     ampSkipValidation?: boolean;
-    hybridAmp?: boolean;
-    inAmpMode?: boolean;
     optimizeFonts?: boolean;
     optimizeImages?: boolean;
     optimizeCss?: any;

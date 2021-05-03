@@ -127,7 +127,7 @@ export default class Router implements BaseRouter {
         pageLoader: any;
         Component: ComponentType;
         App: AppComponent;
-        wrapApp: (App: AppComponent) => any;
+        wrapApp: (WrapAppComponent: AppComponent) => any;
         err?: Error;
         isFallback: boolean;
         locale?: string;

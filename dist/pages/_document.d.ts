@@ -17,13 +17,12 @@ declare type DocumentFiles = {
  * Commonly used for implementing server side rendering for `css-in-js` libraries.
  */
 export default class Document<P = {}> extends Component<DocumentProps & P> {
-    static headTagsMiddleware: Promise<any> | (() => never[]);
     /**
      * `getInitialProps` hook returns the context object with the addition of `renderPage`.
      * `renderPage` callback executes `React` rendering logic synchronously to support server-rendering wrappers
      */
     static getInitialProps(ctx: DocumentContext): Promise<DocumentInitialProps>;
-    static renderDocument<P>(DocumentComponent: new () => Document<P>, props: DocumentProps & P): React.ReactElement;
+    static renderDocument<Y>(DocumentComponent: new () => Document<Y>, props: DocumentProps & Y): React.ReactElement;
     render(): JSX.Element;
 }
 export declare function Html(props: React.DetailedHTMLProps<React.HtmlHTMLAttributes<HTMLHtmlElement>, HTMLHtmlElement>): JSX.Element;

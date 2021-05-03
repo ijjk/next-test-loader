@@ -14,13 +14,9 @@ export declare type RenderOptsPartial = {
     };
     assetPrefix?: string;
     err?: Error | null;
-    autoExport?: boolean;
     nextExport?: boolean;
     dev?: boolean;
-    ampMode?: any;
     ampPath?: string;
-    inAmpMode?: boolean;
-    hybridAmp?: boolean;
     ErrorDebug?: React.ComponentType<{
         error: Error;
     }>;

@@ -1,5 +1,1 @@
-export declare function verifyAndLint(baseDir: string, pagesDir: string, pagePath: string | null): Promise<{
-    results: string;
-    hasErrors: boolean;
-    hasMessages: boolean;
-}>;
+export declare function verifyAndLint(dir: string, pagesDir: string, numWorkers: number | undefined, enableWorkerThreads: boolean | undefined): Promise<void>;

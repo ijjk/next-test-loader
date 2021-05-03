@@ -13,10 +13,9 @@ export declare let entries: {
         lastActiveTime?: number;
     };
 };
-export default function onDemandEntryHandler(watcher: any, multiCompiler: webpack.MultiCompiler, { pagesDir, pageExtensions, eslint, maxInactiveAge, pagesBufferLength, }: {
+export default function onDemandEntryHandler(watcher: any, multiCompiler: webpack.MultiCompiler, { pagesDir, pageExtensions, maxInactiveAge, pagesBufferLength, }: {
     pagesDir: string;
     pageExtensions: string[];
-    eslint: boolean;
     maxInactiveAge: number;
     pagesBufferLength: number;
 }): {

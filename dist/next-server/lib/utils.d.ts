@@ -3,11 +3,11 @@ import { IncomingMessage, ServerResponse } from 'http';
 import { ParsedUrlQuery } from 'querystring';
 import { ComponentType } from 'react';
 import { UrlObject } from 'url';
-import { ManifestItem } from '../server/load-components';
 import { NextRouter } from './router/router';
 import { Env } from '@next/env';
 import { BuildManifest } from '../server/get-page-files';
 import { DomainLocales } from '../server/config';
+import { PreviewData } from 'next/types';
 /**
  * Types used by both next and next-server
  */
@@ -63,7 +63,7 @@ export declare type NEXT_DATA = {
     nextExport?: boolean;
     autoExport?: boolean;
     isFallback?: boolean;
-    dynamicIds?: string[];
+    dynamicIds?: (string | number)[];
     err?: Error & {
         statusCode?: number;
     };
@@ -149,7 +149,7 @@ export declare type DocumentProps = DocumentInitialProps & {
     inAmpMode: boolean;
     hybridAmp: boolean;
     isDevelopment: boolean;
-    dynamicImports: ManifestItem[];
+    dynamicImports: string[];
     assetPrefix?: string;
     canonicalBase: string;
     headTags: any[];
@@ -184,7 +184,7 @@ export interface NextApiRequest extends IncomingMessage {
     /**
      * Preview data set on the request, if any
      * */
-    previewData?: any;
+    previewData?: PreviewData;
 }
 /**
  * Send body of response

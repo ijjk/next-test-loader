@@ -7,7 +7,7 @@ declare global {
     interface Window {
         __NEXT_HYDRATED?: boolean;
         __NEXT_HYDRATED_CB?: () => void;
-        __NEXT_PRELOADREADY?: (ids?: string[]) => void;
+        __NEXT_PRELOADREADY?: (ids?: (string | number)[]) => void;
         __NEXT_DATA__: NEXT_DATA;
         __NEXT_P: any[];
     }
