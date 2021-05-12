@@ -12,7 +12,7 @@ return isCatchAll?val.length===0:true;}}return false;};if(routeKeyNames.every(na
 if(pageIsDynamic&&trustQuery&&defaultRouteRegex){const _parsedUrl=(0,_url.parse)(req.url,true);delete _parsedUrl.search;for(const param of Object.keys(defaultRouteRegex.groups)){delete _parsedUrl.query[param];}req.url=(0,_url.format)(_parsedUrl);}}function normalizeDynamicRouteParams(params){let hasValidParams=true;if(!defaultRouteRegex)return{params,hasValidParams};params=Object.keys(defaultRouteRegex.groups).reduce((prev,key)=>{let value=params[key];// if the value matches the default value we can't rely
 // on the parsed params, this is used to signal if we need
 // to parse x-now-route-matches or not
-const isDefaultValue=Array.isArray(value)?value.some((val,idx)=>val===defaultRouteMatches[key][idx]):value===defaultRouteMatches[key];console.log({isDefaultValue,value,defaultRouteMatches});if(isDefaultValue||typeof value==='undefined'){hasValidParams=false;}// non-provided optional values should be undefined so normalize
+const isDefaultValue=Array.isArray(value)?value.some((val,idx)=>{const defaultValue=defaultRouteMatches[key][idx];return Array.isArray(defaultValue)?defaultValue.includes(val):defaultValue===val;}):value===defaultRouteMatches[key];console.log({isDefaultValue,value,defaultRouteMatches});if(isDefaultValue||typeof value==='undefined'){hasValidParams=false;}// non-provided optional values should be undefined so normalize
 // them to undefined
 if(defaultRouteRegex.groups[key].optional&&(!value||Array.isArray(value)&&value.length===1&&(// fallback optional catch-all SSG pages have
 // [[...paramName]] for the root path on Vercel
