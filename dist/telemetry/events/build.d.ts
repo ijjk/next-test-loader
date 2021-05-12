@@ -1,3 +1,14 @@
+declare type EventTypeCheckCompleted = {
+    durationInSeconds: number;
+    typescriptVersion: string | null;
+    inputFilesCount?: number;
+    totalFilesCount?: number;
+    incremental?: boolean;
+};
+export declare function eventTypeCheckCompleted(event: EventTypeCheckCompleted): {
+    eventName: string;
+    payload: EventTypeCheckCompleted;
+};
 declare type EventBuildCompleted = {
     durationInSeconds: number;
     totalPageCount: number;

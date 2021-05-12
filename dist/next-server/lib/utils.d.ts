@@ -157,8 +157,8 @@ export declare type DocumentProps = DocumentInitialProps & {
     unstable_JsPreload?: false;
     devOnlyCacheBusterQueryString: string;
     scriptLoader: {
-        defer?: string[];
-        eager?: any[];
+        afterInteractive?: string[];
+        beforeInteractive?: any[];
     };
     locale?: string;
 };

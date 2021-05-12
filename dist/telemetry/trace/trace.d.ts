@@ -18,6 +18,6 @@ export declare class Span {
     traceChild(name: string, attrs?: Object): Span;
     setAttribute(key: string, value: any): void;
     traceFn(fn: any): any;
-    traceAsyncFn(fn: any): Promise<any>;
+    traceAsyncFn<T>(fn: () => T | Promise<T>): Promise<T>;
 }
 export declare const trace: (name: string, parentId?: string | undefined, attrs?: Object | undefined) => Span;

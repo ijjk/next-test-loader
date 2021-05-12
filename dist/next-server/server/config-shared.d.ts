@@ -42,7 +42,6 @@ export declare type NextConfig = {
         stats?: boolean;
         externalDir?: boolean;
         serialWebpackBuild?: boolean;
-        babelMultiThread?: boolean;
         conformance?: boolean;
         amp?: {
             optimizer?: any;

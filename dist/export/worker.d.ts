@@ -26,7 +26,7 @@ interface ExportPageInput {
     subFolders?: boolean;
     serverless: boolean;
     optimizeFonts: boolean;
-    optimizeImages: boolean;
+    optimizeImages?: boolean;
     optimizeCss: any;
     parentSpanId: any;
 }
