@@ -1,4 +1,4 @@
 export declare type NecessaryDependencies = {
-    resolved: string;
+    resolved: Map<string, string>;
 };
-export declare function hasNecessaryDependencies(baseDir: string, checkTSDeps: boolean, checkESLintDeps: boolean, eslintrcFile?: string | null): Promise<NecessaryDependencies>;
+export declare function hasNecessaryDependencies(baseDir: string, checkTSDeps: boolean, checkESLintDeps: boolean, lintDuringBuild?: boolean): Promise<NecessaryDependencies>;

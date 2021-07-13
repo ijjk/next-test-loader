@@ -9,7 +9,7 @@ interface LintMessage {
     line: number;
     column: number;
 }
-interface LintResult {
+export interface LintResult {
     filePath: string;
     messages: LintMessage[];
     errorCount: number;
@@ -17,5 +17,9 @@ interface LintResult {
     output?: string;
     source?: string;
 }
-export declare function formatResults(baseDir: string, results: LintResult[]): string;
+export declare function formatResults(baseDir: string, results: LintResult[]): {
+    output: string;
+    totalNextPluginErrorCount: number;
+    totalNextPluginWarningCount: number;
+};
 export {};

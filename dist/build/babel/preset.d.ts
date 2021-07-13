@@ -9,7 +9,6 @@ declare type NextBabelPresetOptions = {
     'preset-react'?: any;
     'class-properties'?: any;
     'transform-runtime'?: any;
-    'experimental-modern-preset'?: PluginItem;
     'styled-jsx'?: StyledJsxBabelOptions;
     'preset-typescript'?: any;
 };

@@ -1,4 +1,4 @@
-"use strict";exports.__esModule=true;exports.default=void 0;var _webpack=require("next/dist/compiled/webpack/webpack");var _path=require("path");var _getRouteFromEntrypoint=_interopRequireDefault(require("../../../next-server/server/get-route-from-entrypoint"));function _interopRequireDefault(obj){return obj&&obj.__esModule?obj:{default:obj};}const SSR_MODULE_CACHE_FILENAME='ssr-module-cache.js';// By default webpack keeps initialized modules per-module.
+"use strict";exports.__esModule=true;exports.default=void 0;var _webpack=require("next/dist/compiled/webpack/webpack");var _path=require("path");var _getRouteFromEntrypoint=_interopRequireDefault(require("../../../server/get-route-from-entrypoint"));function _interopRequireDefault(obj){return obj&&obj.__esModule?obj:{default:obj};}const SSR_MODULE_CACHE_FILENAME='ssr-module-cache.js';// By default webpack keeps initialized modules per-module.
 // This means that if you have 2 entrypoints loaded into the same app
 // they will *not* share the same instance
 // This creates many issues when developers / libraries rely on the singleton pattern

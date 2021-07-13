@@ -9,6 +9,20 @@ export declare function eventTypeCheckCompleted(event: EventTypeCheckCompleted):
     eventName: string;
     payload: EventTypeCheckCompleted;
 };
+export declare type EventLintCheckCompleted = {
+    durationInSeconds: number;
+    eslintVersion: string | null;
+    lintedFilesCount?: number;
+    lintFix?: boolean;
+    buildLint?: boolean;
+    nextEslintPluginVersion?: string | null;
+    nextEslintPluginErrorsCount?: number;
+    nextEslintPluginWarningsCount?: number;
+};
+export declare function eventLintCheckCompleted(event: EventLintCheckCompleted): {
+    eventName: string;
+    payload: EventLintCheckCompleted;
+};
 declare type EventBuildCompleted = {
     durationInSeconds: number;
     totalPageCount: number;

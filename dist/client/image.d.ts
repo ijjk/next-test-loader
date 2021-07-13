@@ -11,34 +11,31 @@ declare const VALID_LAYOUT_VALUES: readonly ["fill", "fixed", "intrinsic", "resp
 declare type LayoutValue = typeof VALID_LAYOUT_VALUES[number];
 declare type PlaceholderValue = 'blur' | 'empty';
 declare type ImgElementStyle = NonNullable<JSX.IntrinsicElements['img']['style']>;
-export declare type ImageProps = Omit<JSX.IntrinsicElements['img'], 'src' | 'srcSet' | 'ref' | 'width' | 'height' | 'loading' | 'style'> & {
+interface StaticImageData {
     src: string;
+    height: number;
+    width: number;
+    blurDataURL?: string;
+}
+interface StaticRequire {
+    default: StaticImageData;
+}
+declare type StaticImport = StaticRequire | StaticImageData;
+export declare type ImageProps = Omit<JSX.IntrinsicElements['img'], 'src' | 'srcSet' | 'ref' | 'width' | 'height' | 'loading' | 'style'> & {
+    src: string | StaticImport;
+    width?: number | string;
+    height?: number | string;
+    layout?: LayoutValue;
     loader?: ImageLoader;
     quality?: number | string;
     priority?: boolean;
     loading?: LoadingValue;
+    placeholder?: PlaceholderValue;
+    blurDataURL?: string;
     unoptimized?: boolean;
     objectFit?: ImgElementStyle['objectFit'];
     objectPosition?: ImgElementStyle['objectPosition'];
-} & ({
-    width?: never;
-    height?: never;
-    /** @deprecated Use `layout="fill"` instead */
-    unsized: true;
-} | {
-    width?: never;
-    height?: never;
-    layout: 'fill';
-} | {
-    width: number | string;
-    height: number | string;
-    layout?: Exclude<LayoutValue, 'fill'>;
-}) & ({
-    placeholder?: Exclude<PlaceholderValue, 'blur'>;
-    blurDataURL?: never;
-} | {
-    placeholder: 'blur';
-    blurDataURL: string;
-});
-export default function Image({ src, sizes, unoptimized, priority, loading, className, quality, width, height, objectFit, objectPosition, loader, placeholder, blurDataURL, ...all }: ImageProps): JSX.Element;
+    onLoadingComplete?: () => void;
+};
+export default function Image({ src, sizes, unoptimized, priority, loading, className, quality, width, height, objectFit, objectPosition, onLoadingComplete, loader, placeholder, blurDataURL, ...all }: ImageProps): JSX.Element;
 export {};

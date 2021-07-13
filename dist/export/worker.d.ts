@@ -1,6 +1,6 @@
 import AmpHtmlValidator from 'next/dist/compiled/amphtml-validator';
-import 'next/dist/next-server/server/node-polyfill-fetch';
-import { FontManifest } from '../next-server/server/font-utils';
+import '../server/node-polyfill-fetch';
+import { FontManifest } from '../server/font-utils';
 interface AmpValidation {
     page: string;
     result: {
@@ -28,6 +28,7 @@ interface ExportPageInput {
     optimizeFonts: boolean;
     optimizeImages?: boolean;
     optimizeCss: any;
+    disableOptimizedLoading: any;
     parentSpanId: any;
 }
 interface ExportPageResults {
@@ -48,6 +49,7 @@ interface RenderOpts {
     ampSkipValidation?: boolean;
     optimizeFonts?: boolean;
     optimizeImages?: boolean;
+    disableOptimizedLoading?: boolean;
     optimizeCss?: any;
     fontManifest?: FontManifest;
     locales?: string[];
@@ -55,5 +57,5 @@ interface RenderOpts {
     defaultLocale?: string;
     trailingSlash?: boolean;
 }
-export default function exportPage({ parentSpanId, path, pathMap, distDir, outDir, pagesDataDir, renderOpts, buildExport, serverRuntimeConfig, subFolders, serverless, optimizeFonts, optimizeImages, optimizeCss, }: ExportPageInput): Promise<ExportPageResults>;
+export default function exportPage({ parentSpanId, path, pathMap, distDir, outDir, pagesDataDir, renderOpts, buildExport, serverRuntimeConfig, subFolders, serverless, optimizeFonts, optimizeImages, optimizeCss, disableOptimizedLoading, }: ExportPageInput): Promise<ExportPageResults>;
 export {};

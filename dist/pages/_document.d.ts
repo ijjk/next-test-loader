@@ -1,7 +1,7 @@
 import PropTypes from 'prop-types';
 import React, { Component, ReactNode } from 'react';
-import { DocumentContext as DocumentComponentContext } from '../next-server/lib/document-context';
-import { DocumentContext, DocumentInitialProps, DocumentProps } from '../next-server/lib/utils';
+import { DocumentContext as DocumentComponentContext } from '../shared/lib/document-context';
+import { DocumentContext, DocumentInitialProps, DocumentProps } from '../shared/lib/utils';
 export { DocumentContext, DocumentInitialProps, DocumentProps };
 export declare type OriginProps = {
     nonce?: string;
@@ -36,6 +36,10 @@ export declare class Head extends Component<OriginProps & React.DetailedHTMLProp
     getCssLinks(files: DocumentFiles): JSX.Element[] | null;
     getPreloadDynamicChunks(): (JSX.Element | null)[];
     getPreloadMainLinks(files: DocumentFiles): JSX.Element[] | null;
+    getDynamicChunks(files: DocumentFiles): (JSX.Element | null)[];
+    getPreNextScripts(): JSX.Element[];
+    getScripts(files: DocumentFiles): JSX.Element[];
+    getPolyfillScripts(): JSX.Element[];
     handleDocumentScriptLoaderItems(children: React.ReactNode): ReactNode[];
     makeStylesheetInert(node: ReactNode): ReactNode[];
     render(): JSX.Element;
