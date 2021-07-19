@@ -1,2 +1,34 @@
-"use strict";exports.__esModule=true;exports.isDynamicRoute=exports.getSortedRoutes=exports.getRouteRegex=exports.getRouteMatcher=void 0;var _routeMatcher=require("./route-matcher");exports.getRouteMatcher=_routeMatcher.getRouteMatcher;var _routeRegex=require("./route-regex");exports.getRouteRegex=_routeRegex.getRouteRegex;var _sortedRoutes=require("./sorted-routes");exports.getSortedRoutes=_sortedRoutes.getSortedRoutes;var _isDynamic=require("./is-dynamic");exports.isDynamicRoute=_isDynamic.isDynamicRoute;
+"use strict";
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+var _routeMatcher = require("./route-matcher");
+var _routeRegex = require("./route-regex");
+var _sortedRoutes = require("./sorted-routes");
+var _isDynamic = require("./is-dynamic");
+Object.defineProperty(exports, "getRouteMatcher", {
+    enumerable: true,
+    get: function() {
+        return _routeMatcher.getRouteMatcher;
+    }
+});
+Object.defineProperty(exports, "getRouteRegex", {
+    enumerable: true,
+    get: function() {
+        return _routeRegex.getRouteRegex;
+    }
+});
+Object.defineProperty(exports, "getSortedRoutes", {
+    enumerable: true,
+    get: function() {
+        return _sortedRoutes.getSortedRoutes;
+    }
+});
+Object.defineProperty(exports, "isDynamicRoute", {
+    enumerable: true,
+    get: function() {
+        return _isDynamic.isDynamicRoute;
+    }
+});
+
 //# sourceMappingURL=index.js.map

@@ -36,6 +36,7 @@ interface ExportPageResults {
     fromBuildExportRevalidate?: number;
     error?: boolean;
     ssgNotFound?: boolean;
+    duration: number;
 }
 interface RenderOpts {
     runtimeConfig?: {

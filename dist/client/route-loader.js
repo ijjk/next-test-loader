@@ -1,4 +1,4 @@
-"use strict";var _interopRequireDefault=require("@babel/runtime/helpers/interopRequireDefault");exports.__esModule=true;exports.markAssetError=markAssetError;exports.isAssetError=isAssetError;exports.getClientBuildManifest=getClientBuildManifest;exports.default=void 0;var _getAssetPathFromRoute=_interopRequireDefault(require("../shared/lib/router/utils/get-asset-path-from-route"));var _requestIdleCallback=require("./request-idle-callback");// 3.8s was arbitrarily chosen as it's what https://web.dev/interactive
+"use strict";var _interopRequireDefault=require("@babel/runtime/helpers/interopRequireDefault");exports.__esModule=true;exports.markAssetError=markAssetError;exports.isAssetError=isAssetError;exports.getClientBuildManifest=getClientBuildManifest;exports.createRouteLoader=createRouteLoader;var _getAssetPathFromRoute=_interopRequireDefault(require("../shared/lib/router/utils/get-asset-path-from-route"));var _requestIdleCallback=require("./request-idle-callback");// 3.8s was arbitrarily chosen as it's what https://web.dev/interactive
 // considers as "Good" time-to-interactive. We must assume something went
 // wrong beyond this point, and then fall-back to a full page transition to
 // show the user something of value.
@@ -36,5 +36,5 @@ throw err;}return{error:err};});});},prefetch(route){// https://github.com/Googl
 // License: Apache 2.0
 let cn;if(cn=navigator.connection){// Don't prefetch if using 2G or if Save-Data is enabled.
 if(cn.saveData||/2g/.test(cn.effectiveType))return Promise.resolve();}return getFilesForRoute(assetPrefix,route).then(output=>Promise.all(canPrefetch?output.scripts.map(script=>prefetchViaDom(script,'script')):[])).then(()=>{(0,_requestIdleCallback.requestIdleCallback)(()=>this.loadRoute(route,true).catch(()=>{}));}).catch(// swallow prefetch errors
-()=>{});}};}var _default=createRouteLoader;exports.default=_default;
+()=>{});}};}
 //# sourceMappingURL=route-loader.js.map

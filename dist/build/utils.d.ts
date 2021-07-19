@@ -12,6 +12,8 @@ export interface PageInfo {
     isSsg: boolean;
     ssgPageRoutes: string[] | null;
     initialRevalidateSeconds: number | false;
+    pageDuration: number | undefined;
+    ssgPageDurations: number[] | undefined;
 }
 export declare function printTreeView(list: readonly string[], pageInfos: Map<string, PageInfo>, serverless: boolean, { distPath, buildId, pagesDir, pageExtensions, buildManifest, useStatic404, gzipSize, }: {
     distPath: string;

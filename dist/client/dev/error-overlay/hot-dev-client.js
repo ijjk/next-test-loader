@@ -1,4 +1,4 @@
-"use strict";var _interopRequireDefault=require("@babel/runtime/helpers/interopRequireDefault");var _interopRequireWildcard=require("@babel/runtime/helpers/interopRequireWildcard");exports.__esModule=true;exports.default=connect;var DevOverlay=_interopRequireWildcard(require("@next/react-dev-overlay/lib/client"));var _stripAnsi=_interopRequireDefault(require("next/dist/compiled/strip-ansi"));var _eventsource=require("./eventsource");var _formatWebpackMessages=_interopRequireDefault(require("./format-webpack-messages"));/**
+"use strict";var _interopRequireDefault=require("@babel/runtime/helpers/interopRequireDefault");exports.__esModule=true;exports.default=connect;var _client=require("@next/react-dev-overlay/lib/client");var _stripAnsi=_interopRequireDefault(require("next/dist/compiled/strip-ansi"));var _eventsource=require("./eventsource");var _formatWebpackMessages=_interopRequireDefault(require("./format-webpack-messages"));/**
  * MIT License
  *
  * Copyright (c) 2013-present, Facebook, Inc.
@@ -30,7 +30,7 @@
 // It makes some opinionated choices on top, like adding a syntax error overlay
 // that looks similar to our console output. The error overlay is inspired by:
 // https://github.com/glenjamin/webpack-hot-middleware
-let hadRuntimeError=false;let customHmrEventHandler;function connect(){DevOverlay.register();(0,_eventsource.addMessageListener)(event=>{// This is the heartbeat event
+let hadRuntimeError=false;let customHmrEventHandler;function connect(){(0,_client.register)();(0,_eventsource.addMessageListener)(event=>{// This is the heartbeat event
 if(event.data==='\uD83D\uDC93'){return;}try{processMessage(event);}catch(ex){console.warn('Invalid HMR message: '+event.data+'\n'+ex);}});return{subscribeToHmrEvent(handler){customHmrEventHandler=handler;},onUnrecoverableError(){hadRuntimeError=true;}};}// Remember some state related to hot module replacement.
 var isFirstCompilation=true;var mostRecentCompilationHash=null;var hasCompileErrors=false;function clearOutdatedErrors(){// Clean up outdated compile errors, if any.
 if(typeof console!=='undefined'&&typeof console.clear==='function'){if(hasCompileErrors){console.clear();}}}// Successful compilation.
@@ -45,10 +45,10 @@ if(isHotUpdate){tryApplyUpdates(function onSuccessfulHotUpdate(hasUpdates){// On
 onFastRefresh(hasUpdates);});}}// Compilation with errors (e.g. syntax error or missing modules).
 function handleErrors(errors){clearOutdatedErrors();isFirstCompilation=false;hasCompileErrors=true;// "Massage" webpack messages.
 var formatted=(0,_formatWebpackMessages.default)({errors:errors,warnings:[]});// Only show the first error.
-DevOverlay.onBuildError(formatted.errors[0]);// Also log them to the console.
+(0,_client.onBuildError)(formatted.errors[0]);// Also log them to the console.
 if(typeof console!=='undefined'&&typeof console.error==='function'){for(var i=0;i<formatted.errors.length;i++){console.error((0,_stripAnsi.default)(formatted.errors[i]));}}// Do not attempt to reload now.
 // We will reload on next success instead.
-if(process.env.__NEXT_TEST_MODE){if(self.__NEXT_HMR_CB){self.__NEXT_HMR_CB(formatted.errors[0]);self.__NEXT_HMR_CB=null;}}}let startLatency=undefined;function onFastRefresh(hasUpdates){DevOverlay.onBuildOk();if(hasUpdates){DevOverlay.onRefresh();}if(startLatency){const latency=Date.now()-startLatency;console.log(`[Fast Refresh] done in ${latency}ms`);if(self.__NEXT_HMR_LATENCY_CB){self.__NEXT_HMR_LATENCY_CB(latency);}}}// There is a newer version of the code available.
+if(process.env.__NEXT_TEST_MODE){if(self.__NEXT_HMR_CB){self.__NEXT_HMR_CB(formatted.errors[0]);self.__NEXT_HMR_CB=null;}}}let startLatency=undefined;function onFastRefresh(hasUpdates){(0,_client.onBuildOk)();if(hasUpdates){(0,_client.onRefresh)();}if(startLatency){const latency=Date.now()-startLatency;console.log(`[Fast Refresh] done in ${latency}ms`);if(self.__NEXT_HMR_LATENCY_CB){self.__NEXT_HMR_LATENCY_CB(latency);}}}// There is a newer version of the code available.
 function handleAvailableHash(hash){// Update last known compilation hash.
 mostRecentCompilationHash=hash;}// Handle messages from the server.
 function processMessage(e){const obj=JSON.parse(e.data);switch(obj.action){case'building':{startLatency=Date.now();console.log('[Fast Refresh] rebuilding');break;}case'built':case'sync':{if(obj.hash){handleAvailableHash(obj.hash);}const{errors,warnings}=obj;const hasErrors=Boolean(errors&&errors.length);if(hasErrors){return handleErrors(errors);}const hasWarnings=Boolean(warnings&&warnings.length);if(hasWarnings){return handleWarnings(warnings);}return handleSuccess();}default:{if(customHmrEventHandler){customHmrEventHandler(obj);break;}break;}}}// Is there a newer version of this code available?

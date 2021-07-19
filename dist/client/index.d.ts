@@ -20,14 +20,12 @@ declare type RenderRouteInfo = PrivateRouteInfo & {
 };
 declare type RenderErrorProps = Omit<RenderRouteInfo, 'Component' | 'styleSheets'>;
 export declare const version: string | undefined;
-declare let webpackHMR: any;
 export declare let router: Router;
 export declare const emitter: MittEmitter<string>;
-declare const _default: (opts?: {
+export declare function initNext(opts?: {
     webpackHMR?: any;
-}) => Promise<MittEmitter<string> | {
+}): Promise<MittEmitter<string> | {
     emitter: MittEmitter<string>;
-    render: typeof render;
     renderCtx: Omit<import("../shared/lib/router/router").CompletePrivateRouteInfo, "styleSheets"> & {
         initial: true;
     } & {
@@ -38,6 +36,6 @@ declare const _default: (opts?: {
         } | null | undefined;
     };
 }>;
-export default _default;
 export declare function render(renderingProps: RenderRouteInfo): Promise<void>;
 export declare function renderError(renderErrorProps: RenderErrorProps): Promise<any>;
+export {};

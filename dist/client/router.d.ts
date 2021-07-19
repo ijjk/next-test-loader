@@ -1,12 +1,14 @@
 /// <reference types="node" />
 import React from 'react';
-import Router, { NextRouter } from '../shared/lib/router/router';
+import Router from '../shared/lib/router/router';
+import type { NextRouter } from '../shared/lib/router/router';
 declare type SingletonRouterBase = {
     router: Router | null;
     readyCallbacks: Array<() => any>;
     ready(cb: () => any): void;
 };
-export { Router, NextRouter };
+export { Router };
+export type { NextRouter };
 export declare type SingletonRouter = SingletonRouterBase & NextRouter;
 declare const routerEvents: readonly ["routeChangeStart", "beforeHistoryChange", "routeChangeComplete", "routeChangeError", "hashChangeStart", "hashChangeComplete"];
 export declare type RouterEvent = typeof routerEvents[number];

@@ -7,5 +7,6 @@ export declare type ImageConfig = {
     path: string;
     domains?: string[];
     disableStaticImages?: boolean;
+    minimumCacheTTL?: number;
 };
 export declare const imageConfigDefault: ImageConfig;

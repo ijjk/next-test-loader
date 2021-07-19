@@ -88,6 +88,8 @@ export declare type NextConfig = {
         gzipSize?: boolean;
         craCompat?: boolean;
         esmExternals?: boolean | 'loose';
+        staticPageGenerationTimeout?: number;
+        pageDataCollectionTimeout?: number;
     };
 };
 export declare const defaultConfig: NextConfig;
