@@ -5,7 +5,8 @@ import React from 'react';
 import { __ApiPreviewProps } from './api-utils';
 import { FontManifest } from './font-utils';
 import { LoadComponentsReturnType } from './load-components';
-import { DomainLocales } from './config';
+import { DomainLocale } from './config';
+import { RenderResult } from './utils';
 export declare type RenderOptsPartial = {
     buildId: string;
     canonicalBase: string;
@@ -42,8 +43,9 @@ export declare type RenderOptsPartial = {
     locale?: string;
     locales?: string[];
     defaultLocale?: string;
-    domainLocales?: DomainLocales;
+    domainLocales?: DomainLocale[];
     disableOptimizedLoading?: boolean;
+    requireStaticHTML?: boolean;
 };
 export declare type RenderOpts = LoadComponentsReturnType & RenderOptsPartial;
-export declare function renderToHTML(req: IncomingMessage, res: ServerResponse, pathname: string, query: ParsedUrlQuery, renderOpts: RenderOpts): Promise<string | null>;
+export declare function renderToHTML(req: IncomingMessage, res: ServerResponse, pathname: string, query: ParsedUrlQuery, renderOpts: RenderOpts): Promise<RenderResult | null>;

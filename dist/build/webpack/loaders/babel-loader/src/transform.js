@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
+exports.default = _default;
 var _core = require("next/dist/compiled/babel/core");
 var _util = require("util");
 var _error = _interopRequireDefault(require("./Error"));
@@ -38,6 +39,5 @@ async function _default(source, options) {
         sourceType
     };
 }
-exports.default = _default;
 
 //# sourceMappingURL=transform.js.map

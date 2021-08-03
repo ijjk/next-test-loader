@@ -4,8 +4,11 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.isSerializableProps = isSerializableProps;
 const regexpPlainIdentifier = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
+function getObjectClassLabel(value) {
+    return Object.prototype.toString.call(value);
+}
 function isPlainObject(value) {
-    if (Object.prototype.toString.call(value) !== '[object Object]') {
+    if (getObjectClassLabel(value) !== '[object Object]') {
         return false;
     }
     const prototype = Object.getPrototypeOf(value);
@@ -13,7 +16,7 @@ function isPlainObject(value) {
 }
 function isSerializableProps(page, method, input) {
     if (!isPlainObject(input)) {
-        throw new SerializableError(page, method, '', `Props must be returned as a plain object from ${method}: \`{ props: { ... } }\`.`);
+        throw new SerializableError(page, method, '', `Props must be returned as a plain object from ${method}: \`{ props: { ... } }\` (received: \`${getObjectClassLabel(input)}\`).`);
     }
     function visit(visited, value, path) {
         if (visited.has(value)) {

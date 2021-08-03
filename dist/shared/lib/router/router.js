@@ -157,18 +157,31 @@ function omitParmsFromQuery(query, params) {
 function resolveHref(router, href, resolveAs) {
     // we use a dummy base url for relative urls
     let base;
-    const urlAsString = typeof href === 'string' ? href : (0, _utils).formatWithValidation(href);
-    try {
-        base = new URL(urlAsString.startsWith('#') ? router.asPath : router.pathname, 'http://n');
-    } catch (_) {
-        // fallback to / for invalid asPath values e.g. //
-        base = new URL('/', 'http://n');
+    let urlAsString = typeof href === 'string' ? href : (0, _utils).formatWithValidation(href);
+    // repeated slashes and backslashes in the URL are considered
+    // a bad request and will never match a Next.js page/file
+    const urlProtoMatch = urlAsString.match(/^[a-zA-Z]{1,}:\/\//);
+    const urlAsStringNoProto = urlProtoMatch ? urlAsString.substr(urlProtoMatch[0].length) : urlAsString;
+    const urlParts = urlAsStringNoProto.split('?');
+    if ((urlParts[0] || '').match(/(\/\/|\\)/)) {
+        console.error(`Invalid href passed to next/router: ${urlAsString}, repeated forward-slashes (//) or backslashes \\ are not valid in the href`);
+        const urlNoQuery = urlParts[0];
+        const normalizedUrl = urlNoQuery// first we replace any non-encoded backslashes with forward
+        // then normalize repeated forward slashes
+        .replace(/\\/g, '/').replace(/\/\/+/g, '/') + (urlParts[1] ? `?${urlParts.slice(1).join('?')}` : '');
+        urlAsString = (urlProtoMatch ? urlProtoMatch[0] : '') + normalizedUrl;
     }
     // Return because it cannot be routed by the Next.js router
     if (!isLocalURL(urlAsString)) {
         return resolveAs ? [
             urlAsString
         ] : urlAsString;
+    }
+    try {
+        base = new URL(urlAsString.startsWith('#') ? router.asPath : router.pathname, 'http://n');
+    } catch (_) {
+        // fallback to / for invalid asPath values e.g. //
+        base = new URL('/', 'http://n');
     }
     try {
         const finalUrl = new URL(urlAsString, base);
@@ -403,7 +416,7 @@ class Router {
         // back from external site
         this.isSsr = true;
         this.isFallback = isFallback;
-        this.isReady = !!(self.__NEXT_DATA__.gssp || self.__NEXT_DATA__.gip || !autoExportDynamic && !self.location.search && !process.env.__NEXT_HAS_REWRITES);
+        this.isReady = !!(self.__NEXT_DATA__.gssp || self.__NEXT_DATA__.gip || self.__NEXT_DATA__.appGip && !self.__NEXT_DATA__.gsp || !autoExportDynamic && !self.location.search && !process.env.__NEXT_HAS_REWRITES);
         this.isPreview = !!isPreview;
         this.isLocaleDomain = false;
         if (process.env.__NEXT_I18N_SUPPORT) {

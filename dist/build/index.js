@@ -419,7 +419,6 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
         const analysisBegin = process.hrtime();
         const staticCheckSpan = nextBuildSpan.traceChild('static-check');
         const { customAppGetInitialProps , namedExports , isNextImageImported , hasSsrAmpPages , hasNonStaticErrorPage ,  } = await staticCheckSpan.traceAsyncFn(async ()=>{
-            var ref12, ref13;
             process.env.NEXT_PHASE = _constants1.PHASE_PRODUCTION_BUILD;
             const timeout = config.experimental.pageDataCollectionTimeout || 0;
             let infoPrinted = false;
@@ -450,8 +449,10 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
             const nonStaticErrorPageSpan = staticCheckSpan.traceChild('check-static-error-page');
             const errorPageHasCustomGetInitialProps = nonStaticErrorPageSpan.traceAsyncFn(async ()=>hasCustomErrorPage && await staticCheckWorkers.hasCustomGetInitialProps('/_error', distDir, isLikeServerless, runtimeEnvConfig, false)
             );
-            const errorPageStaticResult = nonStaticErrorPageSpan.traceAsyncFn(async ()=>hasCustomErrorPage && staticCheckWorkers.isPageStatic('/_error', distDir, isLikeServerless, runtimeEnvConfig, (ref12 = config.i18n) === null || ref12 === void 0 ? void 0 : ref12.locales, (ref13 = config.i18n) === null || ref13 === void 0 ? void 0 : ref13.defaultLocale)
-            );
+            const errorPageStaticResult = nonStaticErrorPageSpan.traceAsyncFn(async ()=>{
+                var ref12, ref13;
+                return hasCustomErrorPage && staticCheckWorkers.isPageStatic('/_error', distDir, isLikeServerless, runtimeEnvConfig, config.httpAgentOptions, (ref12 = config.i18n) === null || ref12 === void 0 ? void 0 : ref12.locales, (ref13 = config.i18n) === null || ref13 === void 0 ? void 0 : ref13.defaultLocale);
+            });
             // we don't output _app in serverless mode so use _app export
             // from _error instead
             const appPageToCheck = isLikeServerless ? '/_error' : '/_app';
@@ -479,7 +480,7 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
                             let isPageStaticSpan = checkPageSpan.traceChild('is-page-static');
                             let workerResult = await isPageStaticSpan.traceAsyncFn(()=>{
                                 var ref14, ref15;
-                                return staticCheckWorkers.isPageStatic(page, distDir, isLikeServerless, runtimeEnvConfig, (ref14 = config.i18n) === null || ref14 === void 0 ? void 0 : ref14.locales, (ref15 = config.i18n) === null || ref15 === void 0 ? void 0 : ref15.defaultLocale, isPageStaticSpan.id);
+                                return staticCheckWorkers.isPageStatic(page, distDir, isLikeServerless, runtimeEnvConfig, config.httpAgentOptions, (ref14 = config.i18n) === null || ref14 === void 0 ? void 0 : ref14.locales, (ref15 = config.i18n) === null || ref15 === void 0 ? void 0 : ref15.defaultLocale, isPageStaticSpan.id);
                             });
                             if (workerResult.isStatic === false && (workerResult.isHybridAmp || workerResult.isAmpOnly)) {
                                 hasSsrAmpPages1 = true;

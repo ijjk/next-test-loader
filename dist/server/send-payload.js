@@ -4,6 +4,7 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.setRevalidateHeaders = setRevalidateHeaders;
 exports.sendPayload = sendPayload;
+exports.sendRenderResult = sendRenderResult;
 exports.sendEtagResponse = sendEtagResponse;
 var _utils = require("../shared/lib/utils");
 var _etag = _interopRequireDefault(require("etag"));
@@ -28,24 +29,52 @@ function setRevalidateHeaders(res, options) {
     }
 }
 function sendPayload(req, res, payload, type, { generateEtags , poweredByHeader  }, options) {
+    sendRenderResult({
+        req,
+        res,
+        resultOrPayload: payload,
+        type,
+        generateEtags,
+        poweredByHeader,
+        options
+    });
+}
+function sendRenderResult({ req , res , resultOrPayload , type , generateEtags , poweredByHeader , options  }) {
     if ((0, _utils).isResSent(res)) {
         return;
     }
     if (poweredByHeader && type === 'html') {
         res.setHeader('X-Powered-By', 'Next.js');
     }
-    const etag = generateEtags ? (0, _etag).default(payload) : undefined;
-    if (sendEtagResponse(req, res, etag)) {
-        return;
+    const isPayload = typeof resultOrPayload === 'string';
+    if (isPayload) {
+        const etag = generateEtags ? (0, _etag).default(resultOrPayload) : undefined;
+        if (sendEtagResponse(req, res, etag)) {
+            return;
+        }
     }
     if (!res.getHeader('Content-Type')) {
         res.setHeader('Content-Type', type === 'json' ? 'application/json' : 'text/html; charset=utf-8');
     }
-    res.setHeader('Content-Length', Buffer.byteLength(payload));
+    if (isPayload) {
+        res.setHeader('Content-Length', Buffer.byteLength(resultOrPayload));
+    }
     if (options != null) {
         setRevalidateHeaders(res, options);
     }
-    res.end(req.method === 'HEAD' ? null : payload);
+    if (req.method === 'HEAD') {
+        res.end(null);
+    } else if (isPayload) {
+        res.end(resultOrPayload);
+    } else {
+        resultOrPayload({
+            next: (chunk)=>res.write(chunk)
+            ,
+            error: (_)=>res.end()
+            ,
+            complete: ()=>res.end()
+        });
+    }
 }
 function sendEtagResponse(req, res, etag) {
     if (etag) {

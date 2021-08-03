@@ -25,7 +25,7 @@ export declare class IncrementalCache {
         dev?: boolean;
     };
     prerenderManifest: PrerenderManifest;
-    cache: LRUCache<string, IncrementalCacheEntry>;
+    cache?: LRUCache<string, IncrementalCacheEntry>;
     locales?: string[];
     constructor({ max, dev, distDir, pagesDir, flushToDisk, locales, }: {
         dev: boolean;

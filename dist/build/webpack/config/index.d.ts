@@ -1,5 +1,5 @@
 import { webpack } from 'next/dist/compiled/webpack/webpack';
-import { NextConfig } from '../../../server/config';
+import { NextConfigComplete } from '../../../server/config-shared';
 export declare function build(config: webpack.Configuration, { rootDirectory, customAppFile, isDevelopment, isServer, assetPrefix, sassOptions, productionBrowserSourceMaps, future, isCraCompat, }: {
     rootDirectory: string;
     customAppFile: string | null;
@@ -8,6 +8,6 @@ export declare function build(config: webpack.Configuration, { rootDirectory, cu
     assetPrefix: string;
     sassOptions: any;
     productionBrowserSourceMaps: boolean;
-    future: NextConfig['future'];
+    future: NextConfigComplete['future'];
     isCraCompat?: boolean;
 }): Promise<webpack.Configuration>;

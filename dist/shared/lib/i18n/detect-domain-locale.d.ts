@@ -1,11 +1,2 @@
-export declare function detectDomainLocale(domainItems: Array<{
-    http?: boolean;
-    domain: string;
-    locales?: string[];
-    defaultLocale: string;
-}> | undefined, hostname?: string, detectedLocale?: string): {
-    http?: boolean | undefined;
-    domain: string;
-    locales?: string[] | undefined;
-    defaultLocale: string;
-} | undefined;
+import type { DomainLocale } from '../../../server/config-shared';
+export declare function detectDomainLocale(domainItems?: DomainLocale[], hostname?: string, detectedLocale?: string): DomainLocale | undefined;

@@ -254,7 +254,13 @@ async function exportApp(dir, options, configuration) {
                 )
             );
             if (isNextImageImported && loader === 'default' && !_ciInfo.hasNextSupport) {
-                throw new Error(`Image Optimization using Next.js' default loader is not compatible with \`next export\`.\n  Possible solutions:\n    - Use \`next start\` to run a server, which includes the Image Optimization API.\n    - Use any provider which supports Image Optimization (like Vercel).\n    - Configure a third-party loader in \`next.config.js\`.\n    - Use the \`loader\` prop for \`next/image\`.\n  Read more: https://nextjs.org/docs/messages/export-image-api`);
+                throw new Error(`Image Optimization using Next.js' default loader is not compatible with \`next export\`.
+  Possible solutions:
+    - Use \`next start\` to run a server, which includes the Image Optimization API.
+    - Use any provider which supports Image Optimization (like Vercel).
+    - Configure a third-party loader in \`next.config.js\`.
+    - Use the \`loader\` prop for \`next/image\`.
+  Read more: https://nextjs.org/docs/messages/export-image-api`);
             }
         }
         // Start the rendering process
@@ -276,7 +282,9 @@ async function exportApp(dir, options, configuration) {
             defaultLocale: i18n === null || i18n === void 0 ? void 0 : i18n.defaultLocale,
             domainLocales: i18n === null || i18n === void 0 ? void 0 : i18n.domains,
             trailingSlash: nextConfig.trailingSlash,
-            disableOptimizedLoading: nextConfig.experimental.disableOptimizedLoading
+            disableOptimizedLoading: nextConfig.experimental.disableOptimizedLoading,
+            // TODO: We should support dynamic HTML too
+            requireStaticHTML: true
         };
         const { serverRuntimeConfig , publicRuntimeConfig  } = nextConfig;
         if (Object.keys(publicRuntimeConfig).length > 0) {
@@ -400,7 +408,8 @@ async function exportApp(dir, options, configuration) {
                     optimizeImages: nextConfig.experimental.optimizeImages,
                     optimizeCss: nextConfig.experimental.optimizeCss,
                     disableOptimizedLoading: nextConfig.experimental.disableOptimizedLoading,
-                    parentSpanId: pageExportSpan.id
+                    parentSpanId: pageExportSpan.id,
+                    httpAgentOptions: nextConfig.httpAgentOptions
                 });
                 for (const validation of result.ampValidations || []){
                     const { page: page1 , result: ampValidationResult  } = validation;

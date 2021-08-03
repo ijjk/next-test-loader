@@ -20,10 +20,12 @@ export declare function apiResolver(req: IncomingMessage, res: ServerResponse, q
  */
 export declare function parseBody(req: NextApiRequest, limit: string | number): Promise<any>;
 /**
- * Parse cookies from `req` header
+ * Parse cookies from the `headers` of request
  * @param req request object
  */
-export declare function getCookieParser(req: IncomingMessage): () => NextApiRequestCookies;
+export declare function getCookieParser(headers: {
+    [key: string]: undefined | string | string[];
+}): () => NextApiRequestCookies;
 /**
  *
  * @param res response object

@@ -50,16 +50,7 @@ export declare function getUtils({ page, i18n, basePath, rewrites, pageIsDynamic
     } | undefined;
     handleRewrites: (req: IncomingMessage, parsedUrl: UrlWithParsedQuery) => UrlWithParsedQuery;
     handleBasePath: (req: IncomingMessage, parsedUrl: UrlWithParsedQuery) => void;
-    defaultRouteRegex: {
-        re: RegExp;
-        namedRegex?: string | undefined;
-        routeKeys?: {
-            [named: string]: string;
-        } | undefined;
-        groups: {
-            [groupName: string]: import("../../../../shared/lib/router/utils/route-regex").Group;
-        };
-    } | undefined;
+    defaultRouteRegex: import("../../../../shared/lib/router/utils/route-regex").RouteRegex | undefined;
     normalizeVercelUrl: (req: IncomingMessage, trustQuery: boolean) => void;
     dynamicRouteMatcher: ((pathname: string | null | undefined) => false | {
         [paramName: string]: string | string[];

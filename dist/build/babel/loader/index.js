@@ -29,8 +29,9 @@ const nextBabelLoaderOuter = function nextBabelLoaderOuter1(inputSource, inputSo
     const callback = this.async();
     const loaderSpan = (0, _trace).trace('next-babel-turbo-loader', (ref = this.currentTraceSpan) === null || ref === void 0 ? void 0 : ref.id);
     loaderSpan.traceAsyncFn(()=>nextBabelLoader.call(this, loaderSpan, inputSource, inputSourceMap)
-    ).then(([transformedSource, outputSourceMap])=>callback === null || callback === void 0 ? void 0 : callback(null, transformedSource, outputSourceMap || inputSourceMap)
-    , (err)=>{
+    ).then(([transformedSource, outputSourceMap])=>{
+        return callback === null || callback === void 0 ? void 0 : callback(null, transformedSource, outputSourceMap || inputSourceMap);
+    }, (err)=>{
         callback === null || callback === void 0 ? void 0 : callback(err);
     });
 };

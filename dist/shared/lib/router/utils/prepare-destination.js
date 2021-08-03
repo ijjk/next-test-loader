@@ -6,8 +6,7 @@ exports.matchHas = matchHas;
 exports.compileNonPath = compileNonPath;
 exports.default = prepareDestination;
 exports.getSafeParamName = void 0;
-var _querystring = require("./querystring");
-var _parseRelativeUrl = require("./parse-relative-url");
+var _parseUrl = require("./parse-url");
 var pathToRegexp = _interopRequireWildcard(require("next/dist/compiled/path-to-regexp"));
 function _interopRequireWildcard(obj) {
     if (obj && obj.__esModule) {
@@ -133,29 +132,13 @@ function compileNonPath(value, params) {
     })(params).substr(1);
 }
 function prepareDestination(destination, params, query, appendParamsToQuery) {
-    let parsedDestination = {
-    };
     // clone query so we don't modify the original
     query = Object.assign({
     }, query);
     const hadLocale = query.__nextLocale;
     delete query.__nextLocale;
     delete query.__nextDefaultLocale;
-    if (destination.startsWith('/')) {
-        parsedDestination = (0, _parseRelativeUrl).parseRelativeUrl(destination);
-    } else {
-        const { pathname , searchParams , hash , hostname , port , protocol , search , href ,  } = new URL(destination);
-        parsedDestination = {
-            pathname,
-            query: (0, _querystring).searchParamsToUrlQuery(searchParams),
-            hash,
-            protocol,
-            hostname,
-            port,
-            search,
-            href
-        };
-    }
+    const parsedDestination = (0, _parseUrl).parseUrl(destination);
     const destQuery = parsedDestination.query;
     const destPath = `${parsedDestination.pathname}${parsedDestination.hash || ''}`;
     const destPathParamKeys = [];

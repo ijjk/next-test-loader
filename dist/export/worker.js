@@ -19,6 +19,8 @@ var _require = require("../server/require");
 var _normalizeLocalePath = require("../shared/lib/i18n/normalize-locale-path");
 var _trace = require("../telemetry/trace");
 var _amp = require("../shared/lib/amp");
+var _utils = require("../server/utils");
+var _config = require("../server/config");
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
         default: obj
@@ -28,7 +30,8 @@ const envConfig = require('../shared/lib/runtime-config');
 global.__NEXT_DATA__ = {
     nextExport: true
 };
-async function exportPage({ parentSpanId , path , pathMap , distDir , outDir , pagesDataDir , renderOpts , buildExport , serverRuntimeConfig , subFolders , serverless , optimizeFonts , optimizeImages , optimizeCss , disableOptimizedLoading  }) {
+async function exportPage({ parentSpanId , path , pathMap , distDir , outDir , pagesDataDir , renderOpts , buildExport , serverRuntimeConfig , subFolders , serverless , optimizeFonts , optimizeImages , optimizeCss , disableOptimizedLoading , httpAgentOptions  }) {
+    (0, _config).setHttpAgentOptions(httpAgentOptions);
     const exportPageSpan = (0, _trace).trace('export-page-worker', parentSpanId);
     return exportPageSpan.traceAsyncFn(async ()=>{
         const start = Date.now();
@@ -142,7 +145,7 @@ async function exportPage({ parentSpanId , path , pathMap , distDir , outDir , p
             await _fs.promises.mkdir(baseDir, {
                 recursive: true
             });
-            let html;
+            let renderResult;
             let curRenderOpts = {
             };
             let renderMethod = _render.renderToHTML;
@@ -172,7 +175,9 @@ async function exportPage({ parentSpanId , path , pathMap , distDir , outDir , p
                 }
                 // if it was auto-exported the HTML is loaded here
                 if (typeof mod === 'string') {
-                    html = mod;
+                    renderResult = (0, _utils).resultFromChunks([
+                        mod
+                    ]);
                     queryWithAutoExportWarn();
                 } else {
                     // for non-dynamic SSG pages we should have already
@@ -204,9 +209,9 @@ async function exportPage({ parentSpanId , path , pathMap , distDir , outDir , p
                     params);
                     curRenderOpts = result.renderOpts || {
                     };
-                    html = result.html;
+                    renderResult = result.html;
                 }
-                if (!html && !curRenderOpts.isNotFound) {
+                if (!renderResult && !curRenderOpts.isNotFound) {
                     throw new Error(`Failed to render serverless page`);
                 }
             } else {
@@ -237,7 +242,9 @@ async function exportPage({ parentSpanId , path , pathMap , distDir , outDir , p
                     htmlFilename += '.html';
                 }
                 if (typeof components.Component === 'string') {
-                    html = components.Component;
+                    renderResult = (0, _utils).resultFromChunks([
+                        components.Component
+                    ]);
                     queryWithAutoExportWarn();
                 } else {
                     /**
@@ -266,8 +273,8 @@ async function exportPage({ parentSpanId , path , pathMap , distDir , outDir , p
                         fontManifest: optimizeFonts ? (0, _require).requireFontManifest(distDir, serverless) : null,
                         locale: locale
                     };
-                    // @ts-ignore
-                    html = await renderMethod(req, res, page, query, curRenderOpts);
+                    renderResult = await renderMethod(req, res, page, query, // @ts-ignore
+                    curRenderOpts);
                 }
             }
             results.ssgNotFound = curRenderOpts.isNotFound;
@@ -288,6 +295,8 @@ async function exportPage({ parentSpanId , path , pathMap , distDir , outDir , p
                     });
                 }
             };
+            const htmlChunks = renderResult ? await (0, _utils).resultToChunks(renderResult) : [];
+            const html = htmlChunks.join('');
             if (inAmpMode && !curRenderOpts.ampSkipValidation) {
                 if (!results.ssgNotFound) {
                     await validateAmp(html, path, curRenderOpts.ampValidatorPath);
@@ -304,18 +313,20 @@ async function exportPage({ parentSpanId , path , pathMap , distDir , outDir , p
                     await _fs.promises.access(ampHtmlFilepath);
                 } catch (_) {
                     // make sure it doesn't exist from manual mapping
-                    let ampHtml;
+                    let ampRenderResult;
                     if (serverless) {
                         req.url += (req.url.includes('?') ? '&' : '?') + 'amp=1';
                         // @ts-ignore
-                        ampHtml = (await renderMethod(req, res, 'export', curRenderOpts, params)).html;
+                        ampRenderResult = (await renderMethod(req, res, 'export', curRenderOpts, params)).html;
                     } else {
-                        ampHtml = await renderMethod(req, res, page, // @ts-ignore
+                        ampRenderResult = await renderMethod(req, res, page, // @ts-ignore
                         {
                             ...query,
                             amp: '1'
                         }, curRenderOpts);
                     }
+                    const ampChunks = await (0, _utils).resultToChunks(ampRenderResult);
+                    const ampHtml = ampChunks.join('');
                     if (!curRenderOpts.ampSkipValidation) {
                         await validateAmp(ampHtml, page + '?amp=1');
                     }

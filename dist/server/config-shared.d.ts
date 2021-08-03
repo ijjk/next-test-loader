@@ -1,24 +1,32 @@
 import { Header, Redirect, Rewrite } from '../lib/load-custom-routes';
 import { ImageConfig } from './image-config';
-export declare type DomainLocales = Array<{
-    http?: true;
-    domain: string;
-    locales?: string[];
-    defaultLocale: string;
-}>;
 declare type NoOptionals<T> = {
     [P in keyof T]-?: T[P];
 };
 export declare type NextConfigComplete = NoOptionals<NextConfig>;
+export interface I18NConfig {
+    defaultLocale: string;
+    domains?: DomainLocale[];
+    localeDetection?: false;
+    locales: string[];
+}
+export interface DomainLocale {
+    defaultLocale: string;
+    domain: string;
+    http?: true;
+    locales?: string[];
+}
+export interface ESLintConfig {
+    /** Only run ESLint on these directories with `next lint` and `next build`. */
+    dirs?: string[];
+    /** Do not run ESLint during production builds (`next build`). */
+    ignoreDuringBuilds?: boolean;
+}
 export declare type NextConfig = {
     [key: string]: any;
 } & {
-    i18n?: {
-        locales: string[];
-        defaultLocale: string;
-        domains?: DomainLocales;
-        localeDetection?: false;
-    } | null;
+    i18n?: I18NConfig | null;
+    eslint?: ESLintConfig;
     headers?: () => Promise<Header[]>;
     rewrites?: () => Promise<Rewrite[] | {
         beforeFiles: Rewrite[];
@@ -36,7 +44,7 @@ export declare type NextConfig = {
     cleanDistDir?: boolean;
     assetPrefix?: string;
     useFileSystemPublicRoutes?: boolean;
-    generateBuildId: () => string | null;
+    generateBuildId?: () => string | null;
     generateEtags?: boolean;
     pageExtensions?: string[];
     compress?: boolean;
@@ -57,18 +65,28 @@ export declare type NextConfig = {
     };
     productionBrowserSourceMaps?: boolean;
     optimizeFonts?: boolean;
-    future: {
+    reactStrictMode?: boolean;
+    publicRuntimeConfig?: {
+        [key: string]: any;
+    };
+    serverRuntimeConfig?: {
+        [key: string]: any;
+    };
+    httpAgentOptions?: {
+        keepAlive?: boolean;
+    };
+    future?: {
         /**
          * @deprecated this options was moved to the top level
          */
         webpack5?: false;
         strictPostcssConfiguration?: boolean;
     };
-    experimental: {
+    experimental?: {
         cpus?: number;
         plugins?: boolean;
         profiling?: boolean;
-        sprFlushToDisk?: boolean;
+        isrFlushToDisk?: boolean;
         reactMode?: 'legacy' | 'concurrent' | 'blocking';
         workerThreads?: boolean;
         pageEnv?: boolean;
@@ -90,6 +108,7 @@ export declare type NextConfig = {
         esmExternals?: boolean | 'loose';
         staticPageGenerationTimeout?: number;
         pageDataCollectionTimeout?: number;
+        isrMemoryCacheSize?: number;
     };
 };
 export declare const defaultConfig: NextConfig;

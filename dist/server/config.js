@@ -2,19 +2,40 @@
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
+Object.defineProperty(exports, "DomainLocale", {
+    enumerable: true,
+    get: function() {
+        return _configShared.DomainLocale;
+    }
+});
+Object.defineProperty(exports, "NextConfig", {
+    enumerable: true,
+    get: function() {
+        return _configShared.NextConfig;
+    }
+});
+Object.defineProperty(exports, "normalizeConfig", {
+    enumerable: true,
+    get: function() {
+        return _configShared.normalizeConfig;
+    }
+});
 exports.default = loadConfig;
 exports.isTargetLikeServerless = isTargetLikeServerless;
+exports.setHttpAgentOptions = setHttpAgentOptions;
 var _chalk = _interopRequireDefault(require("chalk"));
 var _findUp = _interopRequireDefault(require("next/dist/compiled/find-up"));
 var _path = require("path");
+var _http = require("http");
+var _https = require("https");
 var Log = _interopRequireWildcard(require("../build/output/log"));
-var _ciInfo = require("../telemetry/ci-info");
 var _constants = require("../shared/lib/constants");
 var _utils = require("../shared/lib/utils");
 var _configShared = require("./config-shared");
 var _configUtils = require("./config-utils");
 var _imageConfig = require("./image-config");
 var _env = require("@next/env");
+var _ciInfo = require("../telemetry/ci-info");
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
         default: obj
@@ -43,24 +64,6 @@ function _interopRequireWildcard(obj) {
         return newObj;
     }
 }
-Object.defineProperty(exports, "DomainLocales", {
-    enumerable: true,
-    get: function() {
-        return _configShared.DomainLocales;
-    }
-});
-Object.defineProperty(exports, "NextConfig", {
-    enumerable: true,
-    get: function() {
-        return _configShared.NextConfig;
-    }
-});
-Object.defineProperty(exports, "normalizeConfig", {
-    enumerable: true,
-    get: function() {
-        return _configShared.normalizeConfig;
-    }
-});
 const targets = [
     'server',
     'serverless',
@@ -240,9 +243,14 @@ function assignDefaults(userConfig) {
             images.path = `${result.basePath}${images.path}`;
         }
         if (images.minimumCacheTTL && (!Number.isInteger(images.minimumCacheTTL) || images.minimumCacheTTL < 0)) {
-            throw new Error(`Specified images.minimumCacheTTL should be an integer 0 or more\n          ', '\n        )}), received  (${images.minimumCacheTTL}).\nSee more info here: https://nextjs.org/docs/messages/invalid-images-config`);
+            throw new Error(`Specified images.minimumCacheTTL should be an integer 0 or more
+          ', '
+        )}), received  (${images.minimumCacheTTL}).\nSee more info here: https://nextjs.org/docs/messages/invalid-images-config`);
         }
     }
+    // TODO: Change defaultConfig type to NextConfigComplete
+    // so we don't need "!" here.
+    setHttpAgentOptions(result.httpAgentOptions || _configShared.defaultConfig.httpAgentOptions);
     if (result.i18n) {
         const { i18n  } = result;
         const i18nType = typeof i18n;
@@ -251,6 +259,9 @@ function assignDefaults(userConfig) {
         }
         if (!Array.isArray(i18n.locales)) {
             throw new Error(`Specified i18n.locales should be an Array received ${typeof i18n.locales}.\nSee more info here: https://nextjs.org/docs/messages/invalid-i18n-config`);
+        }
+        if (i18n.locales.length > 100) {
+            throw new Error(`Received ${i18n.locales.length} i18n.locales items which exceeds the max of 100, please reduce the number of items to continue.\nSee more info here: https://nextjs.org/docs/messages/invalid-i18n-config`);
         }
         const defaultLocaleType = typeof i18n.defaultLocale;
         if (!i18n.defaultLocale || defaultLocaleType !== 'string') {
@@ -261,9 +272,16 @@ function assignDefaults(userConfig) {
         }
         if (i18n.domains) {
             const invalidDomainItems = i18n.domains.filter((item)=>{
+                var ref3;
                 if (!item || typeof item !== 'object') return true;
                 if (!item.defaultLocale) return true;
                 if (!item.domain || typeof item.domain !== 'string') return true;
+                const defaultLocaleDuplicate = (ref3 = i18n.domains) === null || ref3 === void 0 ? void 0 : ref3.find((altItem)=>altItem.defaultLocale === item.defaultLocale && altItem.domain !== item.domain
+                );
+                if (defaultLocaleDuplicate) {
+                    console.warn(`Both ${item.domain} and ${defaultLocaleDuplicate.domain} configured the defaultLocale ${item.defaultLocale} but only one can. Change one item's default locale to continue`);
+                    return true;
+                }
                 let hasInvalidLocale = false;
                 if (Array.isArray(item.locales)) {
                     for (const locale of item.locales){
@@ -323,7 +341,7 @@ async function loadConfig(phase, dir, customConfig) {
     });
     // If config file was found
     if (path === null || path === void 0 ? void 0 : path.length) {
-        var ref3;
+        var ref4;
         const userConfigModule = require(path);
         const userConfig = (0, _configShared).normalizeConfig(phase, userConfigModule.default || userConfigModule);
         if (Object.keys(userConfig).length === 0) {
@@ -332,14 +350,14 @@ async function loadConfig(phase, dir, customConfig) {
         if (userConfig.target && !targets.includes(userConfig.target)) {
             throw new Error(`Specified target is invalid. Provided: "${userConfig.target}" should be one of ${targets.join(', ')}`);
         }
-        if ((ref3 = userConfig.amp) === null || ref3 === void 0 ? void 0 : ref3.canonicalBase) {
+        if ((ref4 = userConfig.amp) === null || ref4 === void 0 ? void 0 : ref4.canonicalBase) {
             const { canonicalBase  } = userConfig.amp || {
             };
             userConfig.amp = userConfig.amp || {
             };
             userConfig.amp.canonicalBase = (canonicalBase.endsWith('/') ? canonicalBase.slice(0, -1) : canonicalBase) || '';
         }
-        if (_ciInfo.hasNextSupport) {
+        if (process.env.NEXT_PRIVATE_TARGET || _ciInfo.hasNextSupport) {
             userConfig.target = process.env.NEXT_PRIVATE_TARGET || 'server';
         }
         return assignDefaults({
@@ -361,12 +379,26 @@ async function loadConfig(phase, dir, customConfig) {
             throw new Error(`Configuring Next.js via '${(0, _path).basename(nonJsPath)}' is not supported. Please replace the file with 'next.config.js'.`);
         }
     }
-    return _configShared.defaultConfig;
+    const completeConfig = _configShared.defaultConfig;
+    setHttpAgentOptions(completeConfig.httpAgentOptions);
+    return completeConfig;
 }
 function isTargetLikeServerless(target) {
     const isServerless = target === 'serverless';
     const isServerlessTrace = target === 'experimental-serverless-trace';
     return isServerless || isServerlessTrace;
+}
+function setHttpAgentOptions(options) {
+    if (global.__NEXT_HTTP_AGENT) {
+        // We only need to assign once because we want
+        // to resuse the same agent for all requests.
+        return;
+    }
+    if (!options) {
+        throw new Error('Expected config.httpAgentOptions to be an object');
+    }
+    global.__NEXT_HTTP_AGENT = new _http.Agent(options);
+    global.__NEXT_HTTPS_AGENT = new _https.Agent(options);
 }
 
 //# sourceMappingURL=config.js.map

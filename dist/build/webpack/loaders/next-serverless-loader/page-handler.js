@@ -13,6 +13,7 @@ var _denormalizePagePath = require("../../../../server/denormalize-page-path");
 var _loadCustomRoutes = require("../../../../lib/load-custom-routes");
 var _getRouteFromAssetPath = _interopRequireDefault(require("../../../../shared/lib/router/utils/get-route-from-asset-path"));
 var _constants = require("../../../../shared/lib/constants");
+var _utils2 = require("../../../../server/utils");
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
         default: obj
@@ -47,7 +48,7 @@ function getPageHandler(ctx) {
         let hasValidParams = true;
         (0, _apiUtils).setLazyProp({
             req: req
-        }, 'cookies', (0, _apiUtils).getCookieParser(req));
+        }, 'cookies', (0, _apiUtils).getCookieParser(req.headers));
         const options = {
             App,
             Document: Document1,
@@ -211,7 +212,8 @@ function getPageHandler(ctx) {
                             locales: i18n === null || i18n === void 0 ? void 0 : i18n.locales,
                             defaultLocale: i18n === null || i18n === void 0 ? void 0 : i18n.defaultLocale
                         }));
-                        (0, _sendPayload).sendPayload(req, res, result2, 'html', {
+                        const html = result2 ? (await (0, _utils2).resultToChunks(result2)).join('') : '';
+                        (0, _sendPayload).sendPayload(req, res, html, 'html', {
                             generateEtags,
                             poweredByHeader
                         }, {
@@ -256,7 +258,7 @@ function getPageHandler(ctx) {
                 html: result,
                 renderOpts
             };
-            return result;
+            return result ? (await (0, _utils2).resultToChunks(result)).join('') : null;
         } catch (err) {
             if (!parsedUrl) {
                 parsedUrl = (0, _url).parse(req.url, true);
@@ -298,7 +300,7 @@ function getPageHandler(ctx) {
                 Component: Error1,
                 err: res.statusCode === 404 ? undefined : err
             }));
-            return result2;
+            return result2 ? (await (0, _utils2).resultToChunks(result2)).join('') : null;
         }
     }
     return {

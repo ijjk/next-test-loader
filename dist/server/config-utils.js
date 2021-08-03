@@ -2,6 +2,18 @@
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
+Object.defineProperty(exports, "install", {
+    enumerable: true,
+    get: function() {
+        return _configUtilsWorker.install;
+    }
+});
+Object.defineProperty(exports, "shouldLoadWithWebpack5", {
+    enumerable: true,
+    get: function() {
+        return _configUtilsWorker.shouldLoadWithWebpack5;
+    }
+});
 exports.loadWebpackHook = loadWebpackHook;
 var _path = _interopRequireDefault(require("path"));
 var _jestWorker = require("jest-worker");
@@ -36,18 +48,6 @@ function _interopRequireWildcard(obj) {
         return newObj;
     }
 }
-Object.defineProperty(exports, "install", {
-    enumerable: true,
-    get: function() {
-        return _configUtilsWorker.install;
-    }
-});
-Object.defineProperty(exports, "shouldLoadWithWebpack5", {
-    enumerable: true,
-    get: function() {
-        return _configUtilsWorker.shouldLoadWithWebpack5;
-    }
-});
 function reasonMessage(reason) {
     switch(reason){
         case 'default':

@@ -62,7 +62,22 @@ const nextDev = (argv)=>{
         throw error;
     }
     if (args['--help']) {
-        console.log(`\n      Description\n        Starts the application in development mode (hot-code reloading, error\n        reporting, etc)\n\n      Usage\n        $ next dev <dir> -p <port number>\n\n      <dir> represents the directory of the Next.js application.\n      If no directory is provided, the current directory will be used.\n\n      Options\n        --port, -p      A port number on which to start the application\n        --hostname, -H  Hostname on which to start the application (default: 0.0.0.0)\n        --help, -h      Displays this message\n    `);
+        console.log(`
+      Description
+        Starts the application in development mode (hot-code reloading, error
+        reporting, etc)
+
+      Usage
+        $ next dev <dir> -p <port number>
+
+      <dir> represents the directory of the Next.js application.
+      If no directory is provided, the current directory will be used.
+
+      Options
+        --port, -p      A port number on which to start the application
+        --hostname, -H  Hostname on which to start the application (default: 0.0.0.0)
+        --help, -h      Displays this message
+    `);
         process.exit(0);
     }
     const dir = (0, _path).resolve(args._[0] || '.');
@@ -92,14 +107,13 @@ const nextDev = (argv)=>{
     // We do not set a default host value here to prevent breaking
     // some set-ups that rely on listening on other interfaces
     const host = args['--hostname'];
-    const ipPort = `${!host ? 'localhost' : host}:${port}`;
-    const appUrl = `http://${ipPort}`;
+    const appUrl = `http://${!host || host === '0.0.0.0' ? 'localhost' : host}:${port}`;
     (0, _startServer).default({
         dir,
         dev: true,
         isNextDevCommand: true
     }, port, host).then(async (app)=>{
-        (0, _output).startedDevelopmentServer(appUrl, ipPort);
+        (0, _output).startedDevelopmentServer(appUrl, `${host || '0.0.0.0'}:${port}`);
         // Start preflight after server is listening and ignore errors:
         preflight().catch(()=>{
         });

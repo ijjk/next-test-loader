@@ -35,6 +35,7 @@ var _normalizeLocalePath = require("../shared/lib/i18n/normalize-locale-path");
 var Log = _interopRequireWildcard(require("./output/log"));
 var _loadComponents = require("../server/load-components");
 var _trace = require("../telemetry/trace");
+var _config = require("../server/config");
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
         default: obj
@@ -556,11 +557,12 @@ async function buildStaticPaths(page, getStaticPaths, locales, defaultLocale) {
         ]
     };
 }
-async function isPageStatic(page, distDir, serverless, runtimeEnvConfig, locales, defaultLocale, parentId) {
+async function isPageStatic(page, distDir, serverless, runtimeEnvConfig, httpAgentOptions, locales, defaultLocale, parentId) {
     const isPageStaticSpan = (0, _trace).trace('is-page-static-utils', parentId);
     return isPageStaticSpan.traceAsyncFn(async ()=>{
         try {
             require('../shared/lib/runtime-config').setConfig(runtimeEnvConfig);
+            (0, _config).setHttpAgentOptions(httpAgentOptions);
             const components = await (0, _loadComponents).loadComponents(distDir, page, serverless);
             const mod = components.ComponentMod;
             const Comp = mod.default || mod;

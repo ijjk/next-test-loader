@@ -2,10 +2,27 @@
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
+Object.defineProperty(exports, "DocumentContext", {
+    enumerable: true,
+    get: function() {
+        return _utils.DocumentContext;
+    }
+});
+Object.defineProperty(exports, "DocumentInitialProps", {
+    enumerable: true,
+    get: function() {
+        return _utils.DocumentInitialProps;
+    }
+});
+Object.defineProperty(exports, "DocumentProps", {
+    enumerable: true,
+    get: function() {
+        return _utils.DocumentProps;
+    }
+});
 exports.Html = Html;
 exports.Main = Main;
 exports.default = void 0;
-var _propTypes = _interopRequireDefault(require("prop-types"));
 var _react = _interopRequireWildcard(require("react"));
 var _server = _interopRequireDefault(require("styled-jsx/server"));
 var _constants = require("../shared/lib/constants");
@@ -43,24 +60,6 @@ function _interopRequireWildcard(obj) {
         return newObj;
     }
 }
-Object.defineProperty(exports, "DocumentContext", {
-    enumerable: true,
-    get: function() {
-        return _utils.DocumentContext;
-    }
-});
-Object.defineProperty(exports, "DocumentInitialProps", {
-    enumerable: true,
-    get: function() {
-        return _utils.DocumentInitialProps;
-    }
-});
-Object.defineProperty(exports, "DocumentProps", {
-    enumerable: true,
-    get: function() {
-        return _utils.DocumentProps;
-    }
-});
 function getDocumentFiles(buildManifest, pathname, inAmpMode) {
     const sharedFiles = (0, _getPageFiles).getPageFiles(buildManifest, '/_app');
     const pageFiles = inAmpMode ? [] : (0, _getPageFiles).getPageFiles(buildManifest, pathname);
@@ -408,9 +407,10 @@ class Head extends _react.Component {
         if (inAmpMode && styles && // @ts-ignore Property 'props' does not exist on type ReactElement
         styles.props && // @ts-ignore Property 'props' does not exist on type ReactElement
         Array.isArray(styles.props.children)) {
-            var ref2, ref3;
-            const hasStyles = (el)=>el === null || el === void 0 ? void 0 : (ref2 = el.props) === null || ref2 === void 0 ? void 0 : (ref3 = ref2.dangerouslySetInnerHTML) === null || ref3 === void 0 ? void 0 : ref3.__html
-            ;
+            const hasStyles = (el)=>{
+                var ref2, ref3;
+                return el === null || el === void 0 ? void 0 : (ref2 = el.props) === null || ref2 === void 0 ? void 0 : (ref3 = ref2.dangerouslySetInnerHTML) === null || ref3 === void 0 ? void 0 : ref3.__html;
+            };
             // @ts-ignore Property 'props' does not exist on type ReactElement
             styles.props.children.forEach((child)=>{
                 if (Array.isArray(child)) {
@@ -491,10 +491,6 @@ class Head extends _react.Component {
 }
 exports.Head = Head;
 Head.contextType = _documentContext.DocumentContext;
-Head.propTypes = {
-    nonce: _propTypes.default.string,
-    crossOrigin: _propTypes.default.string
-};
 function Main() {
     const { inAmpMode , html , docComponentsRendered  } = (0, _react).useContext(_documentContext.DocumentContext);
     docComponentsRendered.Main = true;
@@ -585,10 +581,6 @@ class NextScript extends _react.Component {
 }
 exports.NextScript = NextScript;
 NextScript.contextType = _documentContext.DocumentContext;
-NextScript.propTypes = {
-    nonce: _propTypes.default.string,
-    crossOrigin: _propTypes.default.string
-};
 NextScript.safariNomoduleFix = '!function(){var e=document,t=e.createElement("script");if(!("noModule"in t)&&"onbeforeload"in t){var n=!1;e.addEventListener("beforeload",function(e){if(e.target===t)n=!0;else if(!e.target.hasAttribute("nomodule")||!n)return;e.preventDefault()},!0),t.type="module",t.src=".",e.head.appendChild(t),t.remove()}}();';
 function getAmpPath(ampPath, asPath) {
     return ampPath || `${asPath}${asPath.includes('?') ? '&' : '?'}amp=1`;

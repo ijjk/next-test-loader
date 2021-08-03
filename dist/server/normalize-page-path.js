@@ -2,9 +2,6 @@
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-exports.normalizePagePath = normalizePagePath;
-var _path = require("path");
-var _denormalizePagePath = require("./denormalize-page-path");
 Object.defineProperty(exports, "normalizePathSep", {
     enumerable: true,
     get: function() {
@@ -17,6 +14,9 @@ Object.defineProperty(exports, "denormalizePagePath", {
         return _denormalizePagePath.denormalizePagePath;
     }
 });
+exports.normalizePagePath = normalizePagePath;
+var _path = require("path");
+var _denormalizePagePath = require("./denormalize-page-path");
 function normalizePagePath(page) {
     // If the page is `/` we need to append `/index`, otherwise the returned directory root will be bundles instead of pages
     if (page === '/') {

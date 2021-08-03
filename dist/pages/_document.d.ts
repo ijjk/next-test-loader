@@ -1,4 +1,3 @@
-import PropTypes from 'prop-types';
 import React, { Component, ReactNode } from 'react';
 import { DocumentContext as DocumentComponentContext } from '../shared/lib/document-context';
 import { DocumentContext, DocumentInitialProps, DocumentProps } from '../shared/lib/utils';
@@ -28,10 +27,6 @@ export default class Document<P = {}> extends Component<DocumentProps & P> {
 export declare function Html(props: React.DetailedHTMLProps<React.HtmlHTMLAttributes<HTMLHtmlElement>, HTMLHtmlElement>): JSX.Element;
 export declare class Head extends Component<OriginProps & React.DetailedHTMLProps<React.HTMLAttributes<HTMLHeadElement>, HTMLHeadElement>> {
     static contextType: React.Context<DocumentProps>;
-    static propTypes: {
-        nonce: PropTypes.Requireable<string>;
-        crossOrigin: PropTypes.Requireable<string>;
-    };
     context: React.ContextType<typeof DocumentComponentContext>;
     getCssLinks(files: DocumentFiles): JSX.Element[] | null;
     getPreloadDynamicChunks(): (JSX.Element | null)[];
@@ -47,10 +42,6 @@ export declare class Head extends Component<OriginProps & React.DetailedHTMLProp
 export declare function Main(): JSX.Element;
 export declare class NextScript extends Component<OriginProps> {
     static contextType: React.Context<DocumentProps>;
-    static propTypes: {
-        nonce: PropTypes.Requireable<string>;
-        crossOrigin: PropTypes.Requireable<string>;
-    };
     context: React.ContextType<typeof DocumentComponentContext>;
     static safariNomoduleFix: string;
     getDynamicChunks(files: DocumentFiles): (JSX.Element | null)[];

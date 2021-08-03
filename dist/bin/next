@@ -87,7 +87,7 @@ const args = (0, _indexJs).default({
 });
 // Version is inlined into the file using taskr build pipeline
 if (args['--version']) {
-    console.log(`Next.js v${"11.0.2-canary.16"}`);
+    console.log(`Next.js v${"11.0.2-canary.25"}`);
     process.exit(0);
 }
 // Check if we are running `next <subcommand>` or `next`
@@ -96,7 +96,20 @@ const foundCommand = Boolean(commands[args._[0]]);
 // This help message is only showed for `next --help`
 // `next <subcommand> --help` falls through to be handled later
 if (!foundCommand && args['--help']) {
-    console.log(`\n    Usage\n      $ next <command>\n\n    Available commands\n      ${Object.keys(commands).join(', ')}\n\n    Options\n      --version, -v   Version number\n      --help, -h      Displays this message\n\n    For more information run a command with the --help flag\n      $ next build --help\n  `);
+    console.log(`
+    Usage
+      $ next <command>
+
+    Available commands
+      ${Object.keys(commands).join(', ')}
+
+    Options
+      --version, -v   Version number
+      --help, -h      Displays this message
+
+    For more information run a command with the --help flag
+      $ next build --help
+  `);
     process.exit(0);
 }
 const command = foundCommand ? args._[0] : defaultCommand;
@@ -116,12 +129,6 @@ if (process.env.NODE_ENV && !standardEnv.includes(process.env.NODE_ENV)) {
     log.warn(_constants.NON_STANDARD_NODE_ENV);
 }
 process.env.NODE_ENV = process.env.NODE_ENV || defaultEnv;
-// this needs to come after we set the correct NODE_ENV or
-// else it might cause SSR to break
-const React = require('react');
-if (typeof React.Suspense === 'undefined') {
-    throw new Error(`The version of React you are using is lower than the minimum required version needed for Next.js. Please upgrade "react" and "react-dom": "npm install react react-dom" https://nextjs.org/docs/messages/invalid-react-version`);
-}
 // Make sure commands gracefully respect termination signals (e.g. from Docker)
 process.on('SIGTERM', ()=>process.exit(0)
 );

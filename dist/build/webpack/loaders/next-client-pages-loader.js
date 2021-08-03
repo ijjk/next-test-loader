@@ -17,7 +17,14 @@ function nextClientPagesLoader() {
         pagesLoaderSpan.setAttribute('absolutePagePath', absolutePagePath);
         const stringifiedAbsolutePagePath = JSON.stringify(absolutePagePath);
         const stringifiedPage = JSON.stringify(page);
-        return `\n    (window.__NEXT_P = window.__NEXT_P || []).push([\n      ${stringifiedPage},\n      function () {\n        return require(${stringifiedAbsolutePagePath});\n      }\n    ]);\n  `;
+        return `
+    (window.__NEXT_P = window.__NEXT_P || []).push([
+      ${stringifiedPage},
+      function () {
+        return require(${stringifiedAbsolutePagePath});
+      }
+    ]);
+  `;
     });
 }
 var _default = nextClientPagesLoader;

@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 exports.default = void 0;
+var _utils = require("./utils");
 class ResponseCache {
     constructor(incrementalCache){
         this.incrementalCache = incrementalCache;
@@ -39,9 +40,16 @@ class ResponseCache {
             try {
                 const cachedResponse = key ? await this.incrementalCache.get(key) : null;
                 if (cachedResponse) {
+                    var ref;
                     resolve({
                         revalidate: cachedResponse.curRevalidate,
-                        value: cachedResponse.value
+                        value: ((ref = cachedResponse.value) === null || ref === void 0 ? void 0 : ref.kind) === 'PAGE' ? {
+                            kind: 'PAGE',
+                            html: (0, _utils).resultFromChunks([
+                                cachedResponse.value.html
+                            ]),
+                            pageData: cachedResponse.value.pageData
+                        } : cachedResponse.value
                     });
                     if (!cachedResponse.isStale) {
                         // The cached value is still valid, so we don't need
@@ -51,8 +59,13 @@ class ResponseCache {
                 }
                 const cacheEntry = await responseGenerator(resolved);
                 resolve(cacheEntry);
-                if (key && typeof cacheEntry.revalidate !== 'undefined') {
-                    await this.incrementalCache.set(key, cacheEntry.value, cacheEntry.revalidate);
+                if (key && cacheEntry && typeof cacheEntry.revalidate !== 'undefined') {
+                    var ref;
+                    await this.incrementalCache.set(key, ((ref = cacheEntry.value) === null || ref === void 0 ? void 0 : ref.kind) === 'PAGE' ? {
+                        kind: 'PAGE',
+                        html: (await (0, _utils).resultToChunks(cacheEntry.value.html)).join(''),
+                        pageData: cacheEntry.value.pageData
+                    } : cacheEntry.value, cacheEntry.revalidate);
                 }
             } catch (err) {
                 rejecter(err);

@@ -47,7 +47,6 @@ function createEntrypoints(pages, target, buildId, previewMode, config, loadedEn
         absoluteDocumentPath: pages['/_document'],
         absoluteErrorPath: pages['/_error'],
         absolute404Path: pages['/404'] || '',
-        // noop
         distDir: _constants.DOT_NEXT_ALIAS,
         buildId,
         assetPrefix: config.assetPrefix,

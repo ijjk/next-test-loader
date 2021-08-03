@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
+exports.default = _default;
 var _pluginSyntaxJsx = _interopRequireDefault(require("next/dist/compiled/babel/plugin-syntax-jsx"));
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
@@ -64,6 +65,5 @@ function _default({ types: t  }) {
         }
     };
 }
-exports.default = _default;
 
 //# sourceMappingURL=jsx-pragma.js.map

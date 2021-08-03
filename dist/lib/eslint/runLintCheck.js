@@ -42,7 +42,7 @@ function _interopRequireWildcard(obj) {
         return newObj;
     }
 }
-async function lint(deps, baseDir, lintDirs, eslintrcFile, pkgJsonPath, eslintOptions = null, reportErrorsOnly = false, maxWarnings = -1) {
+async function lint(deps, baseDir, lintDirs, eslintrcFile, pkgJsonPath, eslintOptions = null, reportErrorsOnly = false, maxWarnings = -1, formatter = null) {
     var ref;
     // Load ESLint after we're sure it exists:
     const mod = await Promise.resolve().then(function() {
@@ -111,10 +111,12 @@ async function lint(deps, baseDir, lintDirs, eslintrcFile, pkgJsonPath, eslintOp
     }
     const lintStart = process.hrtime();
     let results = await eslint.lintFiles(lintDirs);
+    let selectedFormatter = null;
     if (options.fix) await ESLint.outputFixes(results);
     if (reportErrorsOnly) results = await ESLint.getErrorResults(results) // Only return errors if --quiet flag is used
     ;
-    const formattedResult = (0, _customFormatter).formatResults(baseDir, results);
+    if (formatter) selectedFormatter = await eslint.loadFormatter(formatter);
+    const formattedResult = (0, _customFormatter).formatResults(baseDir, results, selectedFormatter === null || selectedFormatter === void 0 ? void 0 : selectedFormatter.format);
     const lintEnd = process.hrtime(lintStart);
     const totalWarnings = results.reduce((sum, file)=>sum + file.warningCount
     , 0);
@@ -132,7 +134,7 @@ async function lint(deps, baseDir, lintDirs, eslintrcFile, pkgJsonPath, eslintOp
         }
     };
 }
-async function runLintCheck(baseDir, lintDirs, lintDuringBuild = false, eslintOptions = null, reportErrorsOnly = false, maxWarnings = -1) {
+async function runLintCheck(baseDir, lintDirs, lintDuringBuild = false, eslintOptions = null, reportErrorsOnly = false, maxWarnings = -1, formatter = null) {
     try {
         var ref5;
         // Find user's .eslintrc file
@@ -169,7 +171,7 @@ async function runLintCheck(baseDir, lintDirs, lintDuringBuild = false, eslintOp
             await (0, _writeDefaultConfig).writeDefaultConfig(eslintrcFile, pkgJsonPath, packageJsonConfig);
         }
         // Run ESLint
-        return await lint(deps, baseDir, lintDirs, eslintrcFile, pkgJsonPath, eslintOptions, reportErrorsOnly, maxWarnings);
+        return await lint(deps, baseDir, lintDirs, eslintrcFile, pkgJsonPath, eslintOptions, reportErrorsOnly, maxWarnings, formatter);
     } catch (err) {
         throw err;
     }

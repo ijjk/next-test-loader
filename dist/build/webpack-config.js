@@ -664,9 +664,11 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
         [
             'next'
         ] : !isServerless ? [
-            _webpack.isWebpack5 ? ({ context , request , dependencyType , getResolve  })=>handleExternals(context, request, dependencyType, (options)=>{
+            _webpack.isWebpack5 ? ({ context , request , dependencyType , getResolve  })=>{
+                return handleExternals(context, request, dependencyType, (options)=>{
                     const resolveFunction = getResolve(options);
-                    return (resolveContext, requestToResolve)=>new Promise((resolve, reject)=>{
+                    return (resolveContext, requestToResolve)=>{
+                        return new Promise((resolve, reject)=>{
                             resolveFunction(resolveContext, requestToResolve, (err, result, resolveData)=>{
                                 var ref10;
                                 if (err) return reject(err);
@@ -680,10 +682,10 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
                                     isEsm
                                 ]);
                             });
-                        })
-                    ;
-                })
-             : (context, request, callback)=>handleExternals(context, request, 'commonjs', ()=>(resolveContext, requestToResolve)=>new Promise((resolve)=>resolve([
+                        });
+                    };
+                });
+            } : (context, request, callback)=>handleExternals(context, request, 'commonjs', ()=>(resolveContext, requestToResolve)=>new Promise((resolve)=>resolve([
                                 require.resolve(requestToResolve, {
                                     paths: [
                                         resolveContext
@@ -955,7 +957,16 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
                 // stub process.env with proxy to warn a missing value is
                 // being accessed in development mode
                 ...config.experimental.pageEnv && dev ? {
-                    'process.env': `\n            new Proxy(${isServer ? 'process.env' : '{}'}, {\n              get(target, prop) {\n                if (typeof target[prop] === 'undefined') {\n                  console.warn(\`An environment variable (\${prop}) that was not provided in the environment was accessed.\nSee more info here: https://nextjs.org/docs/messages/missing-env-value\`)\n                }\n                return target[prop]\n              }\n            })\n          `
+                    'process.env': `
+            new Proxy(${isServer ? 'process.env' : '{}'}, {
+              get(target, prop) {
+                if (typeof target[prop] === 'undefined') {
+                  console.warn(\`An environment variable (\${prop}) that was not provided in the environment was accessed.\nSee more info here: https://nextjs.org/docs/messages/missing-env-value\`)
+                }
+                return target[prop]
+              }
+            })
+          `
                 } : {
                 }
             }),
@@ -1103,6 +1114,7 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
             pageExtensions: config.pageExtensions,
             trailingSlash: config.trailingSlash,
             buildActivity: config.devIndicators.buildActivity,
+            productionBrowserSourceMaps: !!config.productionBrowserSourceMaps,
             plugins: config.experimental.plugins,
             reactStrictMode: config.reactStrictMode,
             reactMode: config.experimental.reactMode,
@@ -1125,7 +1137,7 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
             // Includes:
             //  - Next.js version
             //  - next.config.js keys that affect compilation
-            version: `${"11.0.2-canary.16"}|${configVars}`,
+            version: `${"11.0.2-canary.25"}|${configVars}`,
             cacheDirectory: _path.default.join(distDir, 'cache', 'webpack')
         };
         // Adds `next.config.js` as a buildDependency when custom webpack config is provided
@@ -1325,10 +1337,11 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
             console.warn(_chalk.default.yellow.bold('Warning: ') + _chalk.default.bold('Built-in CSS support is being disabled due to custom CSS configuration being detected.\n') + 'See here for more info: https://nextjs.org/docs/messages/built-in-css-disabled\n');
         }
         if ((ref18 = webpackConfig.module) === null || ref18 === void 0 ? void 0 : ref18.rules.length) {
-            var ref22, ref23;
             // Remove default CSS Loader
-            webpackConfig.module.rules = webpackConfig.module.rules.filter((r)=>!(typeof ((ref22 = r.oneOf) === null || ref22 === void 0 ? void 0 : (ref23 = ref22[0]) === null || ref23 === void 0 ? void 0 : ref23.options) === 'object' && r.oneOf[0].options.__next_css_remove === true)
-            );
+            webpackConfig.module.rules = webpackConfig.module.rules.filter((r)=>{
+                var ref22, ref23;
+                return !(typeof ((ref22 = r.oneOf) === null || ref22 === void 0 ? void 0 : (ref23 = ref22[0]) === null || ref23 === void 0 ? void 0 : ref23.options) === 'object' && r.oneOf[0].options.__next_css_remove === true);
+            });
         }
         if ((ref19 = webpackConfig.plugins) === null || ref19 === void 0 ? void 0 : ref19.length) {
             // Disable CSS Extraction Plugin

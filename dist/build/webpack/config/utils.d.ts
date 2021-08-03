@@ -1,5 +1,5 @@
 import { webpack } from 'next/dist/compiled/webpack/webpack';
-import { NextConfig } from '../../../server/config';
+import { NextConfigComplete } from '../../../server/config-shared';
 export declare type ConfigurationContext = {
     rootDirectory: string;
     customAppFile: string | null;
@@ -10,7 +10,7 @@ export declare type ConfigurationContext = {
     assetPrefix: string;
     sassOptions: any;
     productionBrowserSourceMaps: boolean;
-    future: NextConfig['future'];
+    future: NextConfigComplete['future'];
     isCraCompat?: boolean;
 };
 export declare type ConfigurationFn = (a: webpack.Configuration) => webpack.Configuration;

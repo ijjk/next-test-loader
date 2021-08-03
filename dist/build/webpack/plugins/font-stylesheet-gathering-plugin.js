@@ -125,7 +125,11 @@ class FontStylesheetGatheringPlugin {
          * For target: server drive the manifest through physical file and less of webpack magic.
          */ const mainTemplate = compilation.mainTemplate;
                 mainTemplate.hooks.requireExtensions.tap(this.constructor.name, (source)=>{
-                    return `${source}\n                // Font manifest declaration\n                ${_webpack.isWebpack5 ? '__webpack_require__' : mainTemplate.requireFn}.__NEXT_FONT_MANIFEST__ = ${JSON.stringify(this.manifestContent)};\n            // Enable feature:\n            process.env.__NEXT_OPTIMIZE_FONTS = JSON.stringify(true);`;
+                    return `${source}
+                // Font manifest declaration
+                ${_webpack.isWebpack5 ? '__webpack_require__' : mainTemplate.requireFn}.__NEXT_FONT_MANIFEST__ = ${JSON.stringify(this.manifestContent)};
+            // Enable feature:
+            process.env.__NEXT_OPTIMIZE_FONTS = JSON.stringify(true);`;
                 });
             }
             compilation.hooks.finishModules.tapAsync(this.constructor.name, async (modules, modulesFinished)=>{

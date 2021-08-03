@@ -34,7 +34,17 @@ const nextTelemetry = (argv)=>{
         throw error;
     }
     if (args['--help']) {
-        console.log(`\n      Description\n        Allows you to control Next.js' telemetry collection\n\n      Usage\n        $ next telemetry [enable/disable]\n\n      You may pass the 'enable' or 'disable' argument to turn Next.js' telemetry collection on or off.\n\n      Learn more: ${_chalk.default.cyan('https://nextjs.org/telemetry')}\n    `);
+        console.log(`
+      Description
+        Allows you to control Next.js' telemetry collection
+
+      Usage
+        $ next telemetry [enable/disable]
+
+      You may pass the 'enable' or 'disable' argument to turn Next.js' telemetry collection on or off.
+
+      Learn more: ${_chalk.default.cyan('https://nextjs.org/telemetry')}
+    `);
         return;
     }
     const telemetry = new _storage.Telemetry({

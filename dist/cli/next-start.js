@@ -60,7 +60,22 @@ const nextStart = (argv)=>{
         throw error;
     }
     if (args['--help']) {
-        console.log(`\n      Description\n        Starts the application in production mode.\n        The application should be compiled with \`next build\` first.\n\n      Usage\n        $ next start <dir> -p <port>\n\n      <dir> represents the directory of the Next.js application.\n      If no directory is provided, the current directory will be used.\n\n      Options\n        --port, -p      A port number on which to start the application\n        --hostname, -H  Hostname on which to start the application (default: 0.0.0.0)\n        --help, -h      Displays this message\n    `);
+        console.log(`
+      Description
+        Starts the application in production mode.
+        The application should be compiled with \`next build\` first.
+
+      Usage
+        $ next start <dir> -p <port>
+
+      <dir> represents the directory of the Next.js application.
+      If no directory is provided, the current directory will be used.
+
+      Options
+        --port, -p      A port number on which to start the application
+        --hostname, -H  Hostname on which to start the application (default: 0.0.0.0)
+        --help, -h      Displays this message
+    `);
         process.exit(0);
     }
     const dir = (0, _path).resolve(args._[0] || '.');

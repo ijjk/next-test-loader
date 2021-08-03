@@ -19,7 +19,10 @@ class NextJsSsrImportPlugin {
     apply(compiler) {
         const { outputPath  } = this.options;
         compiler.hooks.emit.tapAsync('NextJsSSRModuleCache', (compilation, callback)=>{
-            compilation.assets[SSR_MODULE_CACHE_FILENAME] = new _webpack.sources.RawSource(`\n      /* This cache is used by webpack for instantiated modules */\n      module.exports = {}\n      `);
+            compilation.assets[SSR_MODULE_CACHE_FILENAME] = new _webpack.sources.RawSource(`
+      /* This cache is used by webpack for instantiated modules */
+      module.exports = {}
+      `);
             callback();
         });
         compiler.hooks.compilation.tap('NextJsSSRModuleCache', (compilation)=>{

@@ -9,7 +9,6 @@ var _jestWorker = require("jest-worker");
 var _amphtmlValidator = _interopRequireDefault(require("next/dist/compiled/amphtml-validator"));
 var _findUp = _interopRequireDefault(require("next/dist/compiled/find-up"));
 var _path = require("path");
-var _react = _interopRequireDefault(require("react"));
 var _watchpack = _interopRequireDefault(require("watchpack"));
 var _output = require("../../build/output");
 var _constants = require("../../lib/constants");
@@ -59,9 +58,6 @@ function _interopRequireWildcard(obj) {
         return newObj;
     }
 }
-if (typeof _react.default.Suspense === 'undefined') {
-    throw new Error(`The version of React you are using is lower than the minimum required version needed for Next.js. Please upgrade "react" and "react-dom": "npm install react react-dom" https://nextjs.org/docs/messages/invalid-react-version`);
-}
 // Load ReactDevOverlay only when needed
 let ReactDevOverlayImpl;
 const ReactDevOverlay = (props)=>{
@@ -102,6 +98,7 @@ class DevServer extends _nextServer.default {
         this.staticPathsWorker = new _jestWorker.Worker(require.resolve('./static-paths-worker'), {
             maxRetries: 1,
             numWorkers: this.nextConfig.experimental.cpus,
+            enableWorkerThreads: this.nextConfig.experimental.workerThreads,
             forkOptions: {
                 env: {
                     ...process.env,
@@ -449,13 +446,13 @@ class DevServer extends _nextServer.default {
         // we lazy load the staticPaths to prevent the user
         // from waiting on them for the page to load in dev mode
         const __getStaticPaths = async ()=>{
-            const { publicRuntimeConfig , serverRuntimeConfig  } = this.nextConfig;
+            const { publicRuntimeConfig , serverRuntimeConfig , httpAgentOptions ,  } = this.nextConfig;
             const { locales , defaultLocale  } = this.nextConfig.i18n || {
             };
             const paths = await this.staticPathsWorker.loadStaticPaths(this.distDir, pathname, !this.renderOpts.dev && this._isLikeServerless, {
                 publicRuntimeConfig,
                 serverRuntimeConfig
-            }, locales, defaultLocale);
+            }, httpAgentOptions, locales, defaultLocale);
             return paths;
         };
         const { paths: staticPaths , fallback  } = (await (0, _coalescedFunction).withCoalescedInvoke(__getStaticPaths)(`staticPaths-${pathname}`, [])).value;

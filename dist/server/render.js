@@ -25,6 +25,7 @@ var _fontUtils = require("./font-utils");
 var _normalizePagePath = require("./normalize-page-path");
 var _optimizeAmp = _interopRequireDefault(require("./optimize-amp"));
 var _loadCustomRoutes = require("../lib/load-custom-routes");
+var _utils1 = require("./utils");
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
         default: obj
@@ -276,7 +277,7 @@ async function renderToHTML(req, res, pathname1, query1, renderOpts) {
         isPreview1 = previewData !== false;
     }
     // url will always be set
-    const routerIsReady = !!(getServerSideProps || hasPageGetInitialProps);
+    const routerIsReady = !!(getServerSideProps || hasPageGetInitialProps || !defaultAppGetInitialProps && !isSSG);
     const router = new ServerRouter(pathname1, query1, asPath, {
         isFallback: isFallback1
     }, routerIsReady, basePath1, renderOpts.locale, renderOpts.locales, renderOpts.defaultLocale, renderOpts.domainLocales, isPreview1, req.__nextIsLocaleDomain);
@@ -521,7 +522,9 @@ async function renderToHTML(req, res, pathname1, query1, renderOpts) {
     // Avoid rendering page un-necessarily for getServerSideProps data request
     // and getServerSideProps/getStaticProps redirects
     if (isDataReq && !isSSG || renderOpts.isRedirect) {
-        return props;
+        return (0, _utils1).resultFromChunks([
+            JSON.stringify(props)
+        ]);
     }
     // We don't call getStaticProps or getServerSideProps while generating
     // the fallback so make sure to set pageProps to an empty object
@@ -681,7 +684,7 @@ async function renderToHTML(req, res, pathname1, query1, renderOpts) {
             ssrMode: true,
             reduceInlineStyles: false,
             path: renderOpts.distDir,
-            publicPath: '/_next/',
+            publicPath: `${renderOpts.assetPrefix}/_next/`,
             preload: 'media',
             fonts: false,
             ...renderOpts.optimizeCss
@@ -692,7 +695,9 @@ async function renderToHTML(req, res, pathname1, query1, renderOpts) {
         // fix &amp being escaped for amphtml rel link
         html = html.replace(/&amp;amp=1/g, '&amp=1');
     }
-    return html;
+    return (0, _utils1).resultFromChunks([
+        html
+    ]);
 }
 function errorToJSON(err) {
     const { name , message , stack  } = err;

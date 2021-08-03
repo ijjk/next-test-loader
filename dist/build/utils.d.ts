@@ -3,6 +3,7 @@ import { CustomRoutes } from '../lib/load-custom-routes';
 import { GetStaticPaths } from 'next/types';
 import { BuildManifest } from '../server/get-page-files';
 import { UnwrapPromise } from '../lib/coalesced-function';
+import { NextConfigComplete } from '../server/config-shared';
 export declare function collectPages(directory: string, pageExtensions: string[]): Promise<string[]>;
 export interface PageInfo {
     isHybridAmp?: boolean;
@@ -43,7 +44,7 @@ export declare function buildStaticPaths(page: string, getStaticPaths: GetStatic
     paths: string[];
     encodedPaths: string[];
 }>;
-export declare function isPageStatic(page: string, distDir: string, serverless: boolean, runtimeEnvConfig: any, locales?: string[], defaultLocale?: string, parentId?: any): Promise<{
+export declare function isPageStatic(page: string, distDir: string, serverless: boolean, runtimeEnvConfig: any, httpAgentOptions: NextConfigComplete['httpAgentOptions'], locales?: string[], defaultLocale?: string, parentId?: any): Promise<{
     isStatic?: boolean;
     isAmpOnly?: boolean;
     isHybridAmp?: boolean;

@@ -4,10 +4,11 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.loadStaticPaths = loadStaticPaths;
 var _utils = require("../../build/utils");
+var _config = require("../config");
 var _loadComponents = require("../load-components");
 require("../node-polyfill-fetch");
 let workerWasUsed = false;
-async function loadStaticPaths(distDir, pathname, serverless, config, locales, defaultLocale) {
+async function loadStaticPaths(distDir, pathname, serverless, config, httpAgentOptions, locales, defaultLocale) {
     // we only want to use each worker once to prevent any invalid
     // caches
     if (workerWasUsed) {
@@ -15,6 +16,7 @@ async function loadStaticPaths(distDir, pathname, serverless, config, locales, d
     }
     // update work memory runtime-config
     require('../../shared/lib/runtime-config').setConfig(config);
+    (0, _config).setHttpAgentOptions(httpAgentOptions);
     const components = await (0, _loadComponents).loadComponents(distDir, pathname, serverless);
     if (!components.getStaticPaths) {
         // we shouldn't get to this point since the worker should

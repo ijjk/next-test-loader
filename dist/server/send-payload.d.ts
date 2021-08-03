@@ -1,5 +1,6 @@
 /// <reference types="node" />
 import { IncomingMessage, ServerResponse } from 'http';
+import { RenderResult } from './utils';
 export declare type PayloadOptions = {
     private: true;
 } | {
@@ -15,4 +16,13 @@ export declare function sendPayload(req: IncomingMessage, res: ServerResponse, p
     generateEtags: boolean;
     poweredByHeader: boolean;
 }, options?: PayloadOptions): void;
+export declare function sendRenderResult({ req, res, resultOrPayload, type, generateEtags, poweredByHeader, options, }: {
+    req: IncomingMessage;
+    res: ServerResponse;
+    resultOrPayload: RenderResult | string;
+    type: 'html' | 'json';
+    generateEtags: boolean;
+    poweredByHeader: boolean;
+    options?: PayloadOptions;
+}): void;
 export declare function sendEtagResponse(req: IncomingMessage, res: ServerResponse, etag: string | undefined): boolean;

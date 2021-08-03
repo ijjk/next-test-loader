@@ -6,7 +6,7 @@ import { PrerenderManifest } from '../build';
 import { CustomRoutes } from '../lib/load-custom-routes';
 import { getRouteMatcher } from '../shared/lib/router/utils';
 import { __ApiPreviewProps } from './api-utils';
-import { DomainLocales, NextConfig } from './config';
+import { DomainLocale, NextConfig } from './config';
 import { LoadComponentsReturnType } from './load-components';
 import Router, { DynamicRoutes, PageChecker, Params, Route } from './router';
 import './node-polyfill-fetch';
@@ -74,7 +74,7 @@ export default class Server {
         locale?: string;
         locales?: string[];
         defaultLocale?: string;
-        domainLocales?: DomainLocales;
+        domainLocales?: DomainLocale[];
         distDir: string;
     };
     private compression?;
@@ -129,7 +129,8 @@ export default class Server {
     protected getDynamicRoutes(): Array<DynamicRouteItem>;
     private handleCompression;
     protected run(req: IncomingMessage, res: ServerResponse, parsedUrl: UrlWithParsedQuery): Promise<void>;
-    protected sendResponse(req: IncomingMessage, res: ServerResponse, { type, body, revalidateOptions }: ResponsePayload): Promise<void>;
+    private pipe;
+    private getStaticHTML;
     render(req: IncomingMessage, res: ServerResponse, pathname: string, query?: ParsedUrlQuery, parsedUrl?: UrlWithParsedQuery): Promise<void>;
     protected findPageComponents(pathname: string, query?: ParsedUrlQuery, params?: Params | null): Promise<FindComponentsResult | null>;
     protected getStaticPaths(pathname: string): Promise<{
@@ -156,9 +157,4 @@ export declare class WrappedBuildError extends Error {
     innerError: Error;
     constructor(innerError: Error);
 }
-declare type ResponsePayload = {
-    type: 'html' | 'json';
-    body: string;
-    revalidateOptions?: any;
-};
 export {};

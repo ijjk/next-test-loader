@@ -43,7 +43,8 @@ const eslintOptions = (args)=>({
         errorOnUnmatchedPattern: args['--error-on-unmatched-pattern'] ? Boolean(args['--error-on-unmatched-pattern']) : false
     })
 ;
-const nextLint = (argv)=>{
+const nextLint = async (argv)=>{
+    var ref5;
     const validArgs = {
         // Types
         '--help': Boolean,
@@ -79,8 +80,10 @@ const nextLint = (argv)=>{
         '--cache': Boolean,
         '--cache-location': String,
         '--error-on-unmatched-pattern': Boolean,
+        '--format': String,
         // Aliases
-        '-c': '--config'
+        '-c': '--config',
+        '-f': '--format'
     };
     let args;
     try {
@@ -97,14 +100,63 @@ const nextLint = (argv)=>{
         throw error;
     }
     if (args['--help']) {
-        (0, _utils).printAndExit(`\n      Description\n        Run ESLint on every file in specified directories. \n        If not configured, ESLint will be set up for the first time.\n\n      Usage\n        $ next lint <baseDir> [options]\n      \n      <baseDir> represents the directory of the Next.js application.\n      If no directory is provided, the current directory will be used.\n\n      Options\n        Basic configuration:\n          -h, --help                     List this help\n          -d, --dir Array                Set directory, or directories, to run ESLint - default: 'pages', 'components', and 'lib'\n          -c, --config path::String      Use this configuration file, overriding all other config options\n          --ext [String]                 Specify JavaScript file extensions - default: .js, .jsx, .ts, .tsx\n          --resolve-plugins-relative-to path::String  A folder where plugins should be resolved from, CWD by default\n\n        Specifying rules:\n          --rulesdir [path::String]      Use additional rules from this directory\n\n        Fixing problems:\n          --fix                          Automatically fix problems\n          --fix-type Array               Specify the types of fixes to apply (problem, suggestion, layout)\n\n        Ignoring files:\n          --ignore-path path::String     Specify path of ignore file\n          --no-ignore                    Disable use of ignore files and patterns\n\n        Handling warnings:\n          --quiet                        Report errors only - default: false\n          --max-warnings Int             Number of warnings to trigger nonzero exit code - default: -1\n\n        Inline configuration comments:\n          --no-inline-config             Prevent comments from changing config or rules\n          --report-unused-disable-directives  Adds reported errors for unused eslint-disable directives ("error" | "warn" | "off")\n\n        Caching:\n          --cache                        Only check changed files - default: false\n          --cache-location path::String  Path to the cache file or directory - default: .eslintcache\n        \n        Miscellaneous:\n          --error-on-unmatched-pattern   Show errors when any file patterns are unmatched - default: false\n          `, 0);
+        (0, _utils).printAndExit(`
+      Description
+        Run ESLint on every file in specified directories. 
+        If not configured, ESLint will be set up for the first time.
+
+      Usage
+        $ next lint <baseDir> [options]
+      
+      <baseDir> represents the directory of the Next.js application.
+      If no directory is provided, the current directory will be used.
+
+      Options
+        Basic configuration:
+          -h, --help                     List this help
+          -d, --dir Array                Set directory, or directories, to run ESLint - default: 'pages', 'components', and 'lib'
+          -c, --config path::String      Use this configuration file, overriding all other config options
+          --ext [String]                 Specify JavaScript file extensions - default: .js, .jsx, .ts, .tsx
+          --resolve-plugins-relative-to path::String  A folder where plugins should be resolved from, CWD by default
+
+        Specifying rules:
+          --rulesdir [path::String]      Use additional rules from this directory
+
+        Fixing problems:
+          --fix                          Automatically fix problems
+          --fix-type Array               Specify the types of fixes to apply (problem, suggestion, layout)
+
+        Ignoring files:
+          --ignore-path path::String     Specify path of ignore file
+          --no-ignore                    Disable use of ignore files and patterns
+
+        Handling warnings:
+          --quiet                        Report errors only - default: false
+          --max-warnings Int             Number of warnings to trigger nonzero exit code - default: -1
+        
+        Output:
+          -f, --format String            Use a specific output format - default: Next.js custom formatter
+
+        Inline configuration comments:
+          --no-inline-config             Prevent comments from changing config or rules
+          --report-unused-disable-directives  Adds reported errors for unused eslint-disable directives ("error" | "warn" | "off")
+
+        Caching:
+          --cache                        Only check changed files - default: false
+          --cache-location path::String  Path to the cache file or directory - default: .eslintcache
+        
+        Miscellaneous:
+          --error-on-unmatched-pattern   Show errors when any file patterns are unmatched - default: false
+          `, 0);
     }
     const baseDir = (0, _path).resolve(args._[0] || '.');
     // Check if the provided directory exists
     if (!(0, _fs).existsSync(baseDir)) {
         (0, _utils).printAndExit(`> No such directory exists as the project root: ${baseDir}`);
     }
-    const dirs = args['--dir'];
+    const conf = await (0, _config).default(_constants1.PHASE_PRODUCTION_BUILD, baseDir);
+    var ref6;
+    const dirs = (ref6 = args['--dir']) !== null && ref6 !== void 0 ? ref6 : (ref5 = conf.eslint) === null || ref5 === void 0 ? void 0 : ref5.dirs;
     const lintDirs = (dirs !== null && dirs !== void 0 ? dirs : _constants.ESLINT_DEFAULT_DIRS).reduce((res, d)=>{
         const currDir = (0, _path).join(baseDir, d);
         if (!(0, _fs).existsSync(currDir)) return res;
@@ -112,12 +164,12 @@ const nextLint = (argv)=>{
         return res;
     }, []);
     const reportErrorsOnly = Boolean(args['--quiet']);
-    var ref5;
-    const maxWarnings = (ref5 = args['--max-warnings']) !== null && ref5 !== void 0 ? ref5 : -1;
-    (0, _runLintCheck).runLintCheck(baseDir, lintDirs, false, eslintOptions(args), reportErrorsOnly, maxWarnings).then(async (lintResults)=>{
+    var ref7;
+    const maxWarnings = (ref7 = args['--max-warnings']) !== null && ref7 !== void 0 ? ref7 : -1;
+    const formatter = args['--format'] || null;
+    (0, _runLintCheck).runLintCheck(baseDir, lintDirs, false, eslintOptions(args), reportErrorsOnly, maxWarnings, formatter).then(async (lintResults)=>{
         const lintOutput = typeof lintResults === 'string' ? lintResults : lintResults === null || lintResults === void 0 ? void 0 : lintResults.output;
         if (typeof lintResults !== 'string' && (lintResults === null || lintResults === void 0 ? void 0 : lintResults.eventInfo)) {
-            const conf = await (0, _config).default(_constants1.PHASE_PRODUCTION_BUILD, baseDir);
             const telemetry = new _storage.Telemetry({
                 distDir: (0, _path).join(baseDir, conf.distDir)
             });

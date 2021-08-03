@@ -2,10 +2,6 @@
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-var _routeMatcher = require("./route-matcher");
-var _routeRegex = require("./route-regex");
-var _sortedRoutes = require("./sorted-routes");
-var _isDynamic = require("./is-dynamic");
 Object.defineProperty(exports, "getRouteMatcher", {
     enumerable: true,
     get: function() {
@@ -30,5 +26,9 @@ Object.defineProperty(exports, "isDynamicRoute", {
         return _isDynamic.isDynamicRoute;
     }
 });
+var _routeMatcher = require("./route-matcher");
+var _routeRegex = require("./route-regex");
+var _sortedRoutes = require("./sorted-routes");
+var _isDynamic = require("./is-dynamic");
 
 //# sourceMappingURL=index.js.map

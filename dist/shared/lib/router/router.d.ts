@@ -4,7 +4,7 @@ import { ComponentType } from 'react';
 import { UrlObject } from 'url';
 import { GoodPageCache, StyleSheetTuple } from '../../../client/page-loader';
 import { RouterEvent } from '../../../client/router';
-import { DomainLocales } from '../../../server/config';
+import type { DomainLocale } from '../../../server/config';
 import { MittEmitter } from '../mitt';
 import { NextPageContext, NEXT_DATA } from '../utils';
 declare global {
@@ -25,7 +25,7 @@ interface NextHistoryState {
     as: string;
     options: TransitionOptions;
 }
-export declare function getDomainLocale(path: string, locale?: string | false, locales?: string[], domainLocales?: DomainLocales): string | false;
+export declare function getDomainLocale(path: string, locale?: string | false, locales?: string[], domainLocales?: DomainLocale[]): string | false;
 export declare function addLocale(path: string, locale?: string | false, defaultLocale?: string): string;
 export declare function delLocale(path: string, locale?: string): string;
 export declare function hasBasePath(path: string): boolean;
@@ -54,7 +54,7 @@ export declare type BaseRouter = {
     locale?: string;
     locales?: string[];
     defaultLocale?: string;
-    domainLocales?: DomainLocales;
+    domainLocales?: DomainLocale[];
     isLocaleDomain: boolean;
 };
 export declare type NextRouter = BaseRouter & Pick<Router, 'push' | 'replace' | 'reload' | 'back' | 'prefetch' | 'beforePopState' | 'events' | 'isFallback' | 'isReady' | 'isPreview'>;
@@ -116,7 +116,7 @@ export default class Router implements BaseRouter {
     locale?: string;
     locales?: string[];
     defaultLocale?: string;
-    domainLocales?: DomainLocales;
+    domainLocales?: DomainLocale[];
     isReady: boolean;
     isPreview: boolean;
     isLocaleDomain: boolean;
@@ -134,7 +134,7 @@ export default class Router implements BaseRouter {
         locale?: string;
         locales?: string[];
         defaultLocale?: string;
-        domainLocales?: DomainLocales;
+        domainLocales?: DomainLocale[];
         isPreview?: boolean;
     });
     onPopState: (e: PopStateEvent) => void;

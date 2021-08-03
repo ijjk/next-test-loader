@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
+exports.getParametrizedRoute = getParametrizedRoute;
 exports.getRouteRegex = getRouteRegex;
 // this isn't importing the escape-string-regex module
 // to reduce bytes
@@ -23,8 +24,8 @@ function parseParameter(param) {
         optional
     };
 }
-function getRouteRegex(normalizedRoute) {
-    const segments = (normalizedRoute.replace(/\/$/, '') || '/').slice(1).split('/');
+function getParametrizedRoute(route) {
+    const segments = (route.replace(/\/$/, '') || '/').slice(1).split('/');
     const groups = {
     };
     let groupIndex = 1;
@@ -86,15 +87,30 @@ function getRouteRegex(normalizedRoute) {
             }
         }).join('');
         return {
-            re: new RegExp(`^${parameterizedRoute}(?:/)?$`),
+            parameterizedRoute,
+            namedParameterizedRoute,
             groups,
-            routeKeys,
-            namedRegex: `^${namedParameterizedRoute}(?:/)?$`
+            routeKeys
         };
     }
     return {
-        re: new RegExp(`^${parameterizedRoute}(?:/)?$`),
+        parameterizedRoute,
         groups
+    };
+}
+function getRouteRegex(normalizedRoute) {
+    const result = getParametrizedRoute(normalizedRoute);
+    if ('routeKeys' in result) {
+        return {
+            re: new RegExp(`^${result.parameterizedRoute}(?:/)?$`),
+            groups: result.groups,
+            routeKeys: result.routeKeys,
+            namedRegex: `^${result.namedParameterizedRoute}(?:/)?$`
+        };
+    }
+    return {
+        re: new RegExp(`^${result.parameterizedRoute}(?:/)?$`),
+        groups: result.groups
     };
 }
 

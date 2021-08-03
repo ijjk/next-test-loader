@@ -118,7 +118,8 @@ function tryParsePath(route, handleUrl) {
         }
         // Make sure we can parse the source properly
         result.tokens = pathToRegexp.parse(routePath);
-        pathToRegexp.tokensToRegexp(result.tokens);
+        const regex = pathToRegexp.tokensToRegexp(result.tokens);
+        result.regexStr = regex.source;
     } catch (err) {
         // If there is an error show our error link but still show original error or a formatted one if we can
         const errMatches = err.message.match(/at (\d{0,})/);
@@ -237,9 +238,12 @@ function checkCustomRoutes(routes, type) {
         if (typeof route.source === 'string' && route.source.startsWith('/')) {
             // only show parse error if we didn't already show error
             // for not being a string
-            const { tokens , error  } = tryParsePath(route.source);
+            const { tokens , error , regexStr  } = tryParsePath(route.source);
             if (error) {
                 invalidParts.push('`source` parse failed');
+            }
+            if (regexStr && regexStr.length > 4096) {
+                invalidParts.push('`source` exceeds max built length of 4096');
             }
             sourceTokens = tokens;
         }
@@ -279,7 +283,10 @@ function checkCustomRoutes(routes, type) {
                         ...unnamedInDest
                     ].join(', ')}`);
                 } else {
-                    const { tokens: destTokens , error: destinationParseFailed ,  } = tryParsePath(route.destination, true);
+                    const { tokens: destTokens , regexStr: destRegexStr , error: destinationParseFailed ,  } = tryParsePath(route.destination, true);
+                    if (destRegexStr && destRegexStr.length > 4096) {
+                        invalidParts.push('`destination` exceeds max built length of 4096');
+                    }
                     if (destinationParseFailed) {
                         invalidParts.push('`destination` parse failed');
                     } else {
@@ -352,17 +359,19 @@ function processRoutes(routes, config, type) {
         const destBasePath = srcBasePath && !isExternal ? srcBasePath : '';
         if (config.i18n && r.locale !== false) {
             var ref1;
-            defaultLocales.forEach((item)=>{
-                let destination;
-                if (r.destination) {
-                    destination = item.base ? `${item.base}${destBasePath}${r.destination}` : `${destBasePath}${r.destination}`;
-                }
-                newRoutes.push({
-                    ...r,
-                    destination,
-                    source: `${srcBasePath}/${item.locale}${r.source}`
+            if (!isExternal) {
+                defaultLocales.forEach((item)=>{
+                    let destination;
+                    if (r.destination) {
+                        destination = item.base ? `${item.base}${destBasePath}${r.destination}` : `${destBasePath}${r.destination}`;
+                    }
+                    newRoutes.push({
+                        ...r,
+                        destination,
+                        source: `${srcBasePath}/${item.locale}${r.source}`
+                    });
                 });
-            });
+            }
             r.source = `/:nextInternalLocale(${config.i18n.locales.map((locale)=>(0, _escapeStringRegexp).default(locale)
             ).join('|')})${r.source === '/' && !config.trailingSlash ? '' : r.source}`;
             if (r.destination && ((ref1 = r.destination) === null || ref1 === void 0 ? void 0 : ref1.startsWith('/'))) {
@@ -382,8 +391,12 @@ async function loadRedirects(config) {
         return [];
     }
     let redirects = await config.redirects();
+    // check before we process the routes and after to ensure
+    // they are still valid
     checkCustomRoutes(redirects, 'redirect');
-    return processRoutes(redirects, config, 'redirect');
+    redirects = processRoutes(redirects, config, 'redirect');
+    checkCustomRoutes(redirects, 'redirect');
+    return redirects;
 }
 async function loadRewrites(config) {
     if (typeof config.rewrites !== 'function') {
@@ -405,13 +418,21 @@ async function loadRewrites(config) {
     } else {
         afterFiles = _rewrites;
     }
+    // check before we process the routes and after to ensure
+    // they are still valid
+    checkCustomRoutes(beforeFiles, 'rewrite');
+    checkCustomRoutes(afterFiles, 'rewrite');
+    checkCustomRoutes(fallback, 'rewrite');
+    beforeFiles = processRoutes(beforeFiles, config, 'rewrite');
+    afterFiles = processRoutes(afterFiles, config, 'rewrite');
+    fallback = processRoutes(fallback, config, 'rewrite');
     checkCustomRoutes(beforeFiles, 'rewrite');
     checkCustomRoutes(afterFiles, 'rewrite');
     checkCustomRoutes(fallback, 'rewrite');
     return {
-        beforeFiles: processRoutes(beforeFiles, config, 'rewrite'),
-        afterFiles: processRoutes(afterFiles, config, 'rewrite'),
-        fallback: processRoutes(fallback, config, 'rewrite')
+        beforeFiles,
+        afterFiles,
+        fallback
     };
 }
 async function loadHeaders(config) {
@@ -419,8 +440,12 @@ async function loadHeaders(config) {
         return [];
     }
     let headers = await config.headers();
+    // check before we process the routes and after to ensure
+    // they are still valid
     checkCustomRoutes(headers, 'header');
-    return processRoutes(headers, config, 'header');
+    headers = processRoutes(headers, config, 'header');
+    checkCustomRoutes(headers, 'header');
+    return headers;
 }
 async function loadCustomRoutes(config) {
     const [headers, rewrites, redirects] = await Promise.all([

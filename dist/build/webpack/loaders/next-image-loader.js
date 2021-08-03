@@ -5,7 +5,7 @@ Object.defineProperty(exports, "__esModule", {
 exports.default = exports.raw = void 0;
 var _loaderUtils = _interopRequireDefault(require("next/dist/compiled/loader-utils"));
 var _imageSize = _interopRequireDefault(require("image-size"));
-var _main = require("../../../server/lib/squoosh/main");
+var _imageOptimizer = require("../../../server/image-optimizer");
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
         default: obj
@@ -47,17 +47,9 @@ function nextImageLoader(content) {
                 blurDataURL = url.href.slice(prefix.length);
             } else {
                 // Shrink the image's largest dimension
-                const resizeOperationOpts = imageSize.width >= imageSize.height ? {
-                    type: 'resize',
-                    width: BLUR_IMG_SIZE
-                } : {
-                    type: 'resize',
-                    height: BLUR_IMG_SIZE
-                };
+                const dimension = imageSize.width >= imageSize.height ? 'width' : 'height';
                 const resizeImageSpan = imageLoaderSpan.traceChild('image-resize');
-                const resizedImage = await resizeImageSpan.traceAsyncFn(()=>(0, _main).processBuffer(content, [
-                        resizeOperationOpts
-                    ], extension, BLUR_QUALITY)
+                const resizedImage = await resizeImageSpan.traceAsyncFn(()=>(0, _imageOptimizer).resizeImage(content, dimension, BLUR_IMG_SIZE, extension, BLUR_QUALITY)
                 );
                 const blurDataURLSpan = imageLoaderSpan.traceChild('image-base64-tostring');
                 blurDataURL = blurDataURLSpan.traceFn(()=>`data:image/${extension};base64,${resizedImage.toString('base64')}`

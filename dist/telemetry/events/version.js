@@ -15,15 +15,17 @@ function _interopRequireDefault(obj) {
 const EVENT_VERSION = 'NEXT_CLI_SESSION_STARTED';
 function hasBabelConfig(dir) {
     try {
-        var ref, ref1, ref2, ref3, ref4;
+        var ref, ref1, ref2, ref3;
         const noopFile = _path.default.join(dir, 'noop.js');
         const res = require('next/dist/compiled/babel/core').loadPartialConfig({
             cwd: dir,
             filename: noopFile,
             sourceFileName: noopFile
         });
-        const isForTooling = ((ref = res.options) === null || ref === void 0 ? void 0 : (ref1 = ref.presets) === null || ref1 === void 0 ? void 0 : ref1.every((e)=>(e === null || e === void 0 ? void 0 : (ref2 = e.file) === null || ref2 === void 0 ? void 0 : ref2.request) === 'next/babel'
-        )) && ((ref3 = res.options) === null || ref3 === void 0 ? void 0 : (ref4 = ref3.plugins) === null || ref4 === void 0 ? void 0 : ref4.length) === 0;
+        const isForTooling = ((ref = res.options) === null || ref === void 0 ? void 0 : (ref1 = ref.presets) === null || ref1 === void 0 ? void 0 : ref1.every((e)=>{
+            var ref4;
+            return (e === null || e === void 0 ? void 0 : (ref4 = e.file) === null || ref4 === void 0 ? void 0 : ref4.request) === 'next/babel';
+        })) && ((ref2 = res.options) === null || ref2 === void 0 ? void 0 : (ref3 = ref2.plugins) === null || ref3 === void 0 ? void 0 : ref3.length) === 0;
         return res.hasFilesystemConfig() && !isForTooling;
     } catch  {
         return false;
@@ -48,22 +50,22 @@ function getNextConfig(phase, dir) {
 }
 function eventCliSession(phase, dir, event) {
     // This should be an invariant, if it fails our build tooling is broken.
-    if (typeof "11.0.2-canary.16" !== 'string') {
+    if (typeof "11.0.2-canary.25" !== 'string') {
         return [];
     }
     const userConfiguration = getNextConfig(phase, dir);
     const { images , i18n  } = userConfiguration || {
     };
-    var ref;
+    var ref1;
     const payload = {
-        nextVersion: "11.0.2-canary.16",
+        nextVersion: "11.0.2-canary.25",
         nodeVersion: process.version,
         cliCommand: event.cliCommand,
         isSrcDir: event.isSrcDir,
         hasNowJson: event.hasNowJson,
         isCustomServer: event.isCustomServer,
         hasNextConfig: !!userConfiguration,
-        buildTarget: (ref = userConfiguration === null || userConfiguration === void 0 ? void 0 : userConfiguration.target) !== null && ref !== void 0 ? ref : 'default',
+        buildTarget: (ref1 = userConfiguration === null || userConfiguration === void 0 ? void 0 : userConfiguration.target) !== null && ref1 !== void 0 ? ref1 : 'default',
         hasWebpackConfig: typeof (userConfiguration === null || userConfiguration === void 0 ? void 0 : userConfiguration.webpack) === 'function',
         hasBabelConfig: hasBabelConfig(dir),
         imageEnabled: !!images,

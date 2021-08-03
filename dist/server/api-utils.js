@@ -43,7 +43,7 @@ async function apiResolver(req, res, query, resolverModule, apiContext, propagat
         // Parsing of cookies
         setLazyProp({
             req: apiReq
-        }, 'cookies', getCookieParser(req));
+        }, 'cookies', getCookieParser(req.headers));
         // Parsing query string
         apiReq.query = query;
         // Parsing preview data
@@ -161,9 +161,9 @@ async function parseBody(req, limit) {
         throw new ApiError(400, 'Invalid JSON');
     }
 }
-function getCookieParser(req) {
+function getCookieParser(headers) {
     return function parseCookie() {
-        const header = req.headers.cookie;
+        const header = headers.cookie;
         if (!header) {
             return {
             };
@@ -244,7 +244,7 @@ function tryGetPreviewData(req, res, options) {
     if (SYMBOL_PREVIEW_DATA in req) {
         return req[SYMBOL_PREVIEW_DATA];
     }
-    const getCookies = getCookieParser(req);
+    const getCookies = getCookieParser(req.headers);
     let cookies;
     try {
         cookies = getCookies();

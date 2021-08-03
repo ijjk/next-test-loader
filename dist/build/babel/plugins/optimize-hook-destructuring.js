@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
+exports.default = _default;
 // matches any hook-like (the default)
 const isHook = /^use[A-Z]/;
 // matches only built-in hooks provided by React et al
@@ -50,6 +51,5 @@ function _default({ types: t  }) {
         }
     };
 }
-exports.default = _default;
 
 //# sourceMappingURL=optimize-hook-destructuring.js.map

@@ -1,13 +1,13 @@
 /// <reference types="node" />
-import { IncomingMessage, ServerResponse } from 'http';
-import { ParsedUrlQuery } from 'querystring';
-import { ComponentType } from 'react';
-import { UrlObject } from 'url';
-import { NextRouter } from './router/router';
-import { Env } from '@next/env';
-import { BuildManifest } from '../../server/get-page-files';
-import { DomainLocales } from '../../server/config';
-import { PreviewData } from 'next/types';
+import type { BuildManifest } from '../../server/get-page-files';
+import type { ComponentType } from 'react';
+import type { DomainLocale } from '../../server/config';
+import type { Env } from '@next/env';
+import type { IncomingMessage, ServerResponse } from 'http';
+import type { NextRouter } from './router/router';
+import type { ParsedUrlQuery } from 'querystring';
+import type { PreviewData } from 'next/types';
+import type { UrlObject } from 'url';
 export declare type NextComponentType<C extends BaseContext = NextPageContext, IP = {}, P = {}> = ComponentType<P> & {
     /**
      * Used for initial page load data population. Data returned from `getInitialProps` is serialized when server rendered.
@@ -29,11 +29,15 @@ export declare type AppTreeType = ComponentType<AppInitialProps & {
  */
 export declare type NextWebVitalsMetric = {
     id: string;
-    label: string;
-    name: string;
     startTime: number;
     value: number;
-};
+} & ({
+    label: 'web-vital';
+    name: 'FCP' | 'LCP' | 'CLS' | 'FID' | 'TTFB';
+} | {
+    label: 'custom';
+    name: 'Next.js-hydration' | 'Next.js-route-change-to-render' | 'Next.js-render';
+});
 export declare type Enhancer<C> = (Component: C) => C;
 export declare type ComponentsEnhancer = {
     enhanceApp?: Enhancer<AppType>;
@@ -72,7 +76,7 @@ export declare type NEXT_DATA = {
     locale?: string;
     locales?: string[];
     defaultLocale?: string;
-    domainLocales?: DomainLocales;
+    domainLocales?: DomainLocale[];
     scriptLoader?: any[];
     isPreview?: boolean;
 };
@@ -241,6 +245,7 @@ export declare function getLocationOrigin(): string;
 export declare function getURL(): string;
 export declare function getDisplayName<P>(Component: ComponentType<P>): string;
 export declare function isResSent(res: ServerResponse): boolean;
+export declare function normalizeRepeatedSlashes(url: string): string;
 export declare function loadGetInitialProps<C extends BaseContext, IP = {}, P = {}>(App: NextComponentType<C, IP, P>, ctx: C): Promise<IP>;
 export declare const urlObjectKeys: string[];
 export declare function formatWithValidation(url: UrlObject): string;

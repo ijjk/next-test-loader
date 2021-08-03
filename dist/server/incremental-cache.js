@@ -37,29 +37,33 @@ class IncrementalCache {
         } else {
             this.prerenderManifest = JSON.parse((0, _fs).readFileSync(_path.default.join(distDir, _constants.PRERENDER_MANIFEST), 'utf8'));
         }
-        this.cache = new _lruCache.default({
-            // default to 50MB limit
-            max: max || 50 * 1024 * 1024,
-            length ({ value  }) {
-                if (!value || value.kind === 'REDIRECT') return 25;
-                // rough estimate of size of cache value
-                return value.html.length + JSON.stringify(value.pageData).length;
-            }
-        });
+        if (process.env.__NEXT_TEST_MAX_ISR_CACHE) {
+            // Allow cache size to be overridden for testing purposes
+            max = parseInt(process.env.__NEXT_TEST_MAX_ISR_CACHE, 10);
+        }
+        if (max) {
+            this.cache = new _lruCache.default({
+                max,
+                length ({ value  }) {
+                    if (!value || value.kind === 'REDIRECT') return 25;
+                    // rough estimate of size of cache value
+                    return value.html.length + JSON.stringify(value.pageData).length;
+                }
+            });
+        }
     }
     getSeedPath(pathname, ext) {
         return _path.default.join(this.incrementalOptions.pagesDir, `${pathname}.${ext}`);
     }
-    calculateRevalidate(pathname) {
+    calculateRevalidate(pathname, fromTime) {
         pathname = toRoute(pathname);
         // in development we don't have a prerender-manifest
         // and default to always revalidating to allow easier debugging
-        const curTime = new Date().getTime();
-        if (this.incrementalOptions.dev) return curTime - 1000;
+        if (this.incrementalOptions.dev) return new Date().getTime() - 1000;
         const { initialRevalidateSeconds  } = this.prerenderManifest.routes[pathname] || {
             initialRevalidateSeconds: 1
         };
-        const revalidateAfter = typeof initialRevalidateSeconds === 'number' ? initialRevalidateSeconds * 1000 + curTime : initialRevalidateSeconds;
+        const revalidateAfter = typeof initialRevalidateSeconds === 'number' ? initialRevalidateSeconds * 1000 + fromTime : initialRevalidateSeconds;
         return revalidateAfter;
     }
     getFallback(page) {
@@ -70,7 +74,7 @@ class IncrementalCache {
     async get(pathname) {
         if (this.incrementalOptions.dev) return null;
         pathname = (0, _normalizePagePath).normalizePagePath(pathname);
-        let data = this.cache.get(pathname);
+        let data = this.cache && this.cache.get(pathname);
         // let's check the disk for seed data
         if (!data) {
             if (this.prerenderManifest.notFoundRoutes.includes(pathname)) {
@@ -80,17 +84,21 @@ class IncrementalCache {
                 };
             }
             try {
-                const html = await _fs.promises.readFile(this.getSeedPath(pathname, 'html'), 'utf8');
+                const htmlPath = this.getSeedPath(pathname, 'html');
+                const html = await _fs.promises.readFile(htmlPath, 'utf8');
+                const { mtime  } = await _fs.promises.stat(htmlPath);
                 const pageData = JSON.parse(await _fs.promises.readFile(this.getSeedPath(pathname, 'json'), 'utf8'));
                 data = {
-                    revalidateAfter: this.calculateRevalidate(pathname),
+                    revalidateAfter: this.calculateRevalidate(pathname, mtime.getTime()),
                     value: {
                         kind: 'PAGE',
                         html,
                         pageData
                     }
                 };
-                this.cache.set(pathname, data);
+                if (this.cache) {
+                    this.cache.set(pathname, data);
+                }
             } catch (_) {
             // unable to get data from disk
             }
@@ -121,10 +129,12 @@ class IncrementalCache {
             };
         }
         pathname = (0, _normalizePagePath).normalizePagePath(pathname);
-        this.cache.set(pathname, {
-            revalidateAfter: this.calculateRevalidate(pathname),
-            value: data
-        });
+        if (this.cache) {
+            this.cache.set(pathname, {
+                revalidateAfter: this.calculateRevalidate(pathname, new Date().getTime()),
+                value: data
+            });
+        }
         // TODO: This option needs to cease to exist unless it stops mutating the
         // `next build` output's manifest.
         if (this.incrementalOptions.flushToDisk && (data === null || data === void 0 ? void 0 : data.kind) === 'PAGE') {

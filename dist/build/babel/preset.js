@@ -37,8 +37,9 @@ var _default = (api, options = {
     const supportsESM = api.caller(supportsStaticESM);
     const isServer = api.caller((caller)=>!!caller && caller.isServer
     );
-    const isCallerDevelopment = api.caller((caller)=>caller === null || caller === void 0 ? void 0 : caller.isDev
-    );
+    const isCallerDevelopment = api.caller((caller)=>{
+        return caller === null || caller === void 0 ? void 0 : caller.isDev;
+    });
     // Look at external intent if used without a caller (e.g. via Jest):
     const isTest = isCallerDevelopment == null && isLoadIntentTest;
     // Look at external intent if used without a caller (e.g. Storybook):

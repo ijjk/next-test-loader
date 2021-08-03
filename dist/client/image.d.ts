@@ -10,6 +10,10 @@ export declare type ImageLoaderProps = {
 declare const VALID_LAYOUT_VALUES: readonly ["fill", "fixed", "intrinsic", "responsive", undefined];
 declare type LayoutValue = typeof VALID_LAYOUT_VALUES[number];
 declare type PlaceholderValue = 'blur' | 'empty';
+declare type OnLoadingComplete = (result: {
+    naturalWidth: number;
+    naturalHeight: number;
+}) => void;
 declare type ImgElementStyle = NonNullable<JSX.IntrinsicElements['img']['style']>;
 interface StaticImageData {
     src: string;
@@ -30,12 +34,13 @@ export declare type ImageProps = Omit<JSX.IntrinsicElements['img'], 'src' | 'src
     quality?: number | string;
     priority?: boolean;
     loading?: LoadingValue;
+    lazyBoundary?: string;
     placeholder?: PlaceholderValue;
     blurDataURL?: string;
     unoptimized?: boolean;
     objectFit?: ImgElementStyle['objectFit'];
     objectPosition?: ImgElementStyle['objectPosition'];
-    onLoadingComplete?: () => void;
+    onLoadingComplete?: OnLoadingComplete;
 };
-export default function Image({ src, sizes, unoptimized, priority, loading, className, quality, width, height, objectFit, objectPosition, onLoadingComplete, loader, placeholder, blurDataURL, ...all }: ImageProps): JSX.Element;
+export default function Image({ src, sizes, unoptimized, priority, loading, lazyBoundary, className, quality, width, height, objectFit, objectPosition, onLoadingComplete, loader, placeholder, blurDataURL, ...all }: ImageProps): JSX.Element;
 export {};

@@ -7,6 +7,7 @@ exports.getLocationOrigin = getLocationOrigin;
 exports.getURL = getURL;
 exports.getDisplayName = getDisplayName;
 exports.isResSent = isResSent;
+exports.normalizeRepeatedSlashes = normalizeRepeatedSlashes;
 exports.loadGetInitialProps = loadGetInitialProps;
 exports.formatWithValidation = formatWithValidation;
 exports.ST = exports.SP = exports.urlObjectKeys = void 0;
@@ -36,6 +37,13 @@ function getDisplayName(Component) {
 }
 function isResSent(res) {
     return res.finished || res.headersSent;
+}
+function normalizeRepeatedSlashes(url) {
+    const urlParts = url.split('?');
+    const urlNoQuery = urlParts[0];
+    return urlNoQuery// first we replace any non-encoded backslashes with forward
+    // then normalize repeated forward slashes
+    .replace(/\\/g, '/').replace(/\/\/+/g, '/') + (urlParts[1] ? `?${urlParts.slice(1).join('?')}` : '');
 }
 async function loadGetInitialProps(App, ctx) {
     if (process.env.NODE_ENV !== 'production') {

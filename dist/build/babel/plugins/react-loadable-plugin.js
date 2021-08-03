@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
+exports.default = _default;
 var _path = require("path");
 function _default({ types: t  }) {
     return {
@@ -104,6 +105,5 @@ function _default({ types: t  }) {
         }
     };
 }
-exports.default = _default;
 
 //# sourceMappingURL=react-loadable-plugin.js.map

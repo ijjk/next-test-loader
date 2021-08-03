@@ -2,13 +2,6 @@
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-exports.default = void 0;
-var _recast = require("next/dist/compiled/recast");
-var _testInterface = require("./TestInterface");
-var _duplicatePolyfillsConformanceCheck = require("./checks/duplicate-polyfills-conformance-check");
-var _granularChunksConformance = require("./checks/granular-chunks-conformance");
-var _minificationConformanceCheck = require("./checks/minification-conformance-check");
-var _reactSyncScriptsConformanceCheck = require("./checks/react-sync-scripts-conformance-check");
 Object.defineProperty(exports, "DuplicatePolyfillsConformanceCheck", {
     enumerable: true,
     get: function() {
@@ -33,6 +26,13 @@ Object.defineProperty(exports, "ReactSyncScriptsConformanceCheck", {
         return _reactSyncScriptsConformanceCheck.ReactSyncScriptsConformanceCheck;
     }
 });
+exports.default = void 0;
+var _recast = require("next/dist/compiled/recast");
+var _testInterface = require("./TestInterface");
+var _duplicatePolyfillsConformanceCheck = require("./checks/duplicate-polyfills-conformance-check");
+var _granularChunksConformance = require("./checks/granular-chunks-conformance");
+var _minificationConformanceCheck = require("./checks/minification-conformance-check");
+var _reactSyncScriptsConformanceCheck = require("./checks/react-sync-scripts-conformance-check");
 class WebpackConformancePlugin {
     constructor(options){
         this.buildStartedHandler = (_compilation, callback)=>{

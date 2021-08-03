@@ -61,7 +61,20 @@ const nextBuild = (argv)=>{
         throw error;
     }
     if (args['--help']) {
-        (0, _utils).printAndExit(`\n      Description\n        Compiles the application for production deployment\n\n      Usage\n        $ next build <dir>\n\n      <dir> represents the directory of the Next.js application.\n      If no directory is provided, the current directory will be used.\n\n      Options\n      --profile     Can be used to enable React Production Profiling\n      --no-lint     Disable linting\n    `, 0);
+        (0, _utils).printAndExit(`
+      Description
+        Compiles the application for production deployment
+
+      Usage
+        $ next build <dir>
+
+      <dir> represents the directory of the Next.js application.
+      If no directory is provided, the current directory will be used.
+
+      Options
+      --profile     Can be used to enable React Production Profiling
+      --no-lint     Disable linting
+    `, 0);
     }
     if (args['--profile']) {
         Log.warn('Profiling is enabled. Note: This may affect performance');

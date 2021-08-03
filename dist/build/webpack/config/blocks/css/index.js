@@ -314,6 +314,7 @@ const css = (0, _lodashCurry).default(async function css1(ctx, config) {
         // Extract CSS as CSS file(s) in the client-side production bundle.
         fns.push((0, _helpers).plugin(// @ts-ignore webpack 5 compat
         new _miniCssExtractPlugin.default({
+            // noop
             experimentalUseImportModule: _webpack.isWebpack5,
             filename: 'static/css/[contenthash].css',
             chunkFilename: 'static/css/[contenthash].css',

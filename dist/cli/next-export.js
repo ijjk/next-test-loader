@@ -38,7 +38,21 @@ const nextExport = (argv)=>{
         throw error;
     }
     if (args['--help']) {
-        console.log(`\n      Description\n        Exports the application for production deployment\n\n      Usage\n        $ next export [options] <dir>\n\n      <dir> represents the directory of the Next.js application.\n      If no directory is provided, the current directory will be used.\n\n      Options\n        -h - list this help\n        -o - set the output dir (defaults to 'out')\n        -s - do not print any messages to console\n    `);
+        console.log(`
+      Description
+        Exports the application for production deployment
+
+      Usage
+        $ next export [options] <dir>
+
+      <dir> represents the directory of the Next.js application.
+      If no directory is provided, the current directory will be used.
+
+      Options
+        -h - list this help
+        -o - set the output dir (defaults to 'out')
+        -s - do not print any messages to console
+    `);
         process.exit(0);
     }
     const dir = (0, _path).resolve(args._[0] || '.');

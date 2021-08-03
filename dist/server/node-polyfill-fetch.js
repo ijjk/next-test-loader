@@ -25,7 +25,19 @@ function _interopRequireWildcard(obj) {
 }
 // Polyfill fetch() in the Node.js environment
 if (!global.fetch) {
-    global.fetch = _nodeFetch.default;
+    const agent = ({ protocol  })=>protocol === 'http:' ? global.__NEXT_HTTP_AGENT : global.__NEXT_HTTPS_AGENT
+    ;
+    const fetchWithAgent = (url, opts, ...rest)=>{
+        if (!opts) {
+            opts = {
+                agent
+            };
+        } else if (!opts.agent) {
+            opts.agent = agent;
+        }
+        return (0, _nodeFetch).default(url, opts, ...rest);
+    };
+    global.fetch = fetchWithAgent;
     global.Headers = _nodeFetch.Headers;
     global.Request = _nodeFetch.Request;
     global.Response = _nodeFetch.Response;

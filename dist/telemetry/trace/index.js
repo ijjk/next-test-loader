@@ -2,9 +2,6 @@
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-var _trace = require("./trace");
-var _shared = require("./shared");
-var _autoparent = require("./autoparent");
 Object.defineProperty(exports, "trace", {
     enumerable: true,
     get: function() {
@@ -47,5 +44,8 @@ Object.defineProperty(exports, "setGlobal", {
         return _shared.setGlobal;
     }
 });
+var _trace = require("./trace");
+var _shared = require("./shared");
+var _autoparent = require("./autoparent");
 
 //# sourceMappingURL=index.js.map

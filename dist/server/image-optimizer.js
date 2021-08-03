@@ -5,6 +5,7 @@ Object.defineProperty(exports, "__esModule", {
 exports.imageOptimizer = imageOptimizer;
 exports.detectContentType = detectContentType;
 exports.getMaxAge = getMaxAge;
+exports.resizeImage = resizeImage;
 var _accept = require("@hapi/accept");
 var _crypto = require("crypto");
 var _fs = require("fs");
@@ -18,6 +19,7 @@ var _imageConfig = require("./image-config");
 var _main = require("./lib/squoosh/main");
 var _sendPayload = require("./send-payload");
 var _serveStatic = require("./serve-static");
+var _chalk = _interopRequireDefault(require("chalk"));
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
         default: obj
@@ -44,6 +46,13 @@ const VECTOR_TYPES = [
 const BLUR_IMG_SIZE = 8 // should match `next-image-loader`
 ;
 const inflightRequests = new Map();
+let sharp;
+try {
+    sharp = require(process.env.NEXT_SHARP_PATH || 'sharp');
+} catch (e) {
+// Sharp not present on the server, Squoosh fallback will be used
+}
+let shouldShowSharpWarning = process.env.NODE_ENV === 'production';
 async function imageOptimizer(server, req, res, parsedUrl, nextConfig, distDir, isDev = false) {
     const imageData = nextConfig.images || _imageConfig.imageConfigDefault;
     const { deviceSizes =[] , imageSizes =[] , domains =[] , loader , minimumCacheTTL =60 ,  } = imageData;
@@ -54,22 +63,23 @@ async function imageOptimizer(server, req, res, parsedUrl, nextConfig, distDir, 
         };
     }
     const { headers  } = req;
-    const { url , w , q  } = parsedUrl.query;
+    const { url: decodedUrl , w , q  } = parsedUrl.query;
     const mimeType = getSupportedMimeType(MODERN_TYPES, headers.accept);
     let href;
-    if (!url) {
+    if (!decodedUrl) {
         res.statusCode = 400;
         res.end('"url" parameter is required');
         return {
             finished: true
         };
-    } else if (Array.isArray(url)) {
+    } else if (Array.isArray(decodedUrl)) {
         res.statusCode = 400;
         res.end('"url" parameter cannot be an array');
         return {
             finished: true
         };
     }
+    const url = encodeURI(decodedUrl);
     let isAbsolute;
     if (url.startsWith('/')) {
         href = url;
@@ -191,7 +201,7 @@ async function imageOptimizer(server, req, res, parsedUrl, nextConfig, distDir, 
                 const contentType = (0, _serveStatic).getContentType(extension);
                 const fsPath = (0, _path).join(hashDir, file);
                 if (now < expireAt) {
-                    const result = setResponseHeaders(req, res, etag, maxAge, contentType, isStatic, isDev);
+                    const result = setResponseHeaders(req, res, url, etag, maxAge, contentType, isStatic, isDev);
                     if (!result.finished) {
                         (0, _fs).createReadStream(fsPath).pipe(res);
                     }
@@ -218,7 +228,7 @@ async function imageOptimizer(server, req, res, parsedUrl, nextConfig, distDir, 
             res.statusCode = upstreamRes.status;
             upstreamBuffer = Buffer.from(await upstreamRes.arrayBuffer());
             upstreamType = detectContentType(upstreamBuffer) || upstreamRes.headers.get('Content-Type');
-            maxAge = getMaxAge(upstreamRes.headers.get('Cache-Control'), minimumCacheTTL);
+            maxAge = getMaxAge(upstreamRes.headers.get('Cache-Control'));
         } else {
             try {
                 const resBuffers = [];
@@ -269,7 +279,7 @@ async function imageOptimizer(server, req, res, parsedUrl, nextConfig, distDir, 
                 res.statusCode = mockRes.statusCode;
                 upstreamBuffer = Buffer.concat(resBuffers);
                 upstreamType = detectContentType(upstreamBuffer) || mockRes.getHeader('Content-Type');
-                maxAge = getMaxAge(mockRes.getHeader('Cache-Control'), minimumCacheTTL);
+                maxAge = getMaxAge(mockRes.getHeader('Cache-Control'));
             } catch (err) {
                 res.statusCode = 500;
                 res.end('"url" parameter is valid but upstream response is invalid');
@@ -278,13 +288,13 @@ async function imageOptimizer(server, req, res, parsedUrl, nextConfig, distDir, 
                 };
             }
         }
-        const expireAt = maxAge * 1000 + now;
+        const expireAt = Math.max(maxAge, minimumCacheTTL) * 1000 + now;
         if (upstreamType) {
             const vector = VECTOR_TYPES.includes(upstreamType);
             const animate = ANIMATABLE_TYPES.includes(upstreamType) && (0, _isAnimated).default(upstreamBuffer);
             if (vector || animate) {
                 await writeToCacheDir(hashDir, upstreamType, maxAge, expireAt, upstreamBuffer);
-                sendResponse(req, res, maxAge, upstreamType, upstreamBuffer, isStatic, isDev);
+                sendResponse(req, res, url, maxAge, upstreamType, upstreamBuffer, isStatic, isDev);
                 return {
                     finished: true
                 };
@@ -306,50 +316,82 @@ async function imageOptimizer(server, req, res, parsedUrl, nextConfig, distDir, 
             contentType = JPEG;
         }
         try {
-            const orientation = await (0, _getOrientation).getOrientation(upstreamBuffer);
-            const operations = [];
-            if (orientation === _getOrientation.Orientation.RIGHT_TOP) {
-                operations.push({
-                    type: 'rotate',
-                    numRotations: 1
-                });
-            } else if (orientation === _getOrientation.Orientation.BOTTOM_RIGHT) {
-                operations.push({
-                    type: 'rotate',
-                    numRotations: 2
-                });
-            } else if (orientation === _getOrientation.Orientation.LEFT_BOTTOM) {
-                operations.push({
-                    type: 'rotate',
-                    numRotations: 3
-                });
-            } else {
-            // TODO: support more orientations
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            // const _: never = orientation
-            }
-            operations.push({
-                type: 'resize',
-                width
-            });
             let optimizedBuffer;
-            //if (contentType === AVIF) {
-            //} else
-            if (contentType === WEBP) {
-                optimizedBuffer = await (0, _main).processBuffer(upstreamBuffer, operations, 'webp', quality);
-            } else if (contentType === PNG) {
-                optimizedBuffer = await (0, _main).processBuffer(upstreamBuffer, operations, 'png', quality);
-            } else if (contentType === JPEG) {
-                optimizedBuffer = await (0, _main).processBuffer(upstreamBuffer, operations, 'jpeg', quality);
+            if (sharp) {
+                // Begin sharp transformation logic
+                const transformer = sharp(upstreamBuffer);
+                transformer.rotate();
+                const { width: metaWidth  } = await transformer.metadata();
+                if (metaWidth && metaWidth > width) {
+                    transformer.resize(width);
+                }
+                if (contentType === WEBP) {
+                    transformer.webp({
+                        quality
+                    });
+                } else if (contentType === PNG) {
+                    transformer.png({
+                        quality
+                    });
+                } else if (contentType === JPEG) {
+                    transformer.jpeg({
+                        quality
+                    });
+                }
+                optimizedBuffer = await transformer.toBuffer();
+            // End sharp transformation logic
+            } else {
+                // Show sharp warning in production once
+                if (shouldShowSharpWarning) {
+                    console.warn(_chalk.default.yellow.bold('Warning: ') + `For production Image Optimization with Next.js, the optional 'sharp' package is strongly recommended. Run 'yarn add sharp', and Next.js will use it automatically for Image Optimization.\n` + 'Read more: https://nextjs.org/docs/messages/sharp-missing-in-production');
+                    shouldShowSharpWarning = false;
+                }
+                // Begin Squoosh transformation logic
+                const orientation = await (0, _getOrientation).getOrientation(upstreamBuffer);
+                const operations = [];
+                if (orientation === _getOrientation.Orientation.RIGHT_TOP) {
+                    operations.push({
+                        type: 'rotate',
+                        numRotations: 1
+                    });
+                } else if (orientation === _getOrientation.Orientation.BOTTOM_RIGHT) {
+                    operations.push({
+                        type: 'rotate',
+                        numRotations: 2
+                    });
+                } else if (orientation === _getOrientation.Orientation.LEFT_BOTTOM) {
+                    operations.push({
+                        type: 'rotate',
+                        numRotations: 3
+                    });
+                } else {
+                // TODO: support more orientations
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                // const _: never = orientation
+                }
+                operations.push({
+                    type: 'resize',
+                    width
+                });
+                //if (contentType === AVIF) {
+                //} else
+                if (contentType === WEBP) {
+                    optimizedBuffer = await (0, _main).processBuffer(upstreamBuffer, operations, 'webp', quality);
+                } else if (contentType === PNG) {
+                    optimizedBuffer = await (0, _main).processBuffer(upstreamBuffer, operations, 'png', quality);
+                } else if (contentType === JPEG) {
+                    optimizedBuffer = await (0, _main).processBuffer(upstreamBuffer, operations, 'jpeg', quality);
+                }
+            // End Squoosh transformation logic
             }
             if (optimizedBuffer) {
                 await writeToCacheDir(hashDir, contentType, maxAge, expireAt, optimizedBuffer);
-                sendResponse(req, res, maxAge, contentType, optimizedBuffer, isStatic, isDev);
+                sendResponse(req, res, url, maxAge, contentType, optimizedBuffer, isStatic, isDev);
             } else {
                 throw new Error('Unable to optimize buffer');
             }
         } catch (error) {
-            sendResponse(req, res, maxAge, upstreamType, upstreamBuffer, isStatic, isDev);
+            sendResponse(req, res, url, maxAge, upstreamType, upstreamBuffer, isStatic, isDev);
         }
         return {
             finished: true
@@ -371,7 +413,17 @@ async function writeToCacheDir(dir, contentType, maxAge, expireAt, buffer) {
     const filename = (0, _path).join(dir, `${maxAge}.${expireAt}.${etag}.${extension}`);
     await _fs.promises.writeFile(filename, buffer);
 }
-function setResponseHeaders(req, res, etag, maxAge, contentType, isStatic, isDev) {
+function getFileNameWithExtension(url, contentType) {
+    const [urlWithoutQueryParams] = url.split('?');
+    const fileNameWithExtension = urlWithoutQueryParams.split('/').pop();
+    if (!contentType || !fileNameWithExtension) {
+        return;
+    }
+    const [fileName] = fileNameWithExtension.split('.');
+    const extension = (0, _serveStatic).getExtension(contentType);
+    return `${fileName}.${extension}`;
+}
+function setResponseHeaders(req, res, url, etag, maxAge, contentType, isStatic, isDev) {
     res.setHeader('Vary', 'Accept');
     res.setHeader('Cache-Control', isStatic ? 'public, max-age=315360000, immutable' : `public, max-age=${isDev ? 0 : maxAge}, must-revalidate`);
     if ((0, _sendPayload).sendEtagResponse(req, res, etag)) {
@@ -383,15 +435,19 @@ function setResponseHeaders(req, res, etag, maxAge, contentType, isStatic, isDev
     if (contentType) {
         res.setHeader('Content-Type', contentType);
     }
+    const fileName = getFileNameWithExtension(url, contentType);
+    if (fileName) {
+        res.setHeader('Content-Disposition', `inline; filename="${fileName}"`);
+    }
     return {
         finished: false
     };
 }
-function sendResponse(req, res, maxAge, contentType, buffer, isStatic, isDev) {
+function sendResponse(req, res, url, maxAge, contentType, buffer, isStatic, isDev) {
     const etag = getHash([
         buffer
     ]);
-    const result = setResponseHeaders(req, res, etag, maxAge, contentType, isStatic, isDev);
+    const result = setResponseHeaders(req, res, url, etag, maxAge, contentType, isStatic, isDev);
     if (!result.finished) {
         res.end(buffer);
     }
@@ -486,7 +542,7 @@ function detectContentType(buffer) {
     }
     return null;
 }
-function getMaxAge(str, minimumCacheTTL) {
+function getMaxAge(str) {
     const map = parseCacheControl(str);
     if (map) {
         let age = map.get('s-maxage') || map.get('max-age') || '';
@@ -495,10 +551,47 @@ function getMaxAge(str, minimumCacheTTL) {
         }
         const n = parseInt(age, 10);
         if (!isNaN(n)) {
-            return Math.max(n, minimumCacheTTL);
+            return n;
         }
     }
-    return minimumCacheTTL;
+    return 0;
+}
+async function resizeImage(content, dimension, size, extension, quality) {
+    if (sharp) {
+        const transformer = sharp(content);
+        if (extension === 'webp') {
+            transformer.webp({
+                quality
+            });
+        } else if (extension === 'png') {
+            transformer.png({
+                quality
+            });
+        } else if (extension === 'jpeg') {
+            transformer.jpeg({
+                quality
+            });
+        }
+        if (dimension === 'width') {
+            transformer.resize(size);
+        } else {
+            transformer.resize(null, size);
+        }
+        const buf = await transformer.toBuffer();
+        return buf;
+    } else {
+        const resizeOperationOpts = dimension === 'width' ? {
+            type: 'resize',
+            width: size
+        } : {
+            type: 'resize',
+            height: size
+        };
+        const buf = await (0, _main).processBuffer(content, [
+            resizeOperationOpts
+        ], extension, quality);
+        return buf;
+    }
 }
 
 //# sourceMappingURL=image-optimizer.js.map

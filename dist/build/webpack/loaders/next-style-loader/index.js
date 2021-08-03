@@ -62,23 +62,192 @@ loaderApi.pitch = function loader(request) {
     switch(injectType){
         case 'linkTag':
             {
-                const hmrCode = this.hot ? `\nif (module.hot) {\n  module.hot.accept(\n    ${_loaderUtils.default.stringifyRequest(this, `!!${request}`)},\n    function() {\n     ${esModule ? 'update(content);' : `content = require(${_loaderUtils.default.stringifyRequest(this, `!!${request}`)});\n\n           content = content.__esModule ? content.default : content;\n\n           update(content);`}\n    }\n  );\n\n  module.hot.dispose(function() {\n    update();\n  });\n}` : '';
-                return `${esModule ? `import api from ${_loaderUtils.default.stringifyRequest(this, `!${_path.default.join(__dirname, 'runtime/injectStylesIntoLinkTag.js')}`)};\n            import content from ${_loaderUtils.default.stringifyRequest(this, `!!${request}`)};` : `var api = require(${_loaderUtils.default.stringifyRequest(this, `!${_path.default.join(__dirname, 'runtime/injectStylesIntoLinkTag.js')}`)});\n            var content = require(${_loaderUtils.default.stringifyRequest(this, `!!${request}`)});\n\n            content = content.__esModule ? content.default : content;`}\n\nvar options = ${JSON.stringify(options)};\n\noptions.insert = ${insert};\n\nvar update = api(content, options);\n\n${hmrCode}\n\n${esModule ? 'export default {}' : ''}`;
+                const hmrCode = this.hot ? `
+if (module.hot) {
+  module.hot.accept(
+    ${_loaderUtils.default.stringifyRequest(this, `!!${request}`)},
+    function() {
+     ${esModule ? 'update(content);' : `content = require(${_loaderUtils.default.stringifyRequest(this, `!!${request}`)});
+
+           content = content.__esModule ? content.default : content;
+
+           update(content);`}
+    }
+  );
+
+  module.hot.dispose(function() {
+    update();
+  });
+}` : '';
+                return `${esModule ? `import api from ${_loaderUtils.default.stringifyRequest(this, `!${_path.default.join(__dirname, 'runtime/injectStylesIntoLinkTag.js')}`)};
+            import content from ${_loaderUtils.default.stringifyRequest(this, `!!${request}`)};` : `var api = require(${_loaderUtils.default.stringifyRequest(this, `!${_path.default.join(__dirname, 'runtime/injectStylesIntoLinkTag.js')}`)});
+            var content = require(${_loaderUtils.default.stringifyRequest(this, `!!${request}`)});
+
+            content = content.__esModule ? content.default : content;`}
+
+var options = ${JSON.stringify(options)};
+
+options.insert = ${insert};
+
+var update = api(content, options);
+
+${hmrCode}
+
+${esModule ? 'export default {}' : ''}`;
             }
         case 'lazyStyleTag':
         case 'lazySingletonStyleTag':
             {
                 const isSingleton = injectType === 'lazySingletonStyleTag';
-                const hmrCode = this.hot ? `\nif (module.hot) {\n  if (!content.locals || module.hot.invalidate) {\n    var isEqualLocals = ${_isEqualLocals.default.toString()};\n    var oldLocals = content.locals;\n\n    module.hot.accept(\n      ${_loaderUtils.default.stringifyRequest(this, `!!${request}`)},\n      function () {\n        ${esModule ? `if (!isEqualLocals(oldLocals, content.locals)) {\n                module.hot.invalidate();\n\n                return;\n              }\n\n              oldLocals = content.locals;\n\n              if (update && refs > 0) {\n                update(content);\n              }` : `content = require(${_loaderUtils.default.stringifyRequest(this, `!!${request}`)});\n\n              content = content.__esModule ? content.default : content;\n\n              if (!isEqualLocals(oldLocals, content.locals)) {\n                module.hot.invalidate();\n\n                return;\n              }\n\n              oldLocals = content.locals;\n\n              if (update && refs > 0) {\n                update(content);\n              }`}\n      }\n    )\n  }\n\n  module.hot.dispose(function() {\n    if (update) {\n      update();\n    }\n  });\n}` : '';
-                return `${esModule ? `import api from ${_loaderUtils.default.stringifyRequest(this, `!${_path.default.join(__dirname, 'runtime/injectStylesIntoStyleTag.js')}`)};\n            import content from ${_loaderUtils.default.stringifyRequest(this, `!!${request}`)};` : `var api = require(${_loaderUtils.default.stringifyRequest(this, `!${_path.default.join(__dirname, 'runtime/injectStylesIntoStyleTag.js')}`)});\n            var content = require(${_loaderUtils.default.stringifyRequest(this, `!!${request}`)});\n\n            content = content.__esModule ? content.default : content;\n\n            if (typeof content === 'string') {\n              content = [[module.id, content, '']];\n            }`}\n\nvar refs = 0;\nvar update;\nvar options = ${JSON.stringify(options)};\n\noptions.insert = ${insert};\noptions.singleton = ${isSingleton};\n\nvar exported = {};\n\nexported.locals = content.locals || {};\nexported.use = function() {\n  if (!(refs++)) {\n    update = api(content, options);\n  }\n\n  return exported;\n};\nexported.unuse = function() {\n  if (refs > 0 && !--refs) {\n    update();\n    update = null;\n  }\n};\n\n${hmrCode}\n\n${esModule ? 'export default' : 'module.exports ='} exported;`;
+                const hmrCode = this.hot ? `
+if (module.hot) {
+  if (!content.locals || module.hot.invalidate) {
+    var isEqualLocals = ${_isEqualLocals.default.toString()};
+    var oldLocals = content.locals;
+
+    module.hot.accept(
+      ${_loaderUtils.default.stringifyRequest(this, `!!${request}`)},
+      function () {
+        ${esModule ? `if (!isEqualLocals(oldLocals, content.locals)) {
+                module.hot.invalidate();
+
+                return;
+              }
+
+              oldLocals = content.locals;
+
+              if (update && refs > 0) {
+                update(content);
+              }` : `content = require(${_loaderUtils.default.stringifyRequest(this, `!!${request}`)});
+
+              content = content.__esModule ? content.default : content;
+
+              if (!isEqualLocals(oldLocals, content.locals)) {
+                module.hot.invalidate();
+
+                return;
+              }
+
+              oldLocals = content.locals;
+
+              if (update && refs > 0) {
+                update(content);
+              }`}
+      }
+    )
+  }
+
+  module.hot.dispose(function() {
+    if (update) {
+      update();
+    }
+  });
+}` : '';
+                return `${esModule ? `import api from ${_loaderUtils.default.stringifyRequest(this, `!${_path.default.join(__dirname, 'runtime/injectStylesIntoStyleTag.js')}`)};
+            import content from ${_loaderUtils.default.stringifyRequest(this, `!!${request}`)};` : `var api = require(${_loaderUtils.default.stringifyRequest(this, `!${_path.default.join(__dirname, 'runtime/injectStylesIntoStyleTag.js')}`)});
+            var content = require(${_loaderUtils.default.stringifyRequest(this, `!!${request}`)});
+
+            content = content.__esModule ? content.default : content;
+
+            if (typeof content === 'string') {
+              content = [[module.id, content, '']];
+            }`}
+
+var refs = 0;
+var update;
+var options = ${JSON.stringify(options)};
+
+options.insert = ${insert};
+options.singleton = ${isSingleton};
+
+var exported = {};
+
+exported.locals = content.locals || {};
+exported.use = function() {
+  if (!(refs++)) {
+    update = api(content, options);
+  }
+
+  return exported;
+};
+exported.unuse = function() {
+  if (refs > 0 && !--refs) {
+    update();
+    update = null;
+  }
+};
+
+${hmrCode}
+
+${esModule ? 'export default' : 'module.exports ='} exported;`;
             }
         case 'styleTag':
         case 'singletonStyleTag':
         default:
             {
                 const isSingleton = injectType === 'singletonStyleTag';
-                const hmrCode = this.hot ? `\nif (module.hot) {\n  if (!content.locals || module.hot.invalidate) {\n    var isEqualLocals = ${_isEqualLocals.default.toString()};\n    var oldLocals = content.locals;\n\n    module.hot.accept(\n      ${_loaderUtils.default.stringifyRequest(this, `!!${request}`)},\n      function () {\n        ${esModule ? `if (!isEqualLocals(oldLocals, content.locals)) {\n                module.hot.invalidate();\n\n                return;\n              }\n\n              oldLocals = content.locals;\n\n              update(content);` : `content = require(${_loaderUtils.default.stringifyRequest(this, `!!${request}`)});\n\n              content = content.__esModule ? content.default : content;\n\n              if (typeof content === 'string') {\n                content = [[module.id, content, '']];\n              }\n\n              if (!isEqualLocals(oldLocals, content.locals)) {\n                module.hot.invalidate();\n\n                return;\n              }\n\n              oldLocals = content.locals;\n\n              update(content);`}\n      }\n    )\n  }\n\n  module.hot.dispose(function() {\n    update();\n  });\n}` : '';
-                return `${esModule ? `import api from ${_loaderUtils.default.stringifyRequest(this, `!${_path.default.join(__dirname, 'runtime/injectStylesIntoStyleTag.js')}`)};\n            import content from ${_loaderUtils.default.stringifyRequest(this, `!!${request}`)};` : `var api = require(${_loaderUtils.default.stringifyRequest(this, `!${_path.default.join(__dirname, 'runtime/injectStylesIntoStyleTag.js')}`)});\n            var content = require(${_loaderUtils.default.stringifyRequest(this, `!!${request}`)});\n\n            content = content.__esModule ? content.default : content;\n\n            if (typeof content === 'string') {\n              content = [[module.id, content, '']];\n            }`}\n\nvar options = ${JSON.stringify(options)};\n\noptions.insert = ${insert};\noptions.singleton = ${isSingleton};\n\nvar update = api(content, options);\n\n${hmrCode}\n\n${esModule ? 'export default' : 'module.exports ='} content.locals || {};`;
+                const hmrCode = this.hot ? `
+if (module.hot) {
+  if (!content.locals || module.hot.invalidate) {
+    var isEqualLocals = ${_isEqualLocals.default.toString()};
+    var oldLocals = content.locals;
+
+    module.hot.accept(
+      ${_loaderUtils.default.stringifyRequest(this, `!!${request}`)},
+      function () {
+        ${esModule ? `if (!isEqualLocals(oldLocals, content.locals)) {
+                module.hot.invalidate();
+
+                return;
+              }
+
+              oldLocals = content.locals;
+
+              update(content);` : `content = require(${_loaderUtils.default.stringifyRequest(this, `!!${request}`)});
+
+              content = content.__esModule ? content.default : content;
+
+              if (typeof content === 'string') {
+                content = [[module.id, content, '']];
+              }
+
+              if (!isEqualLocals(oldLocals, content.locals)) {
+                module.hot.invalidate();
+
+                return;
+              }
+
+              oldLocals = content.locals;
+
+              update(content);`}
+      }
+    )
+  }
+
+  module.hot.dispose(function() {
+    update();
+  });
+}` : '';
+                return `${esModule ? `import api from ${_loaderUtils.default.stringifyRequest(this, `!${_path.default.join(__dirname, 'runtime/injectStylesIntoStyleTag.js')}`)};
+            import content from ${_loaderUtils.default.stringifyRequest(this, `!!${request}`)};` : `var api = require(${_loaderUtils.default.stringifyRequest(this, `!${_path.default.join(__dirname, 'runtime/injectStylesIntoStyleTag.js')}`)});
+            var content = require(${_loaderUtils.default.stringifyRequest(this, `!!${request}`)});
+
+            content = content.__esModule ? content.default : content;
+
+            if (typeof content === 'string') {
+              content = [[module.id, content, '']];
+            }`}
+
+var options = ${JSON.stringify(options)};
+
+options.insert = ${insert};
+options.singleton = ${isSingleton};
+
+var update = api(content, options);
+
+${hmrCode}
+
+${esModule ? 'export default' : 'module.exports ='} content.locals || {};`;
             }
     }
 };

@@ -26,16 +26,127 @@ const nextServerlessLoader = function() {
         const escapedBuildId = (0, _escapeStringRegexp).default(buildId);
         const pageIsDynamicRoute = (0, _utils).isDynamicRoute(page);
         const encodedPreviewProps = (0, _devalue).default(JSON.parse(previewProps));
-        const envLoading = `\n      const { processEnv } = require('@next/env')\n      processEnv(${Buffer.from(loadedEnvFiles, 'base64').toString()})\n    `;
-        const runtimeConfigImports = runtimeConfig ? `\n        const { setConfig } = require('next/config')\n      ` : '';
-        const runtimeConfigSetter = runtimeConfig ? `\n        const runtimeConfig = ${runtimeConfig}\n        setConfig(runtimeConfig)\n      ` : 'const runtimeConfig = {}';
+        const envLoading = `
+      const { processEnv } = require('@next/env')
+      processEnv(${Buffer.from(loadedEnvFiles, 'base64').toString()})
+    `;
+        const runtimeConfigImports = runtimeConfig ? `
+        const { setConfig } = require('next/config')
+      ` : '';
+        const runtimeConfigSetter = runtimeConfig ? `
+        const runtimeConfig = ${runtimeConfig}
+        setConfig(runtimeConfig)
+      ` : 'const runtimeConfig = {}';
         if (page.match(_constants.API_ROUTE)) {
-            return `\n        ${envLoading}\n        ${runtimeConfigImports}\n        ${/*
+            return `
+        ${envLoading}
+        ${runtimeConfigImports}
+        ${/*
             this needs to be called first so its available for any other imports
-          */ runtimeConfigSetter}\n        import 'next/dist/server/node-polyfill-fetch'\n        import routesManifest from '${routesManifest}'\n\n        import { getApiHandler } from 'next/dist/build/webpack/loaders/next-serverless-loader/api-handler'\n\n        const combinedRewrites = Array.isArray(routesManifest.rewrites)\n          ? routesManifest.rewrites\n          : []\n\n        if (!Array.isArray(routesManifest.rewrites)) {\n          combinedRewrites.push(...routesManifest.rewrites.beforeFiles)\n          combinedRewrites.push(...routesManifest.rewrites.afterFiles)\n          combinedRewrites.push(...routesManifest.rewrites.fallback)\n        }\n\n        const apiHandler = getApiHandler({\n          pageModule: require("${absolutePagePath}"),\n          rewrites: combinedRewrites,\n          i18n: ${i18n || 'undefined'},\n          page: "${page}",\n          basePath: "${basePath}",\n          pageIsDynamic: ${pageIsDynamicRoute},\n          encodedPreviewProps: ${encodedPreviewProps}\n        })\n        export default apiHandler\n      `;
+          */ runtimeConfigSetter}
+        import 'next/dist/server/node-polyfill-fetch'
+        import routesManifest from '${routesManifest}'
+
+        import { getApiHandler } from 'next/dist/build/webpack/loaders/next-serverless-loader/api-handler'
+
+        const combinedRewrites = Array.isArray(routesManifest.rewrites)
+          ? routesManifest.rewrites
+          : []
+
+        if (!Array.isArray(routesManifest.rewrites)) {
+          combinedRewrites.push(...routesManifest.rewrites.beforeFiles)
+          combinedRewrites.push(...routesManifest.rewrites.afterFiles)
+          combinedRewrites.push(...routesManifest.rewrites.fallback)
+        }
+
+        const apiHandler = getApiHandler({
+          pageModule: require("${absolutePagePath}"),
+          rewrites: combinedRewrites,
+          i18n: ${i18n || 'undefined'},
+          page: "${page}",
+          basePath: "${basePath}",
+          pageIsDynamic: ${pageIsDynamicRoute},
+          encodedPreviewProps: ${encodedPreviewProps}
+        })
+        export default apiHandler
+      `;
         } else {
-            return `\n      import 'next/dist/server/node-polyfill-fetch'\n      import routesManifest from '${routesManifest}'\n      import buildManifest from '${buildManifest}'\n      import reactLoadableManifest from '${reactLoadableManifest}'\n\n      ${envLoading}\n      ${runtimeConfigImports}\n      ${// this needs to be called first so its available for any other imports
-            runtimeConfigSetter}\n      import { getPageHandler } from 'next/dist/build/webpack/loaders/next-serverless-loader/page-handler'\n\n      const documentModule = require("${absoluteDocumentPath}")\n\n      const appMod = require('${absoluteAppPath}')\n      let App = appMod.default || appMod.then && appMod.then(mod => mod.default);\n\n      const compMod = require('${absolutePagePath}')\n\n      const Component = compMod.default || compMod.then && compMod.then(mod => mod.default)\n      export default Component\n      export const getStaticProps = compMod['getStaticProp' + 's'] || compMod.then && compMod.then(mod => mod['getStaticProp' + 's'])\n      export const getStaticPaths = compMod['getStaticPath' + 's'] || compMod.then && compMod.then(mod => mod['getStaticPath' + 's'])\n      export const getServerSideProps = compMod['getServerSideProp' + 's'] || compMod.then && compMod.then(mod => mod['getServerSideProp' + 's'])\n\n      // kept for detecting legacy exports\n      export const unstable_getStaticParams = compMod['unstable_getStaticParam' + 's'] || compMod.then && compMod.then(mod => mod['unstable_getStaticParam' + 's'])\n      export const unstable_getStaticProps = compMod['unstable_getStaticProp' + 's'] || compMod.then && compMod.then(mod => mod['unstable_getStaticProp' + 's'])\n      export const unstable_getStaticPaths = compMod['unstable_getStaticPath' + 's'] || compMod.then && compMod.then(mod => mod['unstable_getStaticPath' + 's'])\n      export const unstable_getServerProps = compMod['unstable_getServerProp' + 's'] || compMod.then && compMod.then(mod => mod['unstable_getServerProp' + 's'])\n\n      export let config = compMod['confi' + 'g'] || (compMod.then && compMod.then(mod => mod['confi' + 'g'])) || {}\n      export const _app = App\n\n      const combinedRewrites = Array.isArray(routesManifest.rewrites)\n        ? routesManifest.rewrites\n        : []\n\n      if (!Array.isArray(routesManifest.rewrites)) {\n        combinedRewrites.push(...routesManifest.rewrites.beforeFiles)\n        combinedRewrites.push(...routesManifest.rewrites.afterFiles)\n        combinedRewrites.push(...routesManifest.rewrites.fallback)\n      }\n\n      const { renderReqToHTML, render } = getPageHandler({\n        pageModule: compMod,\n        pageComponent: Component,\n        pageConfig: config,\n        appModule: App,\n        documentModule: documentModule,\n        errorModule: require("${absoluteErrorPath}"),\n        notFoundModule: ${absolute404Path ? `require("${absolute404Path}")` : undefined},\n        pageGetStaticProps: getStaticProps,\n        pageGetStaticPaths: getStaticPaths,\n        pageGetServerSideProps: getServerSideProps,\n\n        assetPrefix: "${assetPrefix}",\n        canonicalBase: "${canonicalBase}",\n        generateEtags: ${generateEtags || 'false'},\n        poweredByHeader: ${poweredByHeader || 'false'},\n\n        runtimeConfig,\n        buildManifest,\n        reactLoadableManifest,\n\n        rewrites: combinedRewrites,\n        i18n: ${i18n || 'undefined'},\n        page: "${page}",\n        buildId: "${buildId}",\n        escapedBuildId: "${escapedBuildId}",\n        basePath: "${basePath}",\n        pageIsDynamic: ${pageIsDynamicRoute},\n        encodedPreviewProps: ${encodedPreviewProps}\n      })\n      export { renderReqToHTML, render }\n    `;
+            return `
+      import 'next/dist/server/node-polyfill-fetch'
+      import routesManifest from '${routesManifest}'
+      import buildManifest from '${buildManifest}'
+      import reactLoadableManifest from '${reactLoadableManifest}'
+
+      ${envLoading}
+      ${runtimeConfigImports}
+      ${// this needs to be called first so its available for any other imports
+            runtimeConfigSetter}
+      import { getPageHandler } from 'next/dist/build/webpack/loaders/next-serverless-loader/page-handler'
+
+      const documentModule = require("${absoluteDocumentPath}")
+
+      const appMod = require('${absoluteAppPath}')
+      let App = appMod.default || appMod.then && appMod.then(mod => mod.default);
+
+      const compMod = require('${absolutePagePath}')
+
+      const Component = compMod.default || compMod.then && compMod.then(mod => mod.default)
+      export default Component
+      export const getStaticProps = compMod['getStaticProp' + 's'] || compMod.then && compMod.then(mod => mod['getStaticProp' + 's'])
+      export const getStaticPaths = compMod['getStaticPath' + 's'] || compMod.then && compMod.then(mod => mod['getStaticPath' + 's'])
+      export const getServerSideProps = compMod['getServerSideProp' + 's'] || compMod.then && compMod.then(mod => mod['getServerSideProp' + 's'])
+
+      // kept for detecting legacy exports
+      export const unstable_getStaticParams = compMod['unstable_getStaticParam' + 's'] || compMod.then && compMod.then(mod => mod['unstable_getStaticParam' + 's'])
+      export const unstable_getStaticProps = compMod['unstable_getStaticProp' + 's'] || compMod.then && compMod.then(mod => mod['unstable_getStaticProp' + 's'])
+      export const unstable_getStaticPaths = compMod['unstable_getStaticPath' + 's'] || compMod.then && compMod.then(mod => mod['unstable_getStaticPath' + 's'])
+      export const unstable_getServerProps = compMod['unstable_getServerProp' + 's'] || compMod.then && compMod.then(mod => mod['unstable_getServerProp' + 's'])
+
+      export let config = compMod['confi' + 'g'] || (compMod.then && compMod.then(mod => mod['confi' + 'g'])) || {}
+      export const _app = App
+
+      const combinedRewrites = Array.isArray(routesManifest.rewrites)
+        ? routesManifest.rewrites
+        : []
+
+      if (!Array.isArray(routesManifest.rewrites)) {
+        combinedRewrites.push(...routesManifest.rewrites.beforeFiles)
+        combinedRewrites.push(...routesManifest.rewrites.afterFiles)
+        combinedRewrites.push(...routesManifest.rewrites.fallback)
+      }
+
+      const { renderReqToHTML, render } = getPageHandler({
+        pageModule: compMod,
+        pageComponent: Component,
+        pageConfig: config,
+        appModule: App,
+        documentModule: documentModule,
+        errorModule: require("${absoluteErrorPath}"),
+        notFoundModule: ${absolute404Path ? `require("${absolute404Path}")` : undefined},
+        pageGetStaticProps: getStaticProps,
+        pageGetStaticPaths: getStaticPaths,
+        pageGetServerSideProps: getServerSideProps,
+
+        assetPrefix: "${assetPrefix}",
+        canonicalBase: "${canonicalBase}",
+        generateEtags: ${generateEtags || 'false'},
+        poweredByHeader: ${poweredByHeader || 'false'},
+
+        runtimeConfig,
+        buildManifest,
+        reactLoadableManifest,
+
+        rewrites: combinedRewrites,
+        i18n: ${i18n || 'undefined'},
+        page: "${page}",
+        buildId: "${buildId}",
+        escapedBuildId: "${escapedBuildId}",
+        basePath: "${basePath}",
+        pageIsDynamic: ${pageIsDynamicRoute},
+        encodedPreviewProps: ${encodedPreviewProps}
+      })
+      export { renderReqToHTML, render }
+    `;
         }
     });
 };
