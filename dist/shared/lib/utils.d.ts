@@ -16,9 +16,7 @@ export declare type NextComponentType<C extends BaseContext = NextPageContext, I
      */
     getInitialProps?(context: C): IP | Promise<IP>;
 };
-export declare type DocumentType = NextComponentType<DocumentContext, DocumentInitialProps, DocumentProps> & {
-    renderDocument(Document: DocumentType, props: DocumentProps): React.ReactElement;
-};
+export declare type DocumentType = NextComponentType<DocumentContext, DocumentInitialProps, DocumentProps>;
 export declare type AppType = NextComponentType<AppContextType, AppInitialProps, AppPropsType>;
 export declare type AppTreeType = ComponentType<AppInitialProps & {
     [name: string]: any;
@@ -148,7 +146,8 @@ export declare type DocumentContext = NextPageContext & {
 export declare type DocumentInitialProps = RenderPageResult & {
     styles?: React.ReactElement[] | React.ReactFragment;
 };
-export declare type DocumentProps = DocumentInitialProps & {
+export declare type DocumentProps = DocumentInitialProps & HtmlProps;
+export declare type HtmlProps = {
     __NEXT_DATA__: NEXT_DATA;
     dangerousAsPath: string;
     docComponentsRendered: {
@@ -175,6 +174,8 @@ export declare type DocumentProps = DocumentInitialProps & {
     };
     locale?: string;
     disableOptimizedLoading?: boolean;
+    styles?: React.ReactElement[] | React.ReactFragment;
+    head?: Array<JSX.Element | null>;
 };
 /**
  * Next `API` route request
@@ -253,4 +254,5 @@ export declare const SP: boolean;
 export declare const ST: boolean;
 export declare class DecodeError extends Error {
 }
+export declare const HtmlContext: import("react").Context<HtmlProps>;
 export {};

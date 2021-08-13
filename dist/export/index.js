@@ -367,25 +367,37 @@ async function exportApp(dir, options, configuration) {
         }
         const timeout = (configuration === null || configuration === void 0 ? void 0 : configuration.experimental.staticPageGenerationTimeout) || 0;
         let infoPrinted = false;
-        const worker = new _worker.Worker(require.resolve('./worker'), {
-            timeout: timeout * 1000,
-            onRestart: (_method, [{ path  }], attempts)=>{
-                if (attempts >= 3) {
-                    throw new Error(`Static page generation for ${path} is still timing out after 3 attempts. See more info here https://nextjs.org/docs/messages/static-page-generation-timeout`);
-                }
-                Log.warn(`Restarted static page genertion for ${path} because it took more than ${timeout} seconds`);
-                if (!infoPrinted) {
-                    Log.warn('See more info here https://nextjs.org/docs/messages/static-page-generation-timeout');
-                    infoPrinted = true;
-                }
-            },
-            maxRetries: 0,
-            numWorkers: threads,
-            enableWorkerThreads: nextConfig.experimental.workerThreads,
-            exposedMethods: [
-                'default'
-            ]
-        });
+        let exportPage;
+        let endWorker;
+        if (options.exportPageWorker) {
+            exportPage = options.exportPageWorker;
+            endWorker = options.endWorker || (()=>Promise.resolve()
+            );
+        } else {
+            const worker = new _worker.Worker(require.resolve('./worker'), {
+                timeout: timeout * 1000,
+                onRestart: (_method, [{ path  }], attempts)=>{
+                    if (attempts >= 3) {
+                        throw new Error(`Static page generation for ${path} is still timing out after 3 attempts. See more info here https://nextjs.org/docs/messages/static-page-generation-timeout`);
+                    }
+                    Log.warn(`Restarted static page genertion for ${path} because it took more than ${timeout} seconds`);
+                    if (!infoPrinted) {
+                        Log.warn('See more info here https://nextjs.org/docs/messages/static-page-generation-timeout');
+                        infoPrinted = true;
+                    }
+                },
+                maxRetries: 0,
+                numWorkers: threads,
+                enableWorkerThreads: nextConfig.experimental.workerThreads,
+                exposedMethods: [
+                    'default'
+                ]
+            });
+            exportPage = worker.default.bind(worker);
+            endWorker = async ()=>{
+                await worker.end();
+            };
+        }
         let renderError = false;
         const errorPaths = [];
         await Promise.all(filteredPaths.map(async (path)=>{
@@ -393,7 +405,7 @@ async function exportApp(dir, options, configuration) {
             pageExportSpan.setAttribute('path', path);
             return pageExportSpan.traceAsyncFn(async ()=>{
                 const pathMap = exportPathMap[path];
-                const result = await worker.default({
+                const result = await exportPage({
                     path,
                     pathMap,
                     distDir,
@@ -432,7 +444,7 @@ async function exportApp(dir, options, configuration) {
                 if (progress) progress();
             });
         }));
-        worker.end();
+        const endWorkerPromise = endWorker();
         // copy prerendered routes to outDir
         if (!options.buildExport && prerenderManifest) {
             await Promise.all(Object.keys(prerenderManifest.routes).map(async (route)=>{
@@ -481,6 +493,7 @@ async function exportApp(dir, options, configuration) {
         if (telemetry) {
             await telemetry.flush();
         }
+        await endWorkerPromise;
     });
 }
 

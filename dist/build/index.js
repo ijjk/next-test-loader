@@ -72,7 +72,6 @@ function _interopRequireWildcard(obj) {
         return newObj;
     }
 }
-const staticCheckWorker = require.resolve('./utils');
 async function build(dir, conf = null, reactProductionProfiling = false, debugOutput = false, runLint = true) {
     const nextBuildSpan = (0, _trace).trace('next-build');
     return nextBuildSpan.traceAsyncFn(async ()=>{
@@ -416,48 +415,64 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
         const pageInfos = new Map();
         const pagesManifest = JSON.parse(await _fs.promises.readFile(manifestPath, 'utf8'));
         const buildManifest = JSON.parse(await _fs.promises.readFile(buildManifestPath, 'utf8'));
-        const analysisBegin = process.hrtime();
-        const staticCheckSpan = nextBuildSpan.traceChild('static-check');
-        const { customAppGetInitialProps , namedExports , isNextImageImported , hasSsrAmpPages , hasNonStaticErrorPage ,  } = await staticCheckSpan.traceAsyncFn(async ()=>{
-            process.env.NEXT_PHASE = _constants1.PHASE_PRODUCTION_BUILD;
-            const timeout = config.experimental.pageDataCollectionTimeout || 0;
-            let infoPrinted = false;
-            const staticCheckWorkers = new _worker.Worker(staticCheckWorker, {
-                timeout: timeout * 1000,
-                onRestart: (_method, [pagePath], attempts)=>{
+        const timeout = config.experimental.staticPageGenerationTimeout || 0;
+        const sharedPool = config.experimental.sharedPool || false;
+        const staticWorker = sharedPool ? require.resolve('./worker') : require.resolve('./utils');
+        let infoPrinted = false;
+        const staticWorkers = new _worker.Worker(staticWorker, {
+            timeout: timeout * 1000,
+            onRestart: (method, [arg], attempts)=>{
+                if (method === 'exportPage') {
+                    const { path: pagePath  } = arg;
+                    if (attempts >= 3) {
+                        throw new Error(`Static page generation for ${pagePath} is still timing out after 3 attempts. See more info here https://nextjs.org/docs/messages/static-page-generation-timeout`);
+                    }
+                    Log.warn(`Restarted static page genertion for ${pagePath} because it took more than ${timeout} seconds`);
+                } else {
+                    const pagePath = arg;
                     if (attempts >= 2) {
                         throw new Error(`Collecting page data for ${pagePath} is still timing out after 2 attempts. See more info here https://nextjs.org/docs/messages/page-data-collection-timeout`);
                     }
                     Log.warn(`Restarted collecting page data for ${pagePath} because it took more than ${timeout} seconds`);
-                    if (!infoPrinted) {
-                        Log.warn('See more info here https://nextjs.org/docs/messages/page-data-collection-timeout');
-                        infoPrinted = true;
-                    }
-                },
-                numWorkers: config.experimental.cpus,
-                enableWorkerThreads: config.experimental.workerThreads,
-                exposedMethods: [
-                    'hasCustomGetInitialProps',
-                    'isPageStatic',
-                    'getNamedExports', 
-                ]
-            });
+                }
+                if (!infoPrinted) {
+                    Log.warn('See more info here https://nextjs.org/docs/messages/static-page-generation-timeout');
+                    infoPrinted = true;
+                }
+            },
+            numWorkers: config.experimental.cpus,
+            enableWorkerThreads: config.experimental.workerThreads,
+            exposedMethods: sharedPool ? [
+                'hasCustomGetInitialProps',
+                'isPageStatic',
+                'getNamedExports',
+                'exportPage', 
+            ] : [
+                'hasCustomGetInitialProps',
+                'isPageStatic',
+                'getNamedExports'
+            ]
+        });
+        const analysisBegin = process.hrtime();
+        const staticCheckSpan = nextBuildSpan.traceChild('static-check');
+        const { customAppGetInitialProps , namedExports , isNextImageImported , hasSsrAmpPages , hasNonStaticErrorPage ,  } = await staticCheckSpan.traceAsyncFn(async ()=>{
+            process.env.NEXT_PHASE = _constants1.PHASE_PRODUCTION_BUILD;
             const runtimeEnvConfig = {
                 publicRuntimeConfig: config.publicRuntimeConfig,
                 serverRuntimeConfig: config.serverRuntimeConfig
             };
             const nonStaticErrorPageSpan = staticCheckSpan.traceChild('check-static-error-page');
-            const errorPageHasCustomGetInitialProps = nonStaticErrorPageSpan.traceAsyncFn(async ()=>hasCustomErrorPage && await staticCheckWorkers.hasCustomGetInitialProps('/_error', distDir, isLikeServerless, runtimeEnvConfig, false)
+            const errorPageHasCustomGetInitialProps = nonStaticErrorPageSpan.traceAsyncFn(async ()=>hasCustomErrorPage && await staticWorkers.hasCustomGetInitialProps('/_error', distDir, isLikeServerless, runtimeEnvConfig, false)
             );
             const errorPageStaticResult = nonStaticErrorPageSpan.traceAsyncFn(async ()=>{
                 var ref12, ref13;
-                return hasCustomErrorPage && staticCheckWorkers.isPageStatic('/_error', distDir, isLikeServerless, runtimeEnvConfig, config.httpAgentOptions, (ref12 = config.i18n) === null || ref12 === void 0 ? void 0 : ref12.locales, (ref13 = config.i18n) === null || ref13 === void 0 ? void 0 : ref13.defaultLocale);
+                return hasCustomErrorPage && staticWorkers.isPageStatic('/_error', distDir, isLikeServerless, runtimeEnvConfig, config.httpAgentOptions, (ref12 = config.i18n) === null || ref12 === void 0 ? void 0 : ref12.locales, (ref13 = config.i18n) === null || ref13 === void 0 ? void 0 : ref13.defaultLocale);
             });
             // we don't output _app in serverless mode so use _app export
             // from _error instead
             const appPageToCheck = isLikeServerless ? '/_error' : '/_app';
-            const customAppGetInitialPropsPromise = staticCheckWorkers.hasCustomGetInitialProps(appPageToCheck, distDir, isLikeServerless, runtimeEnvConfig, true);
-            const namedExportsPromise = staticCheckWorkers.getNamedExports(appPageToCheck, distDir, isLikeServerless, runtimeEnvConfig);
+            const customAppGetInitialPropsPromise = staticWorkers.hasCustomGetInitialProps(appPageToCheck, distDir, isLikeServerless, runtimeEnvConfig, true);
+            const namedExportsPromise = staticWorkers.getNamedExports(appPageToCheck, distDir, isLikeServerless, runtimeEnvConfig);
             // eslint-disable-next-line no-shadow
             let isNextImageImported1;
             // eslint-disable-next-line no-shadow
@@ -480,7 +495,7 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
                             let isPageStaticSpan = checkPageSpan.traceChild('is-page-static');
                             let workerResult = await isPageStaticSpan.traceAsyncFn(()=>{
                                 var ref14, ref15;
-                                return staticCheckWorkers.isPageStatic(page, distDir, isLikeServerless, runtimeEnvConfig, config.httpAgentOptions, (ref14 = config.i18n) === null || ref14 === void 0 ? void 0 : ref14.locales, (ref15 = config.i18n) === null || ref15 === void 0 ? void 0 : ref15.defaultLocale, isPageStaticSpan.id);
+                                return staticWorkers.isPageStatic(page, distDir, isLikeServerless, runtimeEnvConfig, config.httpAgentOptions, (ref14 = config.i18n) === null || ref14 === void 0 ? void 0 : ref14.locales, (ref15 = config.i18n) === null || ref15 === void 0 ? void 0 : ref15.defaultLocale, isPageStaticSpan.id);
                             });
                             if (workerResult.isStatic === false && (workerResult.isHybridAmp || workerResult.isAmpOnly)) {
                                 hasSsrAmpPages1 = true;
@@ -551,7 +566,7 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
                 hasSsrAmpPages: hasSsrAmpPages1,
                 hasNonStaticErrorPage: nonStaticErrorPage
             };
-            staticCheckWorkers.end();
+            if (!sharedPool) staticWorkers.end();
             return returnValue;
         });
         if (customAppGetInitialProps) {
@@ -640,7 +655,11 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
                     threads: config.experimental.cpus,
                     pages: combinedPages,
                     outdir: _path.default.join(distDir, 'export'),
-                    statusMessage: 'Generating static pages'
+                    statusMessage: 'Generating static pages',
+                    exportPageWorker: sharedPool ? staticWorkers.exportPage.bind(staticWorkers) : undefined,
+                    endWorker: sharedPool ? async ()=>{
+                        await staticWorkers.end();
+                    } : undefined
                 };
                 const exportConfig = {
                     ...config,

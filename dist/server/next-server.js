@@ -107,7 +107,8 @@ class Server {
             optimizeCss: this.nextConfig.experimental.optimizeCss,
             disableOptimizedLoading: this.nextConfig.experimental.disableOptimizedLoading,
             domainLocales: (ref1 = this.nextConfig.i18n) === null || ref1 === void 0 ? void 0 : ref1.domains,
-            distDir: this.distDir
+            distDir: this.distDir,
+            concurrentFeatures: this.nextConfig.experimental.concurrentFeatures
         };
         // Only the `publicRuntimeConfig` key is exposed to the client side
         // It'll be rendered as part of __NEXT_DATA__ on the client side
@@ -783,7 +784,13 @@ class Server {
                         }
                         pathParts.splice(0, basePathParts.length);
                     }
-                    const path = `/${pathParts.join('/')}`;
+                    let path = `/${pathParts.join('/')}`;
+                    if (!publicFiles.has(path)) {
+                        // In `next-dev-server.ts`, we ensure encoded paths match
+                        // decoded paths on the filesystem. So we need do the
+                        // opposite here: make sure decoded paths match encoded.
+                        path = encodeURI(path);
+                    }
                     if (publicFiles.has(path)) {
                         await this.serveStatic(req, res, (0, _path).join(this.publicDir, ...pathParts), parsedUrl);
                         return {

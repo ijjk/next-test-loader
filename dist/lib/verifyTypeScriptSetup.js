@@ -13,6 +13,7 @@ var log = _interopRequireWildcard(require("../build/output/log"));
 var _getTypeScriptIntent = require("./typescript/getTypeScriptIntent");
 var _writeAppTypeDeclarations = require("./typescript/writeAppTypeDeclarations");
 var _writeConfigurationDefaults = require("./typescript/writeConfigurationDefaults");
+var _missingDependencyError = require("./typescript/missingDependencyError");
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
         default: obj
@@ -41,9 +42,24 @@ function _interopRequireWildcard(obj) {
         return newObj;
     }
 }
+const requiredPackages = [
+    {
+        file: 'typescript',
+        pkg: 'typescript'
+    },
+    {
+        file: '@types/react/index.d.ts',
+        pkg: '@types/react'
+    },
+    {
+        file: '@types/node/index.d.ts',
+        pkg: '@types/node'
+    }, 
+];
 async function verifyTypeScriptSetup(dir, pagesDir, typeCheckPreflight, imageImportsEnabled, cacheDir) {
     const tsConfigPath = _path.default.join(dir, 'tsconfig.json');
     try {
+        var ref;
         // Check if the project uses TypeScript:
         const intent = await (0, _getTypeScriptIntent).getTypeScriptIntent(dir, pagesDir);
         if (!intent) {
@@ -51,9 +67,11 @@ async function verifyTypeScriptSetup(dir, pagesDir, typeCheckPreflight, imageImp
                 version: null
             };
         }
-        const firstTimeSetup = intent.firstTimeSetup;
         // Ensure TypeScript and necessary `@types/*` are installed:
-        const deps = await (0, _hasNecessaryDependencies).hasNecessaryDependencies(dir, !!intent, false);
+        const deps = await (0, _hasNecessaryDependencies).hasNecessaryDependencies(dir, requiredPackages);
+        if (((ref = deps.missing) === null || ref === void 0 ? void 0 : ref.length) > 0) {
+            (0, _missingDependencyError).missingDepsError(dir, deps.missing);
+        }
         // Load TypeScript after we're sure it exists:
         const ts = await Promise.resolve().then(function() {
             return _interopRequireWildcard(require(deps.resolved.get('typescript')));
@@ -62,7 +80,7 @@ async function verifyTypeScriptSetup(dir, pagesDir, typeCheckPreflight, imageImp
             log.warn(`Minimum recommended TypeScript version is v4.3.2, older versions can potentially be incompatible with Next.js. Detected: ${ts.version}`);
         }
         // Reconfigure (or create) the user's `tsconfig.json` for them:
-        await (0, _writeConfigurationDefaults).writeConfigurationDefaults(ts, tsConfigPath, firstTimeSetup);
+        await (0, _writeConfigurationDefaults).writeConfigurationDefaults(ts, tsConfigPath, intent.firstTimeSetup);
         // Write out the necessary `next-env.d.ts` file to correctly register
         // Next.js' types:
         await (0, _writeAppTypeDeclarations).writeAppTypeDeclarations(dir, imageImportsEnabled);

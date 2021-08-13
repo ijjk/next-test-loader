@@ -76,7 +76,7 @@ function formatResults(baseDir, results, format) {
     const output = format ? format(resultsWithMessages) : resultsWithMessages.map(({ messages , filePath  })=>formatMessage(baseDir, messages, filePath)
     ).join('\n');
     return {
-        output: resultsWithMessages.length > 0 ? output + `\n\n${_chalk.default.bold('Need to disable some ESLint rules? Learn more here:')} https://nextjs.org/docs/basic-features/eslint#disabling-rules\n` : '',
+        output: resultsWithMessages.length > 0 ? output + `\n\n${_chalk.default.cyan('info')}  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/basic-features/eslint#disabling-rules` : '',
         totalNextPluginErrorCount,
         totalNextPluginWarningCount
     };

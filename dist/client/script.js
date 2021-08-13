@@ -93,18 +93,19 @@ const loadScript = (props)=>{
     }
     const el = document.createElement('script');
     const loadPromise = new Promise((resolve, reject)=>{
-        el.addEventListener('load', function() {
+        el.addEventListener('load', function(e) {
             resolve();
             if (onLoad) {
-                onLoad.call(this);
+                onLoad.call(this, e);
             }
         });
-        el.addEventListener('error', function() {
-            reject();
-            if (onError) {
-                onError();
-            }
+        el.addEventListener('error', function(e) {
+            reject(e);
         });
+    }).catch(function(e) {
+        if (onError) {
+            onError(e);
+        }
     });
     if (src) {
         ScriptCache.set(src, loadPromise);

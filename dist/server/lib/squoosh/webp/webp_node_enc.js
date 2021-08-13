@@ -88,7 +88,7 @@ var Module = function() {
             return ma.decode(B.subarray(a, c << 1));
         }
         function oa(a, b, c) {
-            (void 0) === c && (c = 2147483647);
+            void 0 === c && (c = 2147483647);
             if (2 > c) return 0;
             c -= 2;
             var d = b;
@@ -110,7 +110,7 @@ var Module = function() {
             return d;
         }
         function ra(a, b, c) {
-            (void 0) === c && (c = 2147483647);
+            void 0 === c && (c = 2147483647);
             if (4 > c) return 0;
             var d = b;
             c = d + c - 4;
@@ -197,7 +197,7 @@ var Module = function() {
                 if ('function' == typeof b) b(f);
                 else {
                     var c = b.L;
-                    'number' === typeof c ? (void 0) === b.G ? J.get(c)() : J.get(c)(b.G) : c((void 0) === b.G ? null : b.G);
+                    'number' === typeof c ? void 0 === b.G ? J.get(c)() : J.get(c)(b.G) : c(void 0 === b.G ? null : b.G);
                 }
             }
         }
@@ -217,7 +217,7 @@ var Module = function() {
         }, S = {
         };
         function Ha(a) {
-            if ((void 0) === a) return '_unknown';
+            if (void 0 === a) return '_unknown';
             a = a.replace(/[^a-zA-Z0-9_]/g, '$');
             var b = a.charCodeAt(0);
             return 48 <= b && 57 >= b ? '_' + a : a;
@@ -231,12 +231,12 @@ var Module = function() {
                 this.name = a;
                 this.message = d;
                 d = Error(d).stack;
-                (void 0) !== d && (this.stack = this.toString() + '\n' + d.replace(/^Error(:[^\n]*)?\n/, ''));
+                void 0 !== d && (this.stack = this.toString() + '\n' + d.replace(/^Error(:[^\n]*)?\n/, ''));
             });
             c.prototype = Object.create(b.prototype);
             c.prototype.constructor = c;
             c.prototype.toString = function() {
-                return (void 0) === this.message ? this.name : this.name + ': ' + this.message;
+                return void 0 === this.message ? this.name : this.name + ': ' + this.message;
             };
             return c;
         }
@@ -339,7 +339,7 @@ var Module = function() {
         }
         function Sa(a, b) {
             var c = f;
-            if ((void 0) === c[a].F) {
+            if (void 0 === c[a].F) {
                 var d = c[a];
                 c[a] = function() {
                     c[a].F.hasOwnProperty(arguments.length) || W("Function '" + b + "' called with an invalid number of arguments (" + arguments.length + ') - expects one of (' + c[a].F + ')!');
@@ -350,7 +350,7 @@ var Module = function() {
             }
         }
         function Ta(a, b, c) {
-            f.hasOwnProperty(a) ? (((void 0) === c || (void 0) !== f[a].F && (void 0) !== f[a].F[c]) && W("Cannot register public name '" + a + "' twice"), Sa(a, a), f.hasOwnProperty(c) && W('Cannot register multiple overloads of a function with the same number of arguments (' + c + ')!'), f[a].F[c] = b) : (f[a] = b, (void 0) !== c && (f[a].X = c));
+            f.hasOwnProperty(a) ? ((void 0 === c || void 0 !== f[a].F && void 0 !== f[a].F[c]) && W("Cannot register public name '" + a + "' twice"), Sa(a, a), f.hasOwnProperty(c) && W('Cannot register multiple overloads of a function with the same number of arguments (' + c + ')!'), f[a].F[c] = b) : (f[a] = b, void 0 !== c && (f[a].X = c));
         }
         function Ua(a, b, c) {
             switch(b){
@@ -378,7 +378,7 @@ var Module = function() {
         }
         function Xa(a, b) {
             var c = R[a];
-            (void 0) === c && W(b + ' has unknown type ' + Va(a));
+            void 0 === c && W(b + ' has unknown type ' + Va(a));
             return c;
         }
         function Ya(a) {
@@ -481,11 +481,11 @@ var Module = function() {
         Na = ib;
         Oa = f.BindingError = Ja('BindingError');
         f.count_emval_handles = function() {
-            for(var a = 0, b = 5; b < X.length; ++b)(void 0) !== X[b] && ++a;
+            for(var a = 0, b = 5; b < X.length; ++b)void 0 !== X[b] && ++a;
             return a;
         };
         f.get_first_emval = function() {
-            for(var a = 5; a < X.length; ++a)if ((void 0) !== X[a]) return X[a];
+            for(var a = 5; a < X.length; ++a)if (void 0 !== X[a]) return X[a];
             return null;
         };
         cb = f.UnboundTypeError = Ja('UnboundTypeError');
@@ -654,7 +654,7 @@ var Module = function() {
                         null
                     ].concat(h.slice(1)), m = h = a, n = e, q = k.length;
                     2 > q && W("argTypes array size mismatch! Must at least get return value and 'this' types!");
-                    for(var w = null !== k[1] && !1, x = !1, p = 1; p < k.length; ++p)if (null !== k[p] && (void 0) === k[p].D) {
+                    for(var w = null !== k[1] && !1, x = !1, p = 1; p < k.length; ++p)if (null !== k[p] && void 0 === k[p].D) {
                         x = !0;
                         break;
                     }
@@ -683,7 +683,7 @@ var Module = function() {
                     k = $a(y).apply(null, n);
                     p = b - 1;
                     if (!f.hasOwnProperty(h)) throw new Ka('Replacing nonexistant public symbol');
-                    (void 0) !== f[h].F && (void 0) !== p ? f[h].F[p] = k : (f[h] = k, f[h].J = p);
+                    void 0 !== f[h].F && void 0 !== p ? f[h].F[p] = k : (f[h] = k, f[h].J = p);
                     return [];
                 });
             },
@@ -754,7 +754,7 @@ var Module = function() {
                                     for(var k = g + (h - g), m = g; !(m >= k) && B[m];)++m;
                                     g = ka.decode(B.subarray(g, m));
                                 } else g = '';
-                                if ((void 0) === n) var n = g;
+                                if (void 0 === n) var n = g;
                                 else n += String.fromCharCode(0), n += g;
                                 g = h + 1;
                             }
@@ -817,7 +817,7 @@ var Module = function() {
                     fromWireType: function(k) {
                         for(var m = I[k >> 2], n = l(), q, w = k + 4, x = 0; x <= m; ++x){
                             var p = k + 4 + x * b;
-                            if (x == m || 0 == n[p >> h]) w = d(w, p - w), (void 0) === q ? q = w : (q += String.fromCharCode(0), q += w), w = p + b;
+                            if (x == m || 0 == n[p >> h]) w = d(w, p - w), void 0 === q ? q = w : (q += String.fromCharCode(0), q += w), w = p + b;
                         }
                         Y(k);
                         return q;
@@ -872,7 +872,7 @@ var Module = function() {
             v: function(a) {
                 if (0 === a) return Ra(gb());
                 var b = fb[a];
-                a = (void 0) === b ? V(a) : b;
+                a = void 0 === b ? V(a) : b;
                 return Ra(gb()[a]);
             },
             u: function(a) {

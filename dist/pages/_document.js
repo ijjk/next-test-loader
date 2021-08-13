@@ -26,7 +26,6 @@ exports.default = void 0;
 var _react = _interopRequireWildcard(require("react"));
 var _server = _interopRequireDefault(require("styled-jsx/server"));
 var _constants = require("../shared/lib/constants");
-var _documentContext = require("../shared/lib/document-context");
 var _utils = require("../shared/lib/utils");
 var _getPageFiles = require("../server/get-page-files");
 var _utils1 = require("../server/utils");
@@ -159,19 +158,13 @@ class Document1 extends _react.Component {
             styles
         };
     }
-    static renderDocument(DocumentComponent, props) {
-        return(/*#__PURE__*/ _react.default.createElement(_documentContext.DocumentContext.Provider, {
-            value: props
-        }, /*#__PURE__*/ _react.default.createElement(DocumentComponent, Object.assign({
-        }, props))));
-    }
     render() {
         return(/*#__PURE__*/ _react.default.createElement(Html, null, /*#__PURE__*/ _react.default.createElement(Head, null), /*#__PURE__*/ _react.default.createElement("body", null, /*#__PURE__*/ _react.default.createElement(Main, null), /*#__PURE__*/ _react.default.createElement(NextScript, null))));
     }
 }
 exports.default = Document1;
 function Html(props) {
-    const { inAmpMode , docComponentsRendered , locale  } = (0, _react).useContext(_documentContext.DocumentContext);
+    const { inAmpMode , docComponentsRendered , locale  } = (0, _react).useContext(_utils.HtmlContext);
     docComponentsRendered.Html = true;
     return(/*#__PURE__*/ _react.default.createElement("html", Object.assign({
     }, props, {
@@ -490,17 +483,14 @@ class Head extends _react.Component {
     }
 }
 exports.Head = Head;
-Head.contextType = _documentContext.DocumentContext;
+Head.contextType = _utils.HtmlContext;
 function Main() {
-    const { inAmpMode , html , docComponentsRendered  } = (0, _react).useContext(_documentContext.DocumentContext);
+    const { inAmpMode , docComponentsRendered  } = (0, _react).useContext(_utils.HtmlContext);
     docComponentsRendered.Main = true;
-    if (inAmpMode) return(/*#__PURE__*/ _react.default.createElement(_react.default.Fragment, null, _constants.AMP_RENDER_TARGET));
+    if (inAmpMode) return(/*#__PURE__*/ _react.default.createElement(_react.default.Fragment, null, _constants.BODY_RENDER_TARGET));
     return(/*#__PURE__*/ _react.default.createElement("div", {
-        id: "__next",
-        dangerouslySetInnerHTML: {
-            __html: html
-        }
-    }));
+        id: "__next"
+    }, _constants.BODY_RENDER_TARGET));
 }
 class NextScript extends _react.Component {
     getDynamicChunks(files) {
@@ -515,8 +505,8 @@ class NextScript extends _react.Component {
     getPolyfillScripts() {
         return getPolyfillScripts(this.context, this.props);
     }
-    static getInlineScriptSource(documentProps) {
-        const { __NEXT_DATA__  } = documentProps;
+    static getInlineScriptSource(context) {
+        const { __NEXT_DATA__  } = context;
         try {
             const data = JSON.stringify(__NEXT_DATA__);
             return (0, _htmlescape).htmlEscapeJsonString(data);
@@ -580,7 +570,7 @@ class NextScript extends _react.Component {
     }
 }
 exports.NextScript = NextScript;
-NextScript.contextType = _documentContext.DocumentContext;
+NextScript.contextType = _utils.HtmlContext;
 NextScript.safariNomoduleFix = '!function(){var e=document,t=e.createElement("script");if(!("noModule"in t)&&"onbeforeload"in t){var n=!1;e.addEventListener("beforeload",function(e){if(e.target===t)n=!0;else if(!e.target.hasAttribute("nomodule")||!n)return;e.preventDefault()},!0),t.type="module",t.src=".",e.head.appendChild(t),t.remove()}}();';
 function getAmpPath(ampPath, asPath) {
     return ampPath || `${asPath}${asPath.includes('?') ? '&' : '?'}amp=1`;

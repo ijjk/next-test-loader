@@ -51,7 +51,7 @@ function createEntrypoints(pages, target, buildId, previewMode, config, loadedEn
         buildId,
         assetPrefix: config.assetPrefix,
         generateEtags: config.generateEtags ? 'true' : '',
-        poweredByHeader: config.poweredByHeader,
+        poweredByHeader: config.poweredByHeader ? 'true' : '',
         canonicalBase: config.amp.canonicalBase || '',
         basePath: config.basePath,
         runtimeConfig: hasRuntimeConfig ? JSON.stringify({

@@ -21,10 +21,29 @@ function cleanAmpPath(pathname) {
     return pathname;
 }
 function resultFromChunks(chunks) {
-    return ({ next , complete  })=>{
-        chunks.forEach(next);
-        complete();
+    return ({ next , complete , error  })=>{
+        let canceled = false;
+        process.nextTick(()=>{
+            try {
+                for (const chunk of chunks){
+                    if (canceled) {
+                        return;
+                    }
+                    next(chunk);
+                }
+            } catch (err) {
+                if (!canceled) {
+                    canceled = true;
+                    error(err);
+                }
+            }
+            if (!canceled) {
+                canceled = true;
+                complete();
+            }
+        });
         return ()=>{
+            canceled = true;
         };
     };
 }

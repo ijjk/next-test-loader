@@ -8,7 +8,7 @@ const path = require('path');
  * the third arguments was decided by `name` field in `package.json`
  * `loadBinding` helper will load `next-swc.[PLATFORM].node` from `__dirname` first
  * If failed to load addon, it will fallback to load from `next-swc-[PLATFORM]`
- */ const bindings = loadBinding(path.join(__dirname, '../../../native'), 'next-swc', 'next-swc');
+ */ const bindings = loadBinding(path.join(__dirname, '../../../native'), 'next-swc', '@next/swc');
 async function transform(src, options) {
     var ref;
     const isModule = typeof src !== 'string';

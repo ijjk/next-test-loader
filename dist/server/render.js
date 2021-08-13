@@ -3,8 +3,9 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 exports.renderToHTML = renderToHTML;
+var _stream = require("stream");
 var _react = _interopRequireDefault(require("react"));
-var _server = require("react-dom/server");
+var ReactDOMServer = _interopRequireWildcard(require("react-dom/server"));
 var _log = require("../build/output/log");
 var _constants = require("../lib/constants");
 var _isSerializableProps = require("../lib/is-serializable-props");
@@ -30,6 +31,29 @@ function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
         default: obj
     };
+}
+function _interopRequireWildcard(obj) {
+    if (obj && obj.__esModule) {
+        return obj;
+    } else {
+        var newObj = {
+        };
+        if (obj != null) {
+            for(var key in obj){
+                if (Object.prototype.hasOwnProperty.call(obj, key)) {
+                    var desc = Object.defineProperty && Object.getOwnPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : {
+                    };
+                    if (desc.get || desc.set) {
+                        Object.defineProperty(newObj, key, desc);
+                    } else {
+                        newObj[key] = obj[key];
+                    }
+                }
+            }
+        }
+        newObj.default = obj;
+        return newObj;
+    }
 }
 function noRouter() {
     const message = 'No router instance found. you should only use "next/router" inside the client side of your app. https://nextjs.org/docs/messages/no-router-instance';
@@ -84,9 +108,7 @@ function enhanceComponents(options, App, Component) {
     };
 }
 function renderDocument(Document1, { buildManifest , docComponentsRendered , props , docProps , pathname: pathname1 , query: query1 , buildId , canonicalBase , assetPrefix , runtimeConfig , nextExport , autoExport , isFallback: isFallback1 , dynamicImportsIds , dangerousAsPath , err , dev , ampPath , ampState , inAmpMode , hybridAmp , dynamicImports , headTags , gsp , gssp , customServer , gip , appGip , unstable_runtimeJS , unstable_JsPreload , devOnlyCacheBusterQueryString , scriptLoader , locale: locale1 , locales: locales1 , defaultLocale: defaultLocale1 , domainLocales: domainLocales1 , isPreview: isPreview1 , disableOptimizedLoading  }) {
-    return '<!DOCTYPE html>' + (0, _server).renderToStaticMarkup(/*#__PURE__*/ _react.default.createElement(_ampContext.AmpStateContext.Provider, {
-        value: ampState
-    }, Document1.renderDocument(Document1, {
+    const htmlProps = {
         __NEXT_DATA__: {
             props,
             page: pathname1,
@@ -127,8 +149,15 @@ function renderDocument(Document1, { buildManifest , docComponentsRendered , pro
         scriptLoader,
         locale: locale1,
         disableOptimizedLoading,
-        ...docProps
-    })));
+        styles: docProps.styles,
+        head: docProps.head
+    };
+    return '<!DOCTYPE html>' + ReactDOMServer.renderToStaticMarkup(/*#__PURE__*/ _react.default.createElement(_ampContext.AmpStateContext.Provider, {
+        value: ampState
+    }, /*#__PURE__*/ _react.default.createElement(_utils.HtmlContext.Provider, {
+        value: htmlProps
+    }, /*#__PURE__*/ _react.default.createElement(Document1, Object.assign({
+    }, htmlProps, docProps)))));
 }
 const invalidKeysMsg = (methodName, invalidKeys)=>{
     return `Additional keys were returned from \`${methodName}\`. Properties intended for your component must be nested under the \`props\` key, e.g.:` + `\n\n\treturn { props: { title: 'My Title', content: '...' } }` + `\n\nKeys that need to be moved: ${invalidKeys.join(', ')}.` + `\nRead more: https://nextjs.org/docs/messages/invalid-getstaticprops-value`;
@@ -168,7 +197,7 @@ async function renderToHTML(req, res, pathname1, query1, renderOpts) {
     query1 = Object.assign({
     }, query1);
     const { err , dev =false , ampPath ='' , App , Document: Document1 , pageConfig ={
-    } , Component , buildManifest , fontManifest , reactLoadableManifest , ErrorDebug , getStaticProps , getStaticPaths , getServerSideProps , isDataReq , params , previewProps , basePath: basePath1 , devOnlyCacheBusterQueryString ,  } = renderOpts;
+    } , Component , buildManifest , fontManifest , reactLoadableManifest , ErrorDebug , getStaticProps , getStaticPaths , getServerSideProps , isDataReq , params , previewProps , basePath: basePath1 , devOnlyCacheBusterQueryString , requireStaticHTML , concurrentFeatures ,  } = renderOpts;
     const getFontDefinition = (url)=>{
         if (fontManifest) {
             return (0, _fontUtils).getFontDefinitionFromManifest(url, fontManifest);
@@ -310,6 +339,7 @@ async function renderToHTML(req, res, pathname1, query1, renderOpts) {
     let head = (0, _head).defaultHead(inAmpMode);
     let scriptLoader = {
     };
+    const nextExport = !isSSG && (renderOpts.nextExport || dev && (isAutoExport || isFallback1));
     const AppContainer = ({ children  })=>/*#__PURE__*/ _react.default.createElement(_routerContext.RouterContext.Provider, {
             value: router
         }, /*#__PURE__*/ _react.default.createElement(_ampContext.AmpStateContext.Provider, {
@@ -430,14 +460,14 @@ async function renderToHTML(req, res, pathname1, query1, renderOpts) {
             } else {
                 data.revalidate = false;
             }
-            // this must come after revalidate is attached
-            if (renderOpts.isNotFound) {
-                return null;
-            }
             props.pageProps = Object.assign({
             }, props.pageProps, 'props' in data ? data.props : undefined);
             renderOpts.revalidate = 'revalidate' in data ? data.revalidate : undefined;
             renderOpts.pageData = props;
+            // this must come after revalidate is added to renderOpts
+            if (renderOpts.isNotFound) {
+                return null;
+            }
         }
         if (getServerSideProps) {
             props[_constants1.SERVER_PROPS_ID] = true;
@@ -558,28 +588,83 @@ async function renderToHTML(req, res, pathname1, query1, renderOpts) {
             };
         }
     }
+    const generateStaticHTML = requireStaticHTML || inAmpMode;
+    const renderToStream = (element)=>new Promise((resolve, reject)=>{
+            const stream = new _stream.PassThrough();
+            let resolved = false;
+            const doResolve = ()=>{
+                if (!resolved) {
+                    resolved = true;
+                    resolve(({ complete , next  })=>{
+                        stream.on('data', (chunk)=>{
+                            next(chunk.toString('utf-8'));
+                        });
+                        stream.once('end', ()=>{
+                            complete();
+                        });
+                        startWriting();
+                        return ()=>{
+                            abort();
+                        };
+                    });
+                }
+            };
+            const { abort , startWriting ,  } = ReactDOMServer.pipeToNodeWritable(element, stream, {
+                onError (error) {
+                    if (!resolved) {
+                        resolved = true;
+                        reject(error);
+                    }
+                    abort();
+                },
+                onReadyToStream () {
+                    if (!generateStaticHTML) {
+                        doResolve();
+                    }
+                },
+                onCompleteAll () {
+                    doResolve();
+                }
+            });
+        }).then(multiplexResult)
+    ;
+    const renderToString = concurrentFeatures ? async (element)=>{
+        const result = await renderToStream(element);
+        return await resultsToString([
+            result
+        ]);
+    } : ReactDOMServer.renderToString;
     const renderPage = (options = {
     })=>{
         if (ctx.err && ErrorDebug) {
-            return {
-                html: (0, _server).renderToString(/*#__PURE__*/ _react.default.createElement(ErrorDebug, {
-                    error: ctx.err
-                })),
+            const htmlOrPromise = renderToString(/*#__PURE__*/ _react.default.createElement(ErrorDebug, {
+                error: ctx.err
+            }));
+            return typeof htmlOrPromise === 'string' ? {
+                html: htmlOrPromise,
                 head
-            };
+            } : htmlOrPromise.then((html)=>({
+                    html,
+                    head
+                })
+            );
         }
         if (dev && (props.router || props.Component)) {
             throw new Error(`'router' and 'Component' can not be returned in getInitialProps from _app.js https://nextjs.org/docs/messages/cant-override-next-props`);
         }
         const { App: EnhancedApp , Component: EnhancedComponent ,  } = enhanceComponents(options, App, Component);
-        const html = (0, _server).renderToString(/*#__PURE__*/ _react.default.createElement(AppContainer, null, /*#__PURE__*/ _react.default.createElement(EnhancedApp, Object.assign({
+        const htmlOrPromise = renderToString(/*#__PURE__*/ _react.default.createElement(AppContainer, null, /*#__PURE__*/ _react.default.createElement(EnhancedApp, Object.assign({
             Component: EnhancedComponent,
             router: router
         }, props))));
-        return {
-            html,
+        return typeof htmlOrPromise === 'string' ? {
+            html: htmlOrPromise,
             head
-        };
+        } : htmlOrPromise.then((html)=>({
+                html,
+                head
+            })
+        );
     };
     const documentCtx = {
         ...ctx,
@@ -606,8 +691,7 @@ async function renderToHTML(req, res, pathname1, query1, renderOpts) {
     const hybridAmp = ampState.hybrid;
     const docComponentsRendered = {
     };
-    const nextExport = !isSSG && (renderOpts.nextExport || dev && (isAutoExport || isFallback1));
-    let html = renderDocument(Document1, {
+    const documentHTML = renderDocument(Document1, {
         ...renderOpts,
         canonicalBase: !renderOpts.ampPath && req.__nextStrippedLocale ? `${renderOpts.canonicalBase || ''}/${renderOpts.locale}` : renderOpts.canonicalBase,
         docComponentsRendered,
@@ -658,46 +742,199 @@ async function renderToHTML(req, res, pathname1, query1, renderOpts) {
             (0, _log).warn(`Your custom Document (pages/_document) did not render all the required subcomponent${plural}.\n` + `Missing component${plural}: ${missingComponentList}\n` + 'Read how to fix here: https://nextjs.org/docs/messages/missing-document-component');
         }
     }
-    if (inAmpMode && html) {
-        // inject HTML to AMP_RENDER_TARGET to allow rendering
-        // directly to body in AMP mode
-        const ampRenderIndex = html.indexOf(_constants1.AMP_RENDER_TARGET);
-        html = html.substring(0, ampRenderIndex) + `<!-- __NEXT_DATA__ -->${docProps.html}` + html.substring(ampRenderIndex + _constants1.AMP_RENDER_TARGET.length);
-        html = await (0, _optimizeAmp).default(html, renderOpts.ampOptimizerConfig);
-        if (!renderOpts.ampSkipValidation && renderOpts.ampValidator) {
-            await renderOpts.ampValidator(html, pathname1);
+    let results = [];
+    const renderTargetIdx = documentHTML.indexOf(_constants1.BODY_RENDER_TARGET);
+    results.push((0, _utils1).resultFromChunks([
+        '<!DOCTYPE html>' + documentHTML.substring(0, renderTargetIdx), 
+    ]));
+    if (inAmpMode) {
+        results.push((0, _utils1).resultFromChunks([
+            '<!-- __NEXT_DATA__ -->'
+        ]));
+    }
+    results.push((0, _utils1).resultFromChunks([
+        docProps.html
+    ]));
+    results.push((0, _utils1).resultFromChunks([
+        documentHTML.substring(renderTargetIdx + _constants1.BODY_RENDER_TARGET.length), 
+    ]));
+    const postProcessors = [
+        inAmpMode ? async (html)=>{
+            html = await (0, _optimizeAmp).default(html, renderOpts.ampOptimizerConfig);
+            if (!renderOpts.ampSkipValidation && renderOpts.ampValidator) {
+                await renderOpts.ampValidator(html, pathname1);
+            }
+            return html;
+        } : null,
+        process.env.__NEXT_OPTIMIZE_FONTS || process.env.__NEXT_OPTIMIZE_IMAGES ? async (html)=>{
+            return await (0, _postProcess).default(html, {
+                getFontDefinition
+            }, {
+                optimizeFonts: renderOpts.optimizeFonts,
+                optimizeImages: renderOpts.optimizeImages
+            });
+        } : null,
+        renderOpts.optimizeCss ? async (html)=>{
+            // eslint-disable-next-line import/no-extraneous-dependencies
+            const Critters = require('critters');
+            const cssOptimizer = new Critters({
+                ssrMode: true,
+                reduceInlineStyles: false,
+                path: renderOpts.distDir,
+                publicPath: `${renderOpts.assetPrefix}/_next/`,
+                preload: 'media',
+                fonts: false,
+                ...renderOpts.optimizeCss
+            });
+            return await cssOptimizer.process(html);
+        } : null,
+        inAmpMode || hybridAmp ? async (html)=>{
+            return html.replace(/&amp;amp=1/g, '&amp=1');
+        } : null, 
+    ].filter(Boolean);
+    if (postProcessors.length > 0) {
+        let html = await resultsToString(results);
+        for (const postProcessor of postProcessors){
+            if (postProcessor) {
+                html = await postProcessor(html);
+            }
         }
+        results = [
+            (0, _utils1).resultFromChunks([
+                html
+            ])
+        ];
     }
-    // Avoid postProcess if both flags are false
-    if (process.env.__NEXT_OPTIMIZE_FONTS || process.env.__NEXT_OPTIMIZE_IMAGES) {
-        html = await (0, _postProcess).default(html, {
-            getFontDefinition
-        }, {
-            optimizeFonts: renderOpts.optimizeFonts,
-            optimizeImages: renderOpts.optimizeImages
+    return mergeResults(results);
+}
+async function resultsToString(chunks) {
+    const result = await (0, _utils1).resultToChunks(mergeResults(chunks));
+    return result.join('');
+}
+function mergeResults(chunks) {
+    return ({ next , complete , error  })=>{
+        let idx = 0;
+        let canceled = false;
+        let unsubscribe = ()=>{
+        };
+        const subscribeNext = ()=>{
+            if (canceled) {
+                return;
+            }
+            if (idx < chunks.length) {
+                const result = chunks[idx++];
+                unsubscribe = result({
+                    next,
+                    complete () {
+                        unsubscribe();
+                        subscribeNext();
+                    },
+                    error (err) {
+                        unsubscribe();
+                        if (!canceled) {
+                            canceled = true;
+                            error(err);
+                        }
+                    }
+                });
+            } else {
+                if (!canceled) {
+                    canceled = true;
+                    complete();
+                }
+            }
+        };
+        subscribeNext();
+        return ()=>{
+            if (!canceled) {
+                canceled = true;
+                unsubscribe();
+            }
+        };
+    };
+}
+function multiplexResult(result) {
+    const chunks = [];
+    const subscribers = new Set();
+    let terminator = null;
+    result({
+        next (chunk) {
+            chunks.push(chunk);
+            subscribers.forEach((subscriber)=>subscriber.next(chunk)
+            );
+        },
+        error (error) {
+            if (!terminator) {
+                terminator = (subscriber)=>subscriber.error(error)
+                ;
+                subscribers.forEach(terminator);
+                subscribers.clear();
+            }
+        },
+        complete () {
+            if (!terminator) {
+                terminator = (subscriber)=>subscriber.complete()
+                ;
+                subscribers.forEach(terminator);
+                subscribers.clear();
+            }
+        }
+    });
+    return (innerSubscriber)=>{
+        let completed = false;
+        let cleanup = ()=>{
+        };
+        const subscriber = {
+            next (chunk) {
+                if (!completed) {
+                    try {
+                        innerSubscriber.next(chunk);
+                    } catch (err) {
+                        subscriber.error(err);
+                    }
+                }
+            },
+            complete () {
+                if (!completed) {
+                    cleanup();
+                    try {
+                        innerSubscriber.complete();
+                    } catch  {
+                    }
+                }
+            },
+            error (err) {
+                if (!completed) {
+                    cleanup();
+                    try {
+                        innerSubscriber.error(err);
+                    } catch  {
+                    }
+                }
+            }
+        };
+        cleanup = ()=>{
+            completed = true;
+            subscribers.delete(subscriber);
+        };
+        process.nextTick(()=>{
+            for (const chunk of chunks){
+                if (completed) {
+                    return;
+                }
+                subscriber.next(chunk);
+            }
+            if (!completed) {
+                if (!terminator) {
+                    subscribers.add(subscriber);
+                } else {
+                    terminator(subscriber);
+                }
+            }
         });
-    }
-    if (renderOpts.optimizeCss) {
-        // eslint-disable-next-line import/no-extraneous-dependencies
-        const Critters = require('critters');
-        const cssOptimizer = new Critters({
-            ssrMode: true,
-            reduceInlineStyles: false,
-            path: renderOpts.distDir,
-            publicPath: `${renderOpts.assetPrefix}/_next/`,
-            preload: 'media',
-            fonts: false,
-            ...renderOpts.optimizeCss
-        });
-        html = await cssOptimizer.process(html);
-    }
-    if (inAmpMode || hybridAmp) {
-        // fix &amp being escaped for amphtml rel link
-        html = html.replace(/&amp;amp=1/g, '&amp=1');
-    }
-    return (0, _utils1).resultFromChunks([
-        html
-    ]);
+        return ()=>cleanup()
+        ;
+    };
 }
 function errorToJSON(err) {
     const { name , message , stack  } = err;

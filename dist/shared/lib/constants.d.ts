@@ -21,7 +21,7 @@ export declare const BLOCKED_PAGES: string[];
 export declare const CLIENT_PUBLIC_FILES_PATH = "public";
 export declare const CLIENT_STATIC_FILES_PATH = "static";
 export declare const CLIENT_STATIC_FILES_RUNTIME = "runtime";
-export declare const AMP_RENDER_TARGET = "__NEXT_AMP_RENDER_TARGET__";
+export declare const BODY_RENDER_TARGET = "__NEXT_BODY_RENDER_TARGET__";
 export declare const STRING_LITERAL_DROP_BUNDLE = "__NEXT_DROP_CLIENT_FILE__";
 export declare const CLIENT_STATIC_FILES_RUNTIME_MAIN = "main";
 export declare const CLIENT_STATIC_FILES_RUNTIME_REACT_REFRESH = "react-refresh";

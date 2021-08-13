@@ -50,8 +50,9 @@ function getDomainLocale(path, locale, locales, domainLocales) {
             return `http${detectedDomain.http ? '' : 's'}://${detectedDomain.domain}${basePath || ''}${locale === detectedDomain.defaultLocale ? '' : `/${locale}`}${path}`;
         }
         return false;
+    } else {
+        return false;
     }
-    return false;
 }
 function addLocale(path, locale, defaultLocale) {
     if (process.env.__NEXT_I18N_SUPPORT) {

@@ -46,13 +46,6 @@ exports.getSafeParamName = getSafeParamName;
 function matchHas(req, has, query) {
     const params = {
     };
-    let initialQueryValues = [];
-    if (typeof window === 'undefined') {
-        initialQueryValues = Object.values(req.__NEXT_INIT_QUERY);
-    }
-    if (typeof window !== 'undefined') {
-        initialQueryValues = Array.from(new URLSearchParams(location.search).values());
-    }
     const allMatch = has.every((hasItem)=>{
         let value;
         let key = hasItem.key;

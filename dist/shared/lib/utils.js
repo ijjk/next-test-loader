@@ -10,8 +10,9 @@ exports.isResSent = isResSent;
 exports.normalizeRepeatedSlashes = normalizeRepeatedSlashes;
 exports.loadGetInitialProps = loadGetInitialProps;
 exports.formatWithValidation = formatWithValidation;
-exports.ST = exports.SP = exports.urlObjectKeys = void 0;
+exports.ST = exports.SP = exports.HtmlContext = exports.urlObjectKeys = void 0;
 var _formatUrl = require("./router/utils/format-url");
+var _react = require("react");
 function execOnce(fn) {
     let used = false;
     let result;
@@ -114,5 +115,10 @@ exports.ST = ST;
 class DecodeError extends Error {
 }
 exports.DecodeError = DecodeError;
+const HtmlContext = (0, _react).createContext(null);
+exports.HtmlContext = HtmlContext;
+if (process.env.NODE_ENV !== 'production') {
+    HtmlContext.displayName = 'HtmlContext';
+}
 
 //# sourceMappingURL=utils.js.map

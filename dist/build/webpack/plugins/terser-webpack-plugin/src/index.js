@@ -102,8 +102,9 @@ class TerserPlugin {
     constructor(options = {
     }){
         const { cacheDir: cacheDir1 , terserOptions ={
-        } , parallel  } = options;
+        } , parallel , swcMinify  } = options;
         this.options = {
+            swcMinify,
             cacheDir: cacheDir1,
             parallel,
             terserOptions
@@ -159,6 +160,22 @@ class TerserPlugin {
             let initializedWorker;
             // eslint-disable-next-line consistent-return
             const getWorker = ()=>{
+                if (this.options.swcMinify) {
+                    return {
+                        minify: async (options1)=>{
+                            const result = await require('../../../../swc').transform(options1.input, {
+                                minify: true,
+                                jsc: {
+                                    minify: {
+                                        compress: true,
+                                        mangle: true
+                                    }
+                                }
+                            });
+                            return result;
+                        }
+                    };
+                }
                 if (initializedWorker) {
                     return initializedWorker;
                 }
@@ -170,13 +187,14 @@ class TerserPlugin {
                 initializedWorker.getStderr().pipe(process.stderr);
                 return initializedWorker;
             };
-            const limit = (0, _pLimit).default(numberOfAssetsForMinify > 0 ? numberOfWorkers : Infinity);
+            const limit = (0, _pLimit).default(// When using the SWC minifier the limit will be handled by Node.js
+            this.options.swcMinify ? Infinity : numberOfAssetsForMinify > 0 ? numberOfWorkers : Infinity);
             const scheduledTasks = [];
             for (const asset of assetsForMinify){
                 scheduledTasks.push(limit(async ()=>{
                     const { name , inputSource , info , eTag  } = asset;
                     let { output  } = asset;
-                    const minifySpan = terserSpan.traceChild('minify-fs');
+                    const minifySpan = terserSpan.traceChild('minify-js');
                     minifySpan.setAttribute('name', name);
                     minifySpan.setAttribute('cache', typeof output === 'undefined' ? 'MISS' : 'HIT');
                     return minifySpan.traceAsyncFn(async ()=>{

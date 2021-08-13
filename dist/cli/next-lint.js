@@ -52,6 +52,7 @@ const nextLint = async (argv)=>{
         '--dir': [
             String
         ],
+        '--strict': Boolean,
         // Aliases
         '-h': '--help',
         '-b': '--base-dir',
@@ -119,6 +120,9 @@ const nextLint = async (argv)=>{
           --ext [String]                 Specify JavaScript file extensions - default: .js, .jsx, .ts, .tsx
           --resolve-plugins-relative-to path::String  A folder where plugins should be resolved from, CWD by default
 
+        Initial setup:
+          --strict                       Creates an .eslintrc.json file using the Next.js strict configuration (only possible if no .eslintrc.json file is present)
+
         Specifying rules:
           --rulesdir [path::String]      Use additional rules from this directory
 
@@ -167,7 +171,8 @@ const nextLint = async (argv)=>{
     var ref7;
     const maxWarnings = (ref7 = args['--max-warnings']) !== null && ref7 !== void 0 ? ref7 : -1;
     const formatter = args['--format'] || null;
-    (0, _runLintCheck).runLintCheck(baseDir, lintDirs, false, eslintOptions(args), reportErrorsOnly, maxWarnings, formatter).then(async (lintResults)=>{
+    const strict = Boolean(args['--strict']);
+    (0, _runLintCheck).runLintCheck(baseDir, lintDirs, false, eslintOptions(args), reportErrorsOnly, maxWarnings, formatter, strict).then(async (lintResults)=>{
         const lintOutput = typeof lintResults === 'string' ? lintResults : lintResults === null || lintResults === void 0 ? void 0 : lintResults.output;
         if (typeof lintResults !== 'string' && (lintResults === null || lintResults === void 0 ? void 0 : lintResults.eventInfo)) {
             const telemetry = new _storage.Telemetry({
@@ -184,7 +189,7 @@ const nextLint = async (argv)=>{
         }
         if (lintOutput) {
             console.log(lintOutput);
-        } else {
+        } else if (lintResults && !lintOutput) {
             console.log(_chalk.default.green('✔ No ESLint warnings or errors'));
         }
     }).catch((err)=>{

@@ -46,6 +46,7 @@ export declare type RenderOptsPartial = {
     domainLocales?: DomainLocale[];
     disableOptimizedLoading?: boolean;
     requireStaticHTML?: boolean;
+    concurrentFeatures?: boolean;
 };
 export declare type RenderOpts = LoadComponentsReturnType & RenderOptsPartial;
 export declare function renderToHTML(req: IncomingMessage, res: ServerResponse, pathname: string, query: ParsedUrlQuery, renderOpts: RenderOpts): Promise<RenderResult | null>;

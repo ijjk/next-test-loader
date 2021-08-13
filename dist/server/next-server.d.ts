@@ -76,6 +76,7 @@ export default class Server {
         defaultLocale?: string;
         domainLocales?: DomainLocale[];
         distDir: string;
+        concurrentFeatures?: boolean;
     };
     private compression?;
     private incrementalCache;

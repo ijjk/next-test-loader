@@ -24,7 +24,9 @@ const unlinkFile = async (p, t = 1)=>{
 async function recursiveDelete(dir, exclude, previousPath = '') {
     let result;
     try {
-        result = await _fs.promises.readdir(dir);
+        result = await _fs.promises.readdir(dir, {
+            withFileTypes: true
+        });
     } catch (e) {
         if (e.code === 'ENOENT') {
             return;
@@ -32,15 +34,16 @@ async function recursiveDelete(dir, exclude, previousPath = '') {
         throw e;
     }
     await Promise.all(result.map(async (part)=>{
-        const absolutePath = (0, _path).join(dir, part);
-        const pathStat = await _fs.promises.stat(absolutePath).catch((e)=>{
-            if (e.code !== 'ENOENT') throw e;
-        });
-        if (!pathStat) {
-            return;
+        const absolutePath = (0, _path).join(dir, part.name);
+        // readdir does not follow symbolic links
+        // if part is a symbolic link, follow it using stat
+        let isDirectory = part.isDirectory();
+        if (part.isSymbolicLink()) {
+            const stats = await _fs.promises.stat(absolutePath);
+            isDirectory = stats.isDirectory();
         }
-        const pp = (0, _path).join(previousPath, part);
-        if (pathStat.isDirectory() && (!exclude || !exclude.test(pp))) {
+        const pp = (0, _path).join(previousPath, part.name);
+        if (isDirectory && (!exclude || !exclude.test(pp))) {
             await recursiveDelete(absolutePath, exclude, pp);
             return _fs.promises.rmdir(absolutePath);
         }

@@ -111,7 +111,7 @@ function _objectSpread(target) {
 }
 const data = JSON.parse(document.getElementById('__NEXT_DATA__').textContent);
 window.__NEXT_DATA__ = data;
-const version = "11.0.2-canary.25";
+const version = "11.1.1-canary.6";
 exports.version = version;
 const looseToArray = (input)=>[].slice.call(input)
 ;
@@ -414,6 +414,7 @@ function renderError(renderErrorProps) {
     }
     // Make sure we log the error to the console, otherwise users can't track down issues.
     console.error(err);
+    console.error(`A client-side exception has occurred, see here for more info: https://nextjs.org/docs/messages/client-side-exception-occurred`);
     return pageLoader.loadPage('/_error').then(({ page: ErrorComponent , styleSheets  })=>{
         return (lastAppProps === null || lastAppProps === void 0 ? void 0 : lastAppProps.Component) === ErrorComponent ? Promise.resolve().then(function() {
             return _interopRequireWildcard(require('../pages/_error'));

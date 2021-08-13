@@ -248,8 +248,17 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
     // Webpack 5 can use the faster babel loader, webpack 5 has built-in caching for loaders
     // For webpack 4 the old loader is used as it has external caching
     const babelLoader = _webpack.isWebpack5 ? require.resolve('./babel/loader/index') : 'next-babel-loader';
+    const useSWCLoader = config.experimental.swcLoader && _webpack.isWebpack5;
+    if (useSWCLoader && babelConfigFile) {
+        Log.warn(`experimental.swcLoader enabled. The custom Babel configuration will not be used.`);
+    }
     const defaultLoaders = {
-        babel: {
+        babel: useSWCLoader ? {
+            loader: 'next-swc-loader',
+            options: {
+                isServer
+            }
+        } : {
             loader: babelLoader,
             options: {
                 configFile: babelConfigFile,
@@ -738,6 +747,7 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
                     new TerserPlugin({
                         cacheDir: _path.default.join(distDir, 'cache', 'next-minifier'),
                         parallel: config.experimental.cpus,
+                        swcMinify: config.experimental.swcMinify,
                         terserOptions
                     }).apply(compiler);
                 },
@@ -808,6 +818,7 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
                 'emit-file-loader',
                 'error-loader',
                 'next-babel-loader',
+                'next-swc-loader',
                 'next-client-pages-loader',
                 'next-image-loader',
                 'next-serverless-loader',
@@ -1137,7 +1148,7 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
             // Includes:
             //  - Next.js version
             //  - next.config.js keys that affect compilation
-            version: `${"11.0.2-canary.25"}|${configVars}`,
+            version: `${"11.1.1-canary.6"}|${configVars}`,
             cacheDirectory: _path.default.join(distDir, 'cache', 'webpack')
         };
         // Adds `next.config.js` as a buildDependency when custom webpack config is provided

@@ -221,6 +221,7 @@ const isJsFile = /\.js$/;
     return fileExt + flags;
 }
 const configCache = new Map();
+const configFiles = new Set();
 function getConfig({ source , target , loaderOptions , filename , inputSourceMap  }) {
     const cacheCharacteristics = getCacheCharacteristics(loaderOptions, source, filename);
     if (loaderOptions.configFile) {
@@ -241,7 +242,8 @@ function getConfig({ source , target , loaderOptions , filename , inputSourceMap
             }
         };
     }
-    if (loaderOptions.configFile) {
+    if (loaderOptions.configFile && !configFiles.has(loaderOptions.configFile)) {
+        configFiles.add(loaderOptions.configFile);
         Log.info(`Using external babel configuration from ${loaderOptions.configFile}`);
     }
     const freshConfig = getFreshConfig.call(this, cacheCharacteristics, loaderOptions, target, filename, inputSourceMap);

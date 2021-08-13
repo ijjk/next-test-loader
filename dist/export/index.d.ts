@@ -6,6 +6,8 @@ interface ExportOptions {
     pages?: string[];
     buildExport?: boolean;
     statusMessage?: string;
+    exportPageWorker?: typeof import('./worker').default;
+    endWorker?: () => Promise<void>;
 }
 export default function exportApp(dir: string, options: ExportOptions, configuration?: NextConfigComplete): Promise<void>;
 export {};

@@ -38,9 +38,7 @@ class Error1 extends _react.default.Component {
             style: styles.desc
         }, /*#__PURE__*/ _react.default.createElement("h2", {
             style: styles.h2
-        }, this.props.title || statusCode ? title : /*#__PURE__*/ _react.default.createElement(_react.default.Fragment, null, "Application error: a client-side exception has occurred (", /*#__PURE__*/ _react.default.createElement("a", {
-            href: "https://nextjs.org/docs/messages/client-side-exception-occurred"
-        }, "developer guidance"), ")"), ".")))));
+        }, this.props.title || statusCode ? title : /*#__PURE__*/ _react.default.createElement(_react.default.Fragment, null, "Application error: a client-side exception has occurred (see the browser console for more information)"), ".")))));
     }
 }
 Error1.displayName = 'ErrorPage';

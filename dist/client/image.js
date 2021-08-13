@@ -490,7 +490,6 @@ function Image1(_param) {
         },
         alt: "",
         "aria-hidden": true,
-        role: "presentation",
         src: `data:image/svg+xml;base64,${(0, _toBase64).toBase64(sizerSvg)}`
     }) : null) : null, !isVisible && /*#__PURE__*/ _react.default.createElement("noscript", null, /*#__PURE__*/ _react.default.createElement("img", Object.assign({
     }, rest, generateImgAttrs({
@@ -503,11 +502,13 @@ function Image1(_param) {
         loader
     }), {
         decoding: "async",
+        "data-nimg": true,
         style: imgStyle,
         className: className
     }))), /*#__PURE__*/ _react.default.createElement("img", Object.assign({
     }, rest, imgAttributes, {
         decoding: "async",
+        "data-nimg": true,
         className: className,
         ref: (img)=>{
             setRef(img);
@@ -525,9 +526,9 @@ function Image1(_param) {
         rel: "preload",
         as: "image",
         href: imgAttributes.srcSet ? undefined : imgAttributes.src,
-        // @ts-ignore: imagesrcset is not yet in the link element type
+        // @ts-ignore: imagesrcset is not yet in the link element type.
         imagesrcset: imgAttributes.srcSet,
-        // @ts-ignore: imagesizes is not yet in the link element type
+        // @ts-ignore: imagesizes is not yet in the link element type.
         imagesizes: imgAttributes.sizes
     })) : null));
 }

@@ -19,11 +19,24 @@ async function recursiveCopy(source, dest, { concurrency =32 , overwrite =false 
     const from = _path.default.resolve(cwdPath, source);
     const to = _path.default.resolve(cwdPath, dest);
     const sema = new _asyncSema.Sema(concurrency);
-    async function _copy(item) {
+    // deep copy the file/directory
+    async function _copy(item, lstats) {
         const target = item.replace(from, to);
-        const stats = await _fs.promises.stat(item);
         await sema.acquire();
-        if (stats.isDirectory()) {
+        if (!lstats) {
+            // after lock on first run
+            lstats = await _fs.promises.lstat(from);
+        }
+        // readdir & lstat do not follow symbolic links
+        // if part is a symbolic link, follow it with stat
+        let isFile = lstats.isFile();
+        let isDirectory = lstats.isDirectory();
+        if (lstats.isSymbolicLink()) {
+            const stats = await _fs.promises.stat(item);
+            isFile = stats.isFile();
+            isDirectory = stats.isDirectory();
+        }
+        if (isDirectory) {
             try {
                 await _fs.promises.mkdir(target);
             } catch (err) {
@@ -33,13 +46,17 @@ async function recursiveCopy(source, dest, { concurrency =32 , overwrite =false 
                 }
             }
             sema.release();
-            const files = await _fs.promises.readdir(item);
-            await Promise.all(files.map((file)=>_copy(_path.default.join(item, file))
+            const files = await _fs.promises.readdir(item, {
+                withFileTypes: true
+            });
+            await Promise.all(files.map((file)=>_copy(_path.default.join(item, file.name), file)
             ));
-        } else if (stats.isFile() && // before we send the path to filter
+        } else if (isFile && // before we send the path to filter
         // we remove the base path (from) and replace \ by / (windows)
         filter(item.replace(from, '').replace(/\\/g, '/'))) {
             await _fs.promises.copyFile(item, target, overwrite ? undefined : COPYFILE_EXCL);
+            sema.release();
+        } else {
             sema.release();
         }
     }

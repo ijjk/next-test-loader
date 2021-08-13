@@ -63,23 +63,22 @@ async function imageOptimizer(server, req, res, parsedUrl, nextConfig, distDir, 
         };
     }
     const { headers  } = req;
-    const { url: decodedUrl , w , q  } = parsedUrl.query;
+    const { url , w , q  } = parsedUrl.query;
     const mimeType = getSupportedMimeType(MODERN_TYPES, headers.accept);
     let href;
-    if (!decodedUrl) {
+    if (!url) {
         res.statusCode = 400;
         res.end('"url" parameter is required');
         return {
             finished: true
         };
-    } else if (Array.isArray(decodedUrl)) {
+    } else if (Array.isArray(url)) {
         res.statusCode = 400;
         res.end('"url" parameter cannot be an array');
         return {
             finished: true
         };
     }
-    const url = encodeURI(decodedUrl);
     let isAbsolute;
     if (url.startsWith('/')) {
         href = url;
@@ -259,6 +258,9 @@ async function imageOptimizer(server, req, res, parsedUrl, nextConfig, distDir, 
                 ;
                 mockRes.setHeader = (name, value)=>mockHeaders[name.toLowerCase()] = value
                 ;
+                mockRes.removeHeader = (name)=>{
+                    delete mockHeaders[name.toLowerCase()];
+                };
                 mockRes._implicitHeader = ()=>{
                 };
                 mockRes.connection = res.connection;

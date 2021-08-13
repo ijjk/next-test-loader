@@ -36,6 +36,18 @@ export declare type NextConfig = {
     redirects?: () => Promise<Redirect[]>;
     webpack5?: false;
     excludeDefaultMomentLocales?: boolean;
+    webpack?: ((config: any, context: {
+        dir: string;
+        dev: boolean;
+        isServer: boolean;
+        buildId: string;
+        config: NextConfigComplete;
+        defaultLoaders: {
+            babel: any;
+        };
+        totalPages: number;
+        webpack: any;
+    }) => any) | null;
     trailingSlash?: boolean;
     env?: {
         [key: string]: string;
@@ -44,10 +56,11 @@ export declare type NextConfig = {
     cleanDistDir?: boolean;
     assetPrefix?: string;
     useFileSystemPublicRoutes?: boolean;
-    generateBuildId?: () => string | null;
+    generateBuildId?: () => string | null | Promise<string | null>;
     generateEtags?: boolean;
     pageExtensions?: string[];
     compress?: boolean;
+    poweredByHeader?: boolean;
     images?: ImageConfig;
     devIndicators?: {
         buildActivity?: boolean;
@@ -83,7 +96,10 @@ export declare type NextConfig = {
         strictPostcssConfiguration?: boolean;
     };
     experimental?: {
+        swcMinify?: boolean;
+        swcLoader?: boolean;
         cpus?: number;
+        sharedPool?: boolean;
         plugins?: boolean;
         profiling?: boolean;
         isrFlushToDisk?: boolean;
@@ -107,8 +123,8 @@ export declare type NextConfig = {
         craCompat?: boolean;
         esmExternals?: boolean | 'loose';
         staticPageGenerationTimeout?: number;
-        pageDataCollectionTimeout?: number;
         isrMemoryCacheSize?: number;
+        concurrentFeatures?: boolean;
     };
 };
 export declare const defaultConfig: NextConfig;
