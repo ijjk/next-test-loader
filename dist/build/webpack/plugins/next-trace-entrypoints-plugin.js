@@ -5,7 +5,7 @@ Object.defineProperty(exports, "__esModule", {
 var _path = _interopRequireDefault(require("path"));
 var _profilingPlugin = require("./profiling-plugin");
 var _isError = _interopRequireDefault(require("../../../lib/is-error"));
-var _nodeFileTrace = require("/Users/jj/dev/vercel/node-file-trace");
+var _nodeFileTrace = require("next/dist/compiled/@vercel/nft");
 var _constants = require("../../../shared/lib/constants");
 var _webpack = require("next/dist/compiled/webpack/webpack");
 var _webpackConfig = require("../../webpack-config");
