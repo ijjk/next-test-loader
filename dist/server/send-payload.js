@@ -3,7 +3,6 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 exports.setRevalidateHeaders = setRevalidateHeaders;
-exports.sendPayload = sendPayload;
 exports.sendRenderResult = sendRenderResult;
 exports.sendEtagResponse = sendEtagResponse;
 var _utils = require("../shared/lib/utils");
@@ -28,27 +27,16 @@ function setRevalidateHeaders(res, options) {
         res.setHeader('Cache-Control', `s-maxage=31536000, stale-while-revalidate`);
     }
 }
-function sendPayload(req, res, payload, type, { generateEtags , poweredByHeader  }, options) {
-    sendRenderResult({
-        req,
-        res,
-        resultOrPayload: payload,
-        type,
-        generateEtags,
-        poweredByHeader,
-        options
-    });
-}
-function sendRenderResult({ req , res , resultOrPayload , type , generateEtags , poweredByHeader , options  }) {
+async function sendRenderResult({ req , res , result , type , generateEtags , poweredByHeader , options  }) {
     if ((0, _utils).isResSent(res)) {
         return;
     }
     if (poweredByHeader && type === 'html') {
         res.setHeader('X-Powered-By', 'Next.js');
     }
-    const isPayload = typeof resultOrPayload === 'string';
-    if (isPayload) {
-        const etag = generateEtags ? (0, _etag).default(resultOrPayload) : undefined;
+    const payload = result.isDynamic() ? null : await result.toUnchunkedString();
+    if (payload) {
+        const etag = generateEtags ? (0, _etag).default(payload) : undefined;
         if (sendEtagResponse(req, res, etag)) {
             return;
         }
@@ -56,24 +44,18 @@ function sendRenderResult({ req , res , resultOrPayload , type , generateEtags ,
     if (!res.getHeader('Content-Type')) {
         res.setHeader('Content-Type', type === 'json' ? 'application/json' : 'text/html; charset=utf-8');
     }
-    if (isPayload) {
-        res.setHeader('Content-Length', Buffer.byteLength(resultOrPayload));
+    if (payload) {
+        res.setHeader('Content-Length', Buffer.byteLength(payload));
     }
     if (options != null) {
         setRevalidateHeaders(res, options);
     }
     if (req.method === 'HEAD') {
         res.end(null);
-    } else if (isPayload) {
-        res.end(resultOrPayload);
+    } else if (payload) {
+        res.end(payload);
     } else {
-        resultOrPayload({
-            next: (chunk)=>res.write(chunk)
-            ,
-            error: (_)=>res.end()
-            ,
-            complete: ()=>res.end()
-        });
+        await result.pipe(res);
     }
 }
 function sendEtagResponse(req, res, etag) {

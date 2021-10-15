@@ -12,14 +12,16 @@ function interopDefault(mod) {
     return mod.default || mod;
 }
 async function loadDefaultErrorComponents(distDir) {
-    const Document1 = interopDefault(require('next/dist/pages/_document'));
+    const Document = interopDefault(require('next/dist/pages/_document'));
     const App = interopDefault(require('next/dist/pages/_app'));
     const ComponentMod = require('next/dist/pages/_error');
     const Component = interopDefault(ComponentMod);
     return {
         App,
-        Document: Document1,
+        Document,
         Component,
+        pageConfig: {
+        },
         buildManifest: require((0, _path).join(distDir, `fallback-${_constants.BUILD_MANIFEST}`)),
         reactLoadableManifest: {
         },
@@ -28,12 +30,21 @@ async function loadDefaultErrorComponents(distDir) {
 }
 async function loadComponents(distDir, pathname, serverless) {
     if (serverless) {
-        const Component = await (0, _require).requirePage(pathname, distDir, serverless);
-        let { getStaticProps , getStaticPaths , getServerSideProps  } = Component;
+        const ComponentMod = await (0, _require).requirePage(pathname, distDir, serverless);
+        if (typeof ComponentMod === 'string') {
+            return {
+                Component: ComponentMod,
+                pageConfig: {
+                },
+                ComponentMod
+            };
+        }
+        let { default: Component , getStaticProps , getStaticPaths , getServerSideProps ,  } = ComponentMod;
+        Component = await Component;
         getStaticProps = await getStaticProps;
         getStaticPaths = await getStaticPaths;
         getServerSideProps = await getServerSideProps;
-        const pageConfig = await Component.config || {
+        const pageConfig = await ComponentMod.config || {
         };
         return {
             Component,
@@ -41,23 +52,25 @@ async function loadComponents(distDir, pathname, serverless) {
             getStaticProps,
             getStaticPaths,
             getServerSideProps,
-            ComponentMod: Component
+            ComponentMod
         };
     }
-    const DocumentMod = await (0, _require).requirePage('/_document', distDir, serverless);
-    const AppMod = await (0, _require).requirePage('/_app', distDir, serverless);
-    const ComponentMod = await (0, _require).requirePage(pathname, distDir, serverless);
-    const [buildManifest, reactLoadableManifest, Component, Document1, App, ] = await Promise.all([
-        require((0, _path).join(distDir, _constants.BUILD_MANIFEST)),
-        require((0, _path).join(distDir, _constants.REACT_LOADABLE_MANIFEST)),
-        interopDefault(ComponentMod),
-        interopDefault(DocumentMod),
-        interopDefault(AppMod), 
+    const [DocumentMod, AppMod, ComponentMod] = await Promise.all([
+        (0, _require).requirePage('/_document', distDir, serverless),
+        (0, _require).requirePage('/_app', distDir, serverless),
+        (0, _require).requirePage(pathname, distDir, serverless), 
     ]);
+    const [buildManifest, reactLoadableManifest] = await Promise.all([
+        require((0, _path).join(distDir, _constants.BUILD_MANIFEST)),
+        require((0, _path).join(distDir, _constants.REACT_LOADABLE_MANIFEST)), 
+    ]);
+    const Component = interopDefault(ComponentMod);
+    const Document = interopDefault(DocumentMod);
+    const App = interopDefault(AppMod);
     const { getServerSideProps , getStaticProps , getStaticPaths  } = ComponentMod;
     return {
         App,
-        Document: Document1,
+        Document,
         Component,
         buildManifest,
         reactLoadableManifest,

@@ -5,8 +5,8 @@ Object.defineProperty(exports, "__esModule", {
 exports.default = swcLoader;
 var _loaderUtils = require("next/dist/compiled/loader-utils");
 var _swc = require("../../swc");
-var _trace = require("../../../telemetry/trace");
-function getSWCOptions({ isTypeScript , isServer , development  }) {
+const nextDistPath = /(next[\\/]dist[\\/]shared[\\/]lib)|(next[\\/]dist[\\/]client)|(next[\\/]dist[\\/]pages)/;
+function getSWCOptions({ isTypeScript , isServer , development , isPageFile , pagesDir , isNextDist , isCommonJS ,  }) {
     const jsc = {
         parser: {
             syntax: isTypeScript ? 'typescript' : 'ecmascript',
@@ -27,6 +27,16 @@ function getSWCOptions({ isTypeScript , isServer , development  }) {
     if (isServer) {
         return {
             jsc,
+            // Next.js dist intentionally does not have type: commonjs on server compilation
+            ...isCommonJS ? {
+                module: {
+                    type: 'commonjs'
+                }
+            } : {
+            },
+            // Disables getStaticProps/getServerSideProps tree shaking on the server compilation for pages
+            disableNextSsg: true,
+            pagesDir,
             env: {
                 targets: {
                     // Targets the current version of Node.js
@@ -38,6 +48,15 @@ function getSWCOptions({ isTypeScript , isServer , development  }) {
         // Matches default @babel/preset-env behavior
         jsc.target = 'es5';
         return {
+            // Ensure Next.js internals are output as commonjs modules
+            ...isNextDist || isCommonJS ? {
+                module: {
+                    type: 'commonjs'
+                }
+            } : {
+            },
+            disableNextSsg: !isPageFile,
+            pagesDir,
             jsc
         };
     }
@@ -48,10 +67,18 @@ async function loaderTransform(parentTrace, source, inputSourceMap) {
     const isTypeScript = filename.endsWith('.ts') || filename.endsWith('.tsx');
     let loaderOptions = (0, _loaderUtils).getOptions(this) || {
     };
+    const { isServer , pagesDir  } = loaderOptions;
+    const isPageFile = filename.startsWith(pagesDir);
+    const isNextDist = nextDistPath.test(filename);
+    const isCommonJS = source.indexOf('module.exports') !== -1;
     const swcOptions = getSWCOptions({
+        pagesDir,
         isTypeScript,
-        isServer: loaderOptions.isServer,
-        development: this.mode === 'development'
+        isServer: isServer,
+        isPageFile,
+        development: this.mode === 'development',
+        isNextDist,
+        isCommonJS
     });
     const programmaticOptions = {
         ...swcOptions,
@@ -59,6 +86,7 @@ async function loaderTransform(parentTrace, source, inputSourceMap) {
         inputSourceMap: inputSourceMap ? JSON.stringify(inputSourceMap) : undefined,
         // Set the default sourcemap behavior based on Webpack's mapping flag,
         sourceMaps: this.sourceMap,
+        inlineSourcesContent: this.sourceMap,
         // Ensure that Webpack will get a full absolute path in the sourcemap
         // so that it can properly map the module back to its internal cached
         // modules.
@@ -81,14 +109,13 @@ async function loaderTransform(parentTrace, source, inputSourceMap) {
     );
 }
 function swcLoader(inputSource, inputSourceMap) {
-    var ref;
-    const loaderSpan = (0, _trace).trace('next-swc-loader', (ref = this.currentTraceSpan) === null || ref === void 0 ? void 0 : ref.id);
+    const loaderSpan = this.currentTraceSpan.traceChild('next-swc-loader');
     const callback = this.async();
     loaderSpan.traceAsyncFn(()=>loaderTransform.call(this, loaderSpan, inputSource, inputSourceMap)
     ).then(([transformedSource, outputSourceMap])=>{
-        return callback === null || callback === void 0 ? void 0 : callback(null, transformedSource, outputSourceMap || inputSourceMap);
+        callback(null, transformedSource, outputSourceMap || inputSourceMap);
     }, (err)=>{
-        callback === null || callback === void 0 ? void 0 : callback(err);
+        callback(err);
     });
 }
 

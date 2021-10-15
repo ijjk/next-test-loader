@@ -12,7 +12,7 @@ declare type ReactLoadableManifest = {
 };
 export declare type LoadComponentsReturnType = {
     Component: React.ComponentType;
-    pageConfig?: PageConfig;
+    pageConfig: PageConfig;
     buildManifest: BuildManifest;
     reactLoadableManifest: ReactLoadableManifest;
     Document: DocumentType;
@@ -26,6 +26,7 @@ export declare function loadDefaultErrorComponents(distDir: string): Promise<{
     App: any;
     Document: any;
     Component: any;
+    pageConfig: {};
     buildManifest: any;
     reactLoadableManifest: {};
     ComponentMod: any;

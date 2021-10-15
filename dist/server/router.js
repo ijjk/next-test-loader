@@ -52,7 +52,7 @@ class Router {
         };
         const memoizedPageChecker = async (p)=>{
             p = (0, _normalizeLocalePath).normalizeLocalePath(p, this.locales).pathname;
-            if (pageChecks[p]) {
+            if (pageChecks[p] !== undefined) {
                 return pageChecks[p];
             }
             const result = this.pageChecker(p);

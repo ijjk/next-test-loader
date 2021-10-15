@@ -1,5 +1,5 @@
 "use strict";
-const getTarget = function getTarget1() {
+const getTarget = function getTarget() {
     const memo = {
     };
     return function memorize(target) {

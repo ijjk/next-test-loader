@@ -1,4 +1,4 @@
-import { Span } from '../../../telemetry/trace';
+import { Span } from '../../../trace';
 import { NextJsLoaderContext } from './types';
 export default function transform(this: NextJsLoaderContext, source: string, inputSourceMap: object | null | undefined, loaderOptions: any, filename: string, target: string, parentSpan: Span): {
     code: string;

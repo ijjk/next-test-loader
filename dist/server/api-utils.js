@@ -21,12 +21,13 @@ var _cryptoUtils = require("./crypto-utils");
 var _loadComponents = require("./load-components");
 var _sendPayload = require("./send-payload");
 var _etag = _interopRequireDefault(require("etag"));
+var _isError = _interopRequireDefault(require("../lib/is-error"));
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
         default: obj
     };
 }
-async function apiResolver(req, res, query, resolverModule, apiContext, propagateError) {
+async function apiResolver(req, res, query, resolverModule, apiContext, propagateError, dev, page) {
     const apiReq = req;
     const apiRes = res;
     try {
@@ -64,12 +65,12 @@ async function apiResolver(req, res, query, resolverModule, apiContext, propagat
         const writeData = apiRes.write;
         const endResponse = apiRes.end;
         apiRes.write = (...args)=>{
-            contentLength += Buffer.byteLength(args[0]);
+            contentLength += Buffer.byteLength(args[0] || '');
             return writeData.apply(apiRes, args);
         };
         apiRes.end = (...args)=>{
             if (args.length && typeof args[0] !== 'function') {
-                contentLength += Buffer.byteLength(args[0]);
+                contentLength += Buffer.byteLength(args[0] || '');
             }
             if (contentLength >= 4 * 1024 * 1024) {
                 console.warn(`API response for ${req.url} exceeds 4MB. This will cause the request to fail in a future version. https://nextjs.org/docs/messages/api-routes-body-size-limit`);
@@ -106,6 +107,12 @@ async function apiResolver(req, res, query, resolverModule, apiContext, propagat
         if (err instanceof ApiError) {
             sendError(apiRes, err.statusCode, err.message);
         } else {
+            if (dev) {
+                if ((0, _isError).default(err)) {
+                    err.page = page;
+                }
+                throw err;
+            }
             console.error(err);
             if (propagateError) {
                 throw err;
@@ -130,7 +137,7 @@ async function parseBody(req, limit) {
             limit
         });
     } catch (e) {
-        if (e.type === 'entity.too.large') {
+        if ((0, _isError).default(e) && e.type === 'entity.too.large') {
             throw new ApiError(413, `Body exceeded ${limit} limit`);
         } else {
             throw new ApiError(400, 'Invalid body');
@@ -193,6 +200,17 @@ function redirect(res, statusOrUrl, url) {
 }
 function sendData(req, res, body) {
     if (body === null || body === undefined) {
+        res.end();
+        return;
+    }
+    // strip irrelevant headers/body
+    if (res.statusCode === 204 || res.statusCode === 304) {
+        res.removeHeader('Content-Type');
+        res.removeHeader('Content-Length');
+        res.removeHeader('Transfer-Encoding');
+        if (process.env.NODE_ENV === 'development' && body) {
+            console.warn(`A body was attempted to be set with a 204 statusCode for ${req.url}, this is invalid and the body was ignored.\n` + `See more info here https://nextjs.org/docs/messages/invalid-api-status-body`);
+        }
         res.end();
         return;
     }
@@ -319,7 +337,7 @@ function setPreviewData(res, data, options) {
     if (payload.length > 2048) {
         throw new Error(`Preview data is limited to 2KB currently, reduce how much data you are storing as preview data to continue`);
     }
-    const { serialize ,  } = require('next/dist/compiled/cookie');
+    const { serialize  } = require('next/dist/compiled/cookie');
     const previous = res.getHeader('Set-Cookie');
     res.setHeader(`Set-Cookie`, [
         ...typeof previous === 'string' ? [
@@ -350,7 +368,7 @@ function clearPreviewData(res) {
     if (SYMBOL_CLEARED_COOKIES in res) {
         return res;
     }
-    const { serialize ,  } = require('next/dist/compiled/cookie');
+    const { serialize  } = require('next/dist/compiled/cookie');
     const previous = res.getHeader('Set-Cookie');
     res.setHeader(`Set-Cookie`, [
         ...typeof previous === 'string' ? [
@@ -390,10 +408,10 @@ class ApiError extends Error {
     }
 }
 exports.ApiError = ApiError;
-function sendError(res, statusCode1, message1) {
-    res.statusCode = statusCode1;
-    res.statusMessage = message1;
-    res.end(message1);
+function sendError(res, statusCode, message) {
+    res.statusCode = statusCode;
+    res.statusMessage = message;
+    res.end(message);
 }
 function setLazyProp({ req  }, prop, getter) {
     const opts = {

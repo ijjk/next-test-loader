@@ -22,6 +22,10 @@ function serveStatic(req, res, path) {
     });
 }
 function getContentType(extWithoutDot) {
+    if (extWithoutDot === 'avif') {
+        // TODO: update "mime" package
+        return 'image/avif';
+    }
     const { mime  } = _send.default;
     if ('getType' in mime) {
         // 2.0
@@ -31,6 +35,10 @@ function getContentType(extWithoutDot) {
     return mime.lookup(extWithoutDot);
 }
 function getExtension(contentType) {
+    if (contentType === 'image/avif') {
+        // TODO: update "mime" package
+        return 'avif';
+    }
     const { mime  } = _send.default;
     if ('getExtension' in mime) {
         // 2.0

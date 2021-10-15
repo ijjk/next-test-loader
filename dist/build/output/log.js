@@ -8,6 +8,7 @@ exports.warn = warn;
 exports.ready = ready;
 exports.info = info;
 exports.event = event;
+exports.trace = trace;
 exports.prefixes = void 0;
 var _chalk = _interopRequireDefault(require("chalk"));
 function _interopRequireDefault(obj) {
@@ -21,7 +22,8 @@ const prefixes = {
     warn: _chalk.default.yellow('warn') + '  -',
     ready: _chalk.default.green('ready') + ' -',
     info: _chalk.default.cyan('info') + '  -',
-    event: _chalk.default.magenta('event') + ' -'
+    event: _chalk.default.magenta('event') + ' -',
+    trace: _chalk.default.magenta('trace') + ' -'
 };
 exports.prefixes = prefixes;
 function wait(...message) {
@@ -41,6 +43,9 @@ function info(...message) {
 }
 function event(...message) {
     console.log(prefixes.event, ...message);
+}
+function trace(...message) {
+    console.log(prefixes.trace, ...message);
 }
 
 //# sourceMappingURL=log.js.map

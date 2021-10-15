@@ -69,6 +69,17 @@ function dynamic(dynamicOptions, options) {
         ...loadableOptions,
         ...options
     };
+    const suspenseOptions = loadableOptions;
+    if (!process.env.__NEXT_CONCURRENT_FEATURES) {
+        // Error if react root is not enabled and `suspense` option is set to true
+        if (!process.env.__NEXT_REACT_ROOT && suspenseOptions.suspense) {
+            // TODO: add error doc when this feature is stable
+            throw new Error(`Invalid suspense option usage in next/dynamic. Read more: https://nextjs.org/docs/messages/invalid-dynamic-suspense`);
+        }
+    }
+    if (suspenseOptions.suspense) {
+        return loadableFn(suspenseOptions);
+    }
     // coming from build/babel/plugins/react-loadable-plugin.js
     if (loadableOptions.loadableGenerated) {
         loadableOptions = {

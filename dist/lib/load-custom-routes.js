@@ -12,6 +12,7 @@ var _url = require("url");
 var pathToRegexp = _interopRequireWildcard(require("next/dist/compiled/path-to-regexp"));
 var _escapeStringRegexp = _interopRequireDefault(require("next/dist/compiled/escape-string-regexp"));
 var _constants = require("../shared/lib/constants");
+var _isError = _interopRequireDefault(require("./is-error"));
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
         default: obj
@@ -89,6 +90,8 @@ function checkHeader(route) {
     const invalidParts = [];
     if (!Array.isArray(route.headers)) {
         invalidParts.push('`headers` field must be an array');
+    } else if (route.headers.length === 0) {
+        invalidParts.push('`headers` field cannot be empty');
     } else {
         for (const header of route.headers){
             if (!header || typeof header !== 'object') {
@@ -122,8 +125,8 @@ function tryParsePath(route, handleUrl) {
         result.regexStr = regex.source;
     } catch (err) {
         // If there is an error show our error link but still show original error or a formatted one if we can
-        const errMatches = err.message.match(/at (\d{0,})/);
-        if (errMatches) {
+        let errMatches;
+        if ((0, _isError).default(err) && (errMatches = err.message.match(/at (\d{0,})/))) {
             const position = parseInt(errMatches[1], 10);
             console.error(`\nError parsing \`${route}\` ` + `https://nextjs.org/docs/messages/invalid-route-source\n` + `Reason: ${err.message}\n\n` + `  ${routePath}\n` + `  ${new Array(position).fill(' ').join('')}^\n`);
         } else {
@@ -293,9 +296,9 @@ function checkCustomRoutes(routes, type) {
                         const sourceSegments = new Set(sourceTokens.map((item)=>typeof item === 'object' && item.name
                         ).filter(Boolean));
                         const invalidDestSegments = new Set();
-                        for (const token1 of destTokens){
-                            if (typeof token1 === 'object' && !sourceSegments.has(token1.name) && !hasSegments.has(token1.name)) {
-                                invalidDestSegments.add(token1.name);
+                        for (const token of destTokens){
+                            if (typeof token === 'object' && !sourceSegments.has(token.name) && !hasSegments.has(token.name)) {
+                                invalidDestSegments.add(token.name);
                             }
                         }
                         if (invalidDestSegments.size) {
@@ -358,7 +361,7 @@ function processRoutes(routes, config, type) {
         const isExternal = !((ref = r.destination) === null || ref === void 0 ? void 0 : ref.startsWith('/'));
         const destBasePath = srcBasePath && !isExternal ? srcBasePath : '';
         if (config.i18n && r.locale !== false) {
-            var ref1;
+            var ref;
             if (!isExternal) {
                 defaultLocales.forEach((item)=>{
                     let destination;
@@ -374,7 +377,7 @@ function processRoutes(routes, config, type) {
             }
             r.source = `/:nextInternalLocale(${config.i18n.locales.map((locale)=>(0, _escapeStringRegexp).default(locale)
             ).join('|')})${r.source === '/' && !config.trailingSlash ? '' : r.source}`;
-            if (r.destination && ((ref1 = r.destination) === null || ref1 === void 0 ? void 0 : ref1.startsWith('/'))) {
+            if (r.destination && ((ref = r.destination) === null || ref === void 0 ? void 0 : ref.startsWith('/'))) {
                 r.destination = `/:nextInternalLocale${r.destination === '/' && !config.trailingSlash ? '' : r.destination}`;
             }
         }

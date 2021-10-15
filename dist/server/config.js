@@ -75,7 +75,7 @@ const experimentalWarning = (0, _utils).execOnce(()=>{
     console.warn();
 });
 function assignDefaults(userConfig) {
-    var ref;
+    var ref, ref1;
     if (typeof userConfig.exportTrailingSlash !== 'undefined') {
         console.warn(_chalk.default.yellow.bold('Warning: ') + 'The "exportTrailingSlash" option has been renamed to "trailingSlash". Please update your next.config.js.');
         if (typeof userConfig.trailingSlash === 'undefined') {
@@ -84,9 +84,9 @@ function assignDefaults(userConfig) {
         delete userConfig.exportTrailingSlash;
     }
     if (typeof ((ref = userConfig.experimental) === null || ref === void 0 ? void 0 : ref.reactMode) !== 'undefined') {
-        var ref1;
+        var ref;
         console.warn(_chalk.default.yellow.bold('Warning: ') + 'The experimental "reactMode" option has been replaced with "reactRoot". Please update your next.config.js.');
-        if (typeof ((ref1 = userConfig.experimental) === null || ref1 === void 0 ? void 0 : ref1.reactRoot) === 'undefined') {
+        if (typeof ((ref = userConfig.experimental) === null || ref === void 0 ? void 0 : ref.reactRoot) === 'undefined') {
             userConfig.experimental.reactRoot = [
                 'concurrent',
                 'blocking'
@@ -167,14 +167,14 @@ function assignDefaults(userConfig) {
             throw new Error(`Specified basePath has to start with a /, found "${result.basePath}"`);
         }
         if (result.basePath !== '/') {
-            var ref2;
+            var ref;
             if (result.basePath.endsWith('/')) {
                 throw new Error(`Specified basePath should not end with /, found "${result.basePath}"`);
             }
             if (result.assetPrefix === '') {
                 result.assetPrefix = result.basePath;
             }
-            if (((ref2 = result.amp) === null || ref2 === void 0 ? void 0 : ref2.canonicalBase) === '') {
+            if (((ref = result.amp) === null || ref === void 0 ? void 0 : ref.canonicalBase) === '') {
                 result.amp.canonicalBase = result.basePath;
             }
         }
@@ -185,8 +185,15 @@ function assignDefaults(userConfig) {
             throw new Error(`Specified images should be an object received ${typeof images}.\nSee more info here: https://nextjs.org/docs/messages/invalid-images-config`);
         }
         if (images.domains) {
+            var ref;
             if (!Array.isArray(images.domains)) {
                 throw new Error(`Specified images.domains should be an Array received ${typeof images.domains}.\nSee more info here: https://nextjs.org/docs/messages/invalid-images-config`);
+            }
+            // static images are automatically prefixed with assetPrefix
+            // so we need to ensure _next/image allows downloading from
+            // this resource
+            if ((ref = config.assetPrefix) === null || ref === void 0 ? void 0 : ref.startsWith('http')) {
+                images.domains.push(new URL(config.assetPrefix).hostname);
             }
             if (images.domains.length > 50) {
                 throw new Error(`Specified images.domains exceeds length of 50, received length (${images.domains.length}), please reduce the length of the array to continue.\nSee more info here: https://nextjs.org/docs/messages/invalid-images-config`);
@@ -233,9 +240,9 @@ function assignDefaults(userConfig) {
         if (!_imageConfig.VALID_LOADERS.includes(images.loader)) {
             throw new Error(`Specified images.loader should be one of (${_imageConfig.VALID_LOADERS.join(', ')}), received invalid value (${images.loader}).\nSee more info here: https://nextjs.org/docs/messages/invalid-images-config`);
         }
-        // Append trailing slash for non-default loaders
+        // Append trailing slash for non-default loaders and when trailingSlash is set
         if (images.path) {
-            if (images.loader !== 'default' && images.path[images.path.length - 1] !== '/') {
+            if (images.loader !== 'default' && images.path[images.path.length - 1] !== '/' || result.trailingSlash) {
                 images.path += '/';
             }
         }
@@ -247,6 +254,29 @@ function assignDefaults(userConfig) {
           ', '
         )}), received  (${images.minimumCacheTTL}).\nSee more info here: https://nextjs.org/docs/messages/invalid-images-config`);
         }
+        if (images.formats) {
+            const { formats  } = images;
+            if (!Array.isArray(formats)) {
+                throw new Error(`Specified images.formats should be an Array received ${typeof formats}.\nSee more info here: https://nextjs.org/docs/messages/invalid-images-config`);
+            }
+            if (formats.length < 1 || formats.length > 2) {
+                throw new Error(`Specified images.formats must be length 1 or 2, received length (${formats.length}), please reduce the length of the array to continue.\nSee more info here: https://nextjs.org/docs/messages/invalid-images-config`);
+            }
+            const invalid = formats.filter((f)=>{
+                return f !== 'image/avif' && f !== 'image/webp';
+            });
+            if (invalid.length > 0) {
+                throw new Error(`Specified images.formats should be an Array of mime type strings, received invalid values (${invalid.join(', ')}).\nSee more info here: https://nextjs.org/docs/messages/invalid-images-config`);
+            }
+        }
+    }
+    if (result.webpack5 === false) {
+        throw new Error('Webpack 4 is no longer supported in Next.js. Please upgrade to webpack 5 by removing "webpack5: false" from next.config.js. https://nextjs.org/docs/messages/webpack5');
+    }
+    if (result.experimental && 'nftTracing' in result.experimental) {
+        // TODO: remove this warning and assignment when we leave experimental phase
+        Log.warn(`Experimental \`nftTracing\` has been renamed to \`outputFileTracing\`. Please update your next.config.js file accordingly.`);
+        result.experimental.outputFileTracing = result.experimental.nftTracing;
     }
     // TODO: Change defaultConfig type to NextConfigComplete
     // so we don't need "!" here.
@@ -261,7 +291,7 @@ function assignDefaults(userConfig) {
             throw new Error(`Specified i18n.locales should be an Array received ${typeof i18n.locales}.\nSee more info here: https://nextjs.org/docs/messages/invalid-i18n-config`);
         }
         if (i18n.locales.length > 100) {
-            throw new Error(`Received ${i18n.locales.length} i18n.locales items which exceeds the max of 100, please reduce the number of items to continue.\nSee more info here: https://nextjs.org/docs/messages/invalid-i18n-config`);
+            Log.warn(`Received ${i18n.locales.length} i18n.locales items which exceeds the recommended max of 100.\nSee more info here: https://nextjs.org/docs/advanced-features/i18n-routing#how-does-this-work-with-static-generation`);
         }
         const defaultLocaleType = typeof i18n.defaultLocale;
         if (!i18n.defaultLocale || defaultLocaleType !== 'string') {
@@ -272,11 +302,11 @@ function assignDefaults(userConfig) {
         }
         if (i18n.domains) {
             const invalidDomainItems = i18n.domains.filter((item)=>{
-                var ref3;
+                var ref;
                 if (!item || typeof item !== 'object') return true;
                 if (!item.defaultLocale) return true;
                 if (!item.domain || typeof item.domain !== 'string') return true;
-                const defaultLocaleDuplicate = (ref3 = i18n.domains) === null || ref3 === void 0 ? void 0 : ref3.find((altItem)=>altItem.defaultLocale === item.defaultLocale && altItem.domain !== item.domain
+                const defaultLocaleDuplicate = (ref = i18n.domains) === null || ref === void 0 ? void 0 : ref.find((altItem)=>altItem.defaultLocale === item.defaultLocale && altItem.domain !== item.domain
                 );
                 if (defaultLocaleDuplicate) {
                     console.warn(`Both ${item.domain} and ${defaultLocaleDuplicate.domain} configured the defaultLocale ${item.defaultLocale} but only one can. Change one item's default locale to continue`);
@@ -325,11 +355,20 @@ function assignDefaults(userConfig) {
             throw new Error(`Specified i18n.localeDetection should be undefined or a boolean received ${localeDetectionType}.\nSee more info here: https://nextjs.org/docs/messages/invalid-i18n-config`);
         }
     }
+    if ((ref1 = result.experimental) === null || ref1 === void 0 ? void 0 : ref1.serverComponents) {
+        const pageExtensions = [];
+        (result.pageExtensions || []).forEach((ext)=>{
+            pageExtensions.push(ext);
+            pageExtensions.push(`server.${ext}`);
+            pageExtensions.push(`client.${ext}`);
+        });
+        result.pageExtensions = pageExtensions;
+    }
     return result;
 }
 async function loadConfig(phase, dir, customConfig) {
     await (0, _env).loadEnvConfig(dir, phase === _constants.PHASE_DEVELOPMENT_SERVER, Log);
-    await (0, _configUtils).loadWebpackHook(phase, dir);
+    await (0, _configUtils).loadWebpackHook();
     if (customConfig) {
         return assignDefaults({
             configOrigin: 'server',
@@ -341,8 +380,14 @@ async function loadConfig(phase, dir, customConfig) {
     });
     // If config file was found
     if (path === null || path === void 0 ? void 0 : path.length) {
-        var ref4;
-        const userConfigModule = require(path);
+        var ref;
+        let userConfigModule;
+        try {
+            userConfigModule = require(path);
+        } catch (err) {
+            console.error(_chalk.default.red('Error:') + ' failed to load next.config.js, see more info here https://nextjs.org/docs/messages/next-config-error');
+            throw err;
+        }
         const userConfig = (0, _configShared).normalizeConfig(phase, userConfigModule.default || userConfigModule);
         if (Object.keys(userConfig).length === 0) {
             Log.warn('Detected next.config.js, no exported configuration found. https://nextjs.org/docs/messages/empty-configuration');
@@ -350,7 +395,7 @@ async function loadConfig(phase, dir, customConfig) {
         if (userConfig.target && !targets.includes(userConfig.target)) {
             throw new Error(`Specified target is invalid. Provided: "${userConfig.target}" should be one of ${targets.join(', ')}`);
         }
-        if ((ref4 = userConfig.amp) === null || ref4 === void 0 ? void 0 : ref4.canonicalBase) {
+        if ((ref = userConfig.amp) === null || ref === void 0 ? void 0 : ref.canonicalBase) {
             const { canonicalBase  } = userConfig.amp || {
             };
             userConfig.amp = userConfig.amp || {

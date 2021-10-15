@@ -6,6 +6,7 @@ exports.startedDevelopmentServer = startedDevelopmentServer;
 exports.formatAmpMessages = formatAmpMessages;
 exports.ampValidation = ampValidation;
 exports.watchCompilers = watchCompilers;
+exports.reportTrigger = reportTrigger;
 var _chalk = _interopRequireDefault(require("chalk"));
 var _stripAnsi = _interopRequireDefault(require("next/dist/compiled/strip-ansi"));
 var _textTable = _interopRequireDefault(require("next/dist/compiled/text-table"));
@@ -25,27 +26,6 @@ function startedDevelopmentServer(appUrl, bindAddr) {
 }
 let previousClient = null;
 let previousServer = null;
-var // eslint typescript has a bug with TS enums
-/* eslint-disable no-shadow */ WebpackStatusPhase;
-(function(WebpackStatusPhase1) {
-    WebpackStatusPhase1[WebpackStatusPhase1["COMPILING"] = 1] = "COMPILING";
-    WebpackStatusPhase1[WebpackStatusPhase1["COMPILED_WITH_ERRORS"] = 2] = "COMPILED_WITH_ERRORS";
-    WebpackStatusPhase1[WebpackStatusPhase1["COMPILED_WITH_WARNINGS"] = 4] = "COMPILED_WITH_WARNINGS";
-    WebpackStatusPhase1[WebpackStatusPhase1["COMPILED"] = 5] = "COMPILED";
-})(WebpackStatusPhase || (WebpackStatusPhase = {
-}));
-function getWebpackStatusPhase(status) {
-    if (status.loading) {
-        return WebpackStatusPhase.COMPILING;
-    }
-    if (status.errors) {
-        return WebpackStatusPhase.COMPILED_WITH_ERRORS;
-    }
-    if (status.warnings) {
-        return WebpackStatusPhase.COMPILED_WITH_WARNINGS;
-    }
-    return WebpackStatusPhase.COMPILED;
-}
 function formatAmpMessages(amp) {
     let output = _chalk.default.bold('Amp Validation') + '\n\n';
     let messages = [];
@@ -112,46 +92,61 @@ function formatAmpMessages(amp) {
     return output;
 }
 const buildStore = (0, _unistore).default();
+let buildWasDone = false;
+let clientWasLoading = true;
+let serverWasLoading = true;
 buildStore.subscribe((state)=>{
-    const { amp , client , server  } = state;
-    const [{ status  }] = [
-        {
-            status: client,
-            phase: getWebpackStatusPhase(client)
-        },
-        {
-            status: server,
-            phase: getWebpackStatusPhase(server)
-        }, 
-    ].sort((a, b)=>a.phase.valueOf() - b.phase.valueOf()
-    );
+    const { amp , client , server , trigger  } = state;
     const { bootstrap: bootstrapping , appUrl  } = _store.store.getState();
-    if (bootstrapping && status.loading) {
+    if (bootstrapping && (client.loading || server.loading)) {
         return;
     }
+    if (client.loading || server.loading) {
+        _store.store.setState({
+            bootstrap: false,
+            appUrl: appUrl,
+            loading: true,
+            trigger
+        }, true);
+        clientWasLoading = !buildWasDone && clientWasLoading || client.loading;
+        serverWasLoading = !buildWasDone && serverWasLoading || server.loading;
+        buildWasDone = false;
+        return;
+    }
+    buildWasDone = true;
     let partialState = {
         bootstrap: false,
-        appUrl: appUrl
+        appUrl: appUrl,
+        loading: false,
+        typeChecking: false,
+        partial: clientWasLoading && !serverWasLoading ? 'client' : serverWasLoading && !clientWasLoading ? 'server' : undefined,
+        modules: (clientWasLoading ? client.modules : 0) + (serverWasLoading ? server.modules : 0)
     };
-    if (status.loading) {
+    if (client.errors) {
+        // Show only client errors
         _store.store.setState({
             ...partialState,
-            loading: true
+            errors: client.errors,
+            warnings: null
+        }, true);
+    } else if (server.errors) {
+        // Show only server errors
+        _store.store.setState({
+            ...partialState,
+            errors: server.errors,
+            warnings: null
         }, true);
     } else {
-        let { errors , warnings  } = status;
-        if (errors == null) {
-            if (Object.keys(amp).length > 0) {
-                warnings = (warnings || []).concat(formatAmpMessages(amp) || []);
-                if (!warnings.length) warnings = null;
-            }
-        }
+        // Show warnings from all of them
+        const warnings = [
+            ...client.warnings || [],
+            ...server.warnings || [],
+            ...Object.keys(amp).length > 0 && formatAmpMessages(amp) || [], 
+        ];
         _store.store.setState({
             ...partialState,
-            loading: false,
-            typeChecking: false,
-            errors,
-            warnings
+            errors: null,
+            warnings: warnings.length === 0 ? null : warnings
         }, true);
     }
 });
@@ -191,7 +186,8 @@ function watchCompilers(client, server) {
         },
         server: {
             loading: true
-        }
+        },
+        trigger: 'initial'
     });
     function tapCompiler(key, compiler, onEvent) {
         compiler.hooks.invalid.tap(`NextJsInvalid-${key}`, ()=>{
@@ -213,21 +209,43 @@ function watchCompilers(client, server) {
             const hasWarnings = !!(warnings === null || warnings === void 0 ? void 0 : warnings.length);
             onEvent({
                 loading: false,
+                modules: stats.compilation.modules.size,
                 errors: hasErrors ? errors : null,
                 warnings: hasWarnings ? warnings : null
             });
         });
     }
-    tapCompiler('client', client, (status)=>buildStore.setState({
-            client: status
-        })
-    );
-    tapCompiler('server', server, (status)=>buildStore.setState({
-            server: status
-        })
-    );
+    tapCompiler('client', client, (status)=>{
+        if (!status.loading && !buildStore.getState().server.loading) {
+            buildStore.setState({
+                client: status,
+                trigger: undefined
+            });
+        } else {
+            buildStore.setState({
+                client: status
+            });
+        }
+    });
+    tapCompiler('server', server, (status)=>{
+        if (!status.loading && !buildStore.getState().client.loading) {
+            buildStore.setState({
+                server: status,
+                trigger: undefined
+            });
+        } else {
+            buildStore.setState({
+                server: status
+            });
+        }
+    });
     previousClient = client;
     previousServer = server;
+}
+function reportTrigger(trigger) {
+    buildStore.setState({
+        trigger
+    });
 }
 
 //# sourceMappingURL=index.js.map

@@ -98,8 +98,8 @@ function resolveRewrites(asPath, pages, rewrites, query, resolveHref, locales) {
     matchedPage = pages.includes(fsPathname);
     if (!matchedPage) {
         if (!finished) {
-            for(let i1 = 0; i1 < rewrites.afterFiles.length; i1++){
-                if (handleRewrite(rewrites.afterFiles[i1])) {
+            for(let i = 0; i < rewrites.afterFiles.length; i++){
+                if (handleRewrite(rewrites.afterFiles[i])) {
                     finished = true;
                     break;
                 }
@@ -112,8 +112,8 @@ function resolveRewrites(asPath, pages, rewrites, query, resolveHref, locales) {
             finished = matchedPage;
         }
         if (!finished) {
-            for(let i1 = 0; i1 < rewrites.fallback.length; i1++){
-                if (handleRewrite(rewrites.fallback[i1])) {
+            for(let i = 0; i < rewrites.fallback.length; i++){
+                if (handleRewrite(rewrites.fallback[i])) {
                     finished = true;
                     break;
                 }

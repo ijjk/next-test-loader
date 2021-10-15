@@ -54,6 +54,8 @@ export declare function isPageStatic(page: string, distDir: string, serverless: 
     encodedPrerenderRoutes?: string[];
     prerenderFallback?: boolean | 'blocking';
     isNextImageImported?: boolean;
+    traceIncludes?: string[];
+    traceExcludes?: string[];
 }>;
 export declare function hasCustomGetInitialProps(page: string, distDir: string, isLikeServerless: boolean, runtimeEnvConfig: any, checkingApp: boolean): Promise<boolean>;
 export declare function getNamedExports(page: string, distDir: string, isLikeServerless: boolean, runtimeEnvConfig: any): Promise<Array<string>>;

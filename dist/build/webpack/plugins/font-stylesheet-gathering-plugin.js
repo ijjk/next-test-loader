@@ -60,15 +60,14 @@ class FontStylesheetGatheringPlugin {
                             result.setRange(node.range);
                             result.setExpression(node);
                             result.setIdentifier(node.name);
-                            // This was added webpack 5.
-                            if (_webpack.isWebpack5) {
-                                result.getMembers = ()=>[]
-                                ;
-                            }
+                            // This was added in webpack 5.
+                            result.getMembers = ()=>[]
+                            ;
                         }
                         return result;
                     });
                     const jsxNodeHandler = (node)=>{
+                        var ref, ref5;
                         if (node.arguments.length !== 2) {
                             // A font link tag has only two arguments rel=stylesheet and href='...'
                             return;
@@ -96,12 +95,9 @@ class FontStylesheetGatheringPlugin {
                             return false;
                         }
                         this.gatheredStylesheets.push(props.href);
-                        if (_webpack.isWebpack5) {
-                            var ref5, ref6;
-                            const buildInfo = parser === null || parser === void 0 ? void 0 : (ref5 = parser.state) === null || ref5 === void 0 ? void 0 : (ref6 = ref5.module) === null || ref6 === void 0 ? void 0 : ref6.buildInfo;
-                            if (buildInfo) {
-                                buildInfo.valueDependencies.set(_constants.FONT_MANIFEST, this.gatheredStylesheets);
-                            }
+                        const buildInfo = parser === null || parser === void 0 ? void 0 : (ref = parser.state) === null || ref === void 0 ? void 0 : (ref5 = ref.module) === null || ref5 === void 0 ? void 0 : ref5.buildInfo;
+                        if (buildInfo) {
+                            buildInfo.valueDependencies.set(_constants.FONT_MANIFEST, this.gatheredStylesheets);
                         }
                     };
                     // React JSX transform:
@@ -127,25 +123,23 @@ class FontStylesheetGatheringPlugin {
                 mainTemplate.hooks.requireExtensions.tap(this.constructor.name, (source)=>{
                     return `${source}
                 // Font manifest declaration
-                ${_webpack.isWebpack5 ? '__webpack_require__' : mainTemplate.requireFn}.__NEXT_FONT_MANIFEST__ = ${JSON.stringify(this.manifestContent)};
+                __webpack_require__.__NEXT_FONT_MANIFEST__ = ${JSON.stringify(this.manifestContent)};
             // Enable feature:
             process.env.__NEXT_OPTIMIZE_FONTS = JSON.stringify(true);`;
                 });
             }
             compilation.hooks.finishModules.tapAsync(this.constructor.name, async (modules, modulesFinished)=>{
                 let fontStylesheets = this.gatheredStylesheets;
-                if (_webpack.isWebpack5) {
-                    const fontUrls = new Set();
-                    modules.forEach((module)=>{
-                        var ref7, ref8;
-                        const fontDependencies = module === null || module === void 0 ? void 0 : (ref7 = module.buildInfo) === null || ref7 === void 0 ? void 0 : (ref8 = ref7.valueDependencies) === null || ref8 === void 0 ? void 0 : ref8.get(_constants.FONT_MANIFEST);
-                        if (fontDependencies) {
-                            fontDependencies.forEach((v)=>fontUrls.add(v)
-                            );
-                        }
-                    });
-                    fontStylesheets = Array.from(fontUrls);
-                }
+                const fontUrls = new Set();
+                modules.forEach((module)=>{
+                    var ref, ref9;
+                    const fontDependencies = module === null || module === void 0 ? void 0 : (ref = module.buildInfo) === null || ref === void 0 ? void 0 : (ref9 = ref.valueDependencies) === null || ref9 === void 0 ? void 0 : ref9.get(_constants.FONT_MANIFEST);
+                    if (fontDependencies) {
+                        fontDependencies.forEach((v)=>fontUrls.add(v)
+                        );
+                    }
+                });
+                fontStylesheets = Array.from(fontUrls);
                 const fontDefinitionPromises = fontStylesheets.map((url)=>(0, _fontUtils).getFontDefinitionFromNetwork(url)
                 );
                 this.manifestContent = [];
@@ -159,25 +153,21 @@ class FontStylesheetGatheringPlugin {
                         });
                     }
                 }
-                if (!_webpack.isWebpack5) {
-                    compilation.assets[_constants.FONT_MANIFEST] = new _webpack.sources.RawSource(JSON.stringify(this.manifestContent, null, '  '));
-                }
+                compilation.assets[_constants.FONT_MANIFEST] = new _webpack.sources.RawSource(JSON.stringify(this.manifestContent, null, '  '));
                 modulesFinished();
             });
             cb();
         });
-        if (_webpack.isWebpack5) {
-            compiler.hooks.make.tap(this.constructor.name, (compilation)=>{
+        compiler.hooks.make.tap(this.constructor.name, (compilation)=>{
+            // @ts-ignore TODO: Remove ignore when webpack 5 is stable
+            compilation.hooks.processAssets.tap({
+                name: this.constructor.name,
                 // @ts-ignore TODO: Remove ignore when webpack 5 is stable
-                compilation.hooks.processAssets.tap({
-                    name: this.constructor.name,
-                    // @ts-ignore TODO: Remove ignore when webpack 5 is stable
-                    stage: _webpack.webpack.Compilation.PROCESS_ASSETS_STAGE_ADDITIONS
-                }, (assets)=>{
-                    assets['../' + _constants.FONT_MANIFEST] = new _webpack.sources.RawSource(JSON.stringify(this.manifestContent, null, '  '));
-                });
+                stage: _webpack.webpack.Compilation.PROCESS_ASSETS_STAGE_ADDITIONS
+            }, (assets)=>{
+                assets['../' + _constants.FONT_MANIFEST] = new _webpack.sources.RawSource(JSON.stringify(this.manifestContent, null, '  '));
             });
-        }
+        });
     }
 }
 exports.FontStylesheetGatheringPlugin = FontStylesheetGatheringPlugin;

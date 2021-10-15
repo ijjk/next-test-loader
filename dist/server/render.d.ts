@@ -6,7 +6,7 @@ import { __ApiPreviewProps } from './api-utils';
 import { FontManifest } from './font-utils';
 import { LoadComponentsReturnType } from './load-components';
 import { DomainLocale } from './config';
-import { RenderResult } from './utils';
+import RenderResult from './render-result';
 export declare type RenderOptsPartial = {
     buildId: string;
     canonicalBase: string;
@@ -45,8 +45,10 @@ export declare type RenderOptsPartial = {
     defaultLocale?: string;
     domainLocales?: DomainLocale[];
     disableOptimizedLoading?: boolean;
-    requireStaticHTML?: boolean;
+    supportsDynamicHTML?: boolean;
     concurrentFeatures?: boolean;
+    customServer?: boolean;
 };
 export declare type RenderOpts = LoadComponentsReturnType & RenderOptsPartial;
 export declare function renderToHTML(req: IncomingMessage, res: ServerResponse, pathname: string, query: ParsedUrlQuery, renderOpts: RenderOpts): Promise<RenderResult | null>;
+export declare function useMaybeDeferContent(_name: string, contentFn: () => JSX.Element): [boolean, JSX.Element];

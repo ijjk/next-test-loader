@@ -8,9 +8,12 @@ export declare type OutputState = {
     bindAddr: string | null;
 } & ({
     loading: true;
+    trigger: string | undefined;
 } | {
     loading: false;
     typeChecking: boolean;
+    partial: 'client' | 'server' | undefined;
+    modules: number;
     errors: string[] | null;
     warnings: string[] | null;
 }));

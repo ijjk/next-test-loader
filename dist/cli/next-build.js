@@ -6,10 +6,11 @@ Object.defineProperty(exports, "__esModule", {
 exports.nextBuild = void 0;
 var _fs = require("fs");
 var _indexJs = _interopRequireDefault(require("next/dist/compiled/arg/index.js"));
-var _path = require("path");
 var Log = _interopRequireWildcard(require("../build/output/log"));
 var _build = _interopRequireDefault(require("../build"));
 var _utils = require("../server/lib/utils");
+var _isError = _interopRequireDefault(require("../lib/is-error"));
+var _getProjectDir = require("../lib/get-project-dir");
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
         default: obj
@@ -55,7 +56,7 @@ const nextBuild = (argv)=>{
             argv
         });
     } catch (error) {
-        if (error.code === 'ARG_UNKNOWN_OPTION') {
+        if ((0, _isError).default(error) && error.code === 'ARG_UNKNOWN_OPTION') {
             return (0, _utils).printAndExit(error.message, 1);
         }
         throw error;
@@ -82,7 +83,7 @@ const nextBuild = (argv)=>{
     if (args['--no-lint']) {
         Log.warn('Linting is disabled');
     }
-    const dir = (0, _path).resolve(args._[0] || '.');
+    const dir = (0, _getProjectDir).getProjectDir(args._[0]);
     // Check if the provided directory exists
     if (!(0, _fs).existsSync(dir)) {
         (0, _utils).printAndExit(`> No such directory exists as the project root: ${dir}`);

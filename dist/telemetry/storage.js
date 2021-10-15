@@ -211,10 +211,10 @@ class Telemetry {
     }
 }
 exports.Telemetry = Telemetry;
-function getStorageDirectory(distDir1) {
+function getStorageDirectory(distDir) {
     const isLikelyEphemeral = ciEnvironment.isCI || (0, _isDocker).default();
     if (isLikelyEphemeral) {
-        return _path.default.join(distDir1, 'cache');
+        return _path.default.join(distDir, 'cache');
     }
     return undefined;
 }

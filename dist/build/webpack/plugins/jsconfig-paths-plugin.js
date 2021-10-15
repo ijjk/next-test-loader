@@ -84,6 +84,26 @@ function matchedText(pattern, candidate) {
 function patternText({ prefix , suffix  }) {
     return `${prefix}*${suffix}`;
 }
+/**
+ * Calls the iterator function for each entry of the array
+ * until the first result or error is reached
+ */ function forEachBail(array, iterator, callback) {
+    if (array.length === 0) return callback();
+    let i = 0;
+    const next = ()=>{
+        let loop = undefined;
+        iterator(array[i++], (err, result)=>{
+            if (err || result !== undefined || i >= array.length) {
+                return callback(err, result);
+            }
+            if (loop === false) while(next());
+            loop = true;
+        });
+        if (!loop) loop = false;
+        return loop;
+    };
+    while(next());
+}
 const NODE_MODULES_REGEX = /node_modules/;
 class JsConfigPathsPlugin {
     constructor(paths, resolvedBaseUrl){
@@ -93,8 +113,8 @@ class JsConfigPathsPlugin {
         log('resolved baseUrl: %s', resolvedBaseUrl);
     }
     apply(resolver) {
-        const paths1 = this.paths;
-        const pathsKeys = Object.keys(paths1);
+        const paths = this.paths;
+        const pathsKeys = Object.keys(paths);
         // If no aliases are added bail out
         if (pathsKeys.length === 0) {
             log('paths are empty, bailing out');
@@ -102,57 +122,52 @@ class JsConfigPathsPlugin {
         }
         const baseDirectory = this.resolvedBaseUrl;
         const target = resolver.ensureHook('resolve');
-        resolver.getHook('described-resolve').tapPromise('JsConfigPathsPlugin', async (request, resolveContext)=>{
+        resolver.getHook('described-resolve').tapAsync('JsConfigPathsPlugin', (request, resolveContext, callback)=>{
             const moduleName = request.request;
             // Exclude node_modules from paths support (speeds up resolving)
             if (request.path.match(NODE_MODULES_REGEX)) {
                 log('skipping request as it is inside node_modules %s', moduleName);
-                return;
+                return callback();
             }
             if (_path.default.posix.isAbsolute(moduleName) || process.platform === 'win32' && _path.default.win32.isAbsolute(moduleName)) {
                 log('skipping request as it is an absolute path %s', moduleName);
-                return;
+                return callback();
             }
             if (pathIsRelative(moduleName)) {
                 log('skipping request as it is a relative path %s', moduleName);
-                return;
+                return callback();
             }
             // log('starting to resolve request %s', moduleName)
             // If the module name does not match any of the patterns in `paths` we hand off resolving to webpack
             const matchedPattern = matchPatternOrExact(pathsKeys, moduleName);
             if (!matchedPattern) {
                 log('moduleName did not match any paths pattern %s', moduleName);
-                return;
+                return callback();
             }
             const matchedStar = isString(matchedPattern) ? undefined : matchedText(matchedPattern, moduleName);
             const matchedPatternText = isString(matchedPattern) ? matchedPattern : patternText(matchedPattern);
             let triedPaths = [];
-            for (const subst of paths1[matchedPatternText]){
+            forEachBail(paths[matchedPatternText], (subst, pathCallback)=>{
                 const curPath = matchedStar ? subst.replace('*', matchedStar) : subst;
                 // Ensure .d.ts is not matched
                 if (curPath.endsWith('.d.ts')) {
-                    continue;
+                    // try next path candidate
+                    return pathCallback();
                 }
                 const candidate = _path.default.join(baseDirectory, curPath);
-                const [err, result] = await new Promise((resolve)=>{
-                    const obj = Object.assign({
-                    }, request, {
-                        request: candidate
-                    });
-                    resolver.doResolve(target, obj, `Aliased with tsconfig.json or jsconfig.json ${matchedPatternText} to ${candidate}`, resolveContext, (resolverErr, resolverResult)=>{
-                        resolve([
-                            resolverErr,
-                            resolverResult
-                        ]);
-                    });
+                const obj = Object.assign({
+                }, request, {
+                    request: candidate
                 });
-                // There's multiple paths values possible, so we first have to iterate them all first before throwing an error
-                if (err || result === undefined) {
-                    triedPaths.push(candidate);
-                    continue;
-                }
-                return result;
-            }
+                resolver.doResolve(target, obj, `Aliased with tsconfig.json or jsconfig.json ${matchedPatternText} to ${candidate}`, resolveContext, (resolverErr, resolverResult)=>{
+                    if (resolverErr || resolverResult === undefined) {
+                        triedPaths.push(candidate);
+                        // try next path candidate
+                        return pathCallback();
+                    }
+                    return pathCallback(resolverErr, resolverResult);
+                });
+            }, callback);
         });
     }
 }

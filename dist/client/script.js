@@ -78,7 +78,7 @@ const ignoreProps = [
 ];
 const loadScript = (props)=>{
     const { src , id , onLoad =()=>{
-    } , dangerouslySetInnerHTML , children ='' , onError ,  } = props;
+    } , dangerouslySetInnerHTML , children ='' , strategy ='afterInteractive' , onError ,  } = props;
     const cacheKey = id || src;
     // Script has already loaded
     if (cacheKey && LoadCache.has(cacheKey)) {
@@ -125,6 +125,7 @@ const loadScript = (props)=>{
         const attr = _headManager.DOMAttributeNames[k] || k.toLowerCase();
         el.setAttribute(attr, value);
     }
+    el.setAttribute('data-nscript', strategy);
     document.body.appendChild(el);
 };
 function handleClientScriptLoad(props) {
@@ -156,7 +157,7 @@ function Script(props) {
     const { src ='' , onLoad =()=>{
     } , dangerouslySetInnerHTML , strategy ='afterInteractive' , onError  } = props, restProps = _objectWithoutProperties(props, ["src", "onLoad", "dangerouslySetInnerHTML", "strategy", "onError"]);
     // Context is available only during SSR
-    const { updateScripts , scripts  } = (0, _react).useContext(_headManagerContext.HeadManagerContext);
+    const { updateScripts , scripts , getIsSsr  } = (0, _react).useContext(_headManagerContext.HeadManagerContext);
     (0, _react).useEffect(()=>{
         if (strategy === 'afterInteractive') {
             loadScript(props);
@@ -177,7 +178,10 @@ function Script(props) {
                 }, restProps), 
             ]);
             updateScripts(scripts);
-        } else {
+        } else if (getIsSsr && getIsSsr()) {
+            // Script has already loaded during SSR
+            LoadCache.add(restProps.id || src);
+        } else if (getIsSsr && !getIsSsr()) {
             loadScript(props);
         }
     }

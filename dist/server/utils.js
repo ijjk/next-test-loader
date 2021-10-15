@@ -4,8 +4,7 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.isBlockedPage = isBlockedPage;
 exports.cleanAmpPath = cleanAmpPath;
-exports.resultFromChunks = resultFromChunks;
-exports.resultToChunks = resultToChunks;
+exports.isBot = isBot;
 var _constants = require("../shared/lib/constants");
 function isBlockedPage(pathname) {
     return _constants.BLOCKED_PAGES.includes(pathname);
@@ -20,45 +19,8 @@ function cleanAmpPath(pathname) {
     pathname = pathname.replace(/\?$/, '');
     return pathname;
 }
-function resultFromChunks(chunks) {
-    return ({ next , complete , error  })=>{
-        let canceled = false;
-        process.nextTick(()=>{
-            try {
-                for (const chunk of chunks){
-                    if (canceled) {
-                        return;
-                    }
-                    next(chunk);
-                }
-            } catch (err) {
-                if (!canceled) {
-                    canceled = true;
-                    error(err);
-                }
-            }
-            if (!canceled) {
-                canceled = true;
-                complete();
-            }
-        });
-        return ()=>{
-            canceled = true;
-        };
-    };
-}
-function resultToChunks(result) {
-    return new Promise((resolve, reject)=>{
-        const chunks = [];
-        result({
-            next: (chunk)=>{
-                chunks.push(chunk);
-            },
-            error: (error)=>reject(error)
-            ,
-            complete: ()=>resolve(chunks)
-        });
-    });
+function isBot(userAgent) {
+    return /Googlebot|Mediapartners-Google|AdsBot-Google|googleweblight|Storebot-Google|Bingbot|BingPreview|Slurp|DuckDuckBot|baiduspider|yandex|sogou|LinkedInBot|bitlybot|tumblr|vkShare|quora link preview|facebookexternalhit|facebookcatalog|Twitterbot|applebot|redditbot|Slackbot|Discordbot|WhatsApp|SkypeUriPreview|ia_archiver/i.test(userAgent);
 }
 
 //# sourceMappingURL=utils.js.map

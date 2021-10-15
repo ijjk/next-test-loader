@@ -9,6 +9,12 @@ var _parseBabel = require("./parseBabel");
 var _parseCss = require("./parseCss");
 var _parseScss = require("./parseScss");
 var _parseNotFoundError = require("./parseNotFoundError");
+var _isError = _interopRequireDefault(require("../../../../lib/is-error"));
+function _interopRequireDefault(obj) {
+    return obj && obj.__esModule ? obj : {
+        default: obj
+    };
+}
 function _interopRequireWildcard(obj) {
     if (obj && obj.__esModule) {
         return obj;
@@ -66,7 +72,7 @@ function getFileData(compilation, m) {
     ];
 }
 async function getModuleBuildError(compilation, input) {
-    if (!(typeof input === 'object' && ((input === null || input === void 0 ? void 0 : input.name) === 'ModuleBuildError' || (input === null || input === void 0 ? void 0 : input.name) === 'ModuleNotFoundError') && Boolean(input.module) && input.error instanceof Error)) {
+    if (!(typeof input === 'object' && ((input === null || input === void 0 ? void 0 : input.name) === 'ModuleBuildError' || (input === null || input === void 0 ? void 0 : input.name) === 'ModuleNotFoundError') && Boolean(input.module) && (0, _isError).default(input.error))) {
         return false;
     }
     const err = input.error;

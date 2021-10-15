@@ -9,12 +9,16 @@ var _fs = require("fs");
 var _indexJs = _interopRequireDefault(require("next/dist/compiled/arg/index.js"));
 var _export = _interopRequireDefault(require("../export"));
 var _utils = require("../server/lib/utils");
+var _trace = require("../trace");
+var _isError = _interopRequireDefault(require("../lib/is-error"));
+var _getProjectDir = require("../lib/get-project-dir");
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
         default: obj
     };
 }
 const nextExport = (argv)=>{
+    const nextExportCliSpan = (0, _trace).trace('next-export-cli');
     const validArgs = {
         // Types
         '--help': Boolean,
@@ -32,7 +36,7 @@ const nextExport = (argv)=>{
             argv
         });
     } catch (error) {
-        if (error.code === 'ARG_UNKNOWN_OPTION') {
+        if ((0, _isError).default(error) && error.code === 'ARG_UNKNOWN_OPTION') {
             return (0, _utils).printAndExit(error.message, 1);
         }
         throw error;
@@ -55,7 +59,7 @@ const nextExport = (argv)=>{
     `);
         process.exit(0);
     }
-    const dir = (0, _path).resolve(args._[0] || '.');
+    const dir = (0, _getProjectDir).getProjectDir(args._[0]);
     // Check if pages dir exists and warn if not
     if (!(0, _fs).existsSync(dir)) {
         (0, _utils).printAndExit(`> No such directory exists as the project root: ${dir}`);
@@ -65,9 +69,11 @@ const nextExport = (argv)=>{
         threads: args['--threads'],
         outdir: args['--outdir'] ? (0, _path).resolve(args['--outdir']) : (0, _path).join(dir, 'out')
     };
-    (0, _export).default(dir, options).then(()=>{
+    (0, _export).default(dir, options, nextExportCliSpan).then(()=>{
+        nextExportCliSpan.stop();
         (0, _utils).printAndExit(`Export successful. Files written to ${options.outdir}`, 0);
     }).catch((err)=>{
+        nextExportCliSpan.stop();
         (0, _utils).printAndExit(err);
     });
 };

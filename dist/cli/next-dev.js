@@ -4,13 +4,14 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 exports.nextDev = void 0;
-var _path = require("path");
 var _indexJs = _interopRequireDefault(require("next/dist/compiled/arg/index.js"));
 var _fs = require("fs");
 var _startServer = _interopRequireDefault(require("../server/lib/start-server"));
 var _utils = require("../server/lib/utils");
 var Log = _interopRequireWildcard(require("../build/output/log"));
 var _output = require("../build/output");
+var _isError = _interopRequireDefault(require("../lib/is-error"));
+var _getProjectDir = require("../lib/get-project-dir");
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
         default: obj
@@ -56,7 +57,7 @@ const nextDev = (argv)=>{
             argv
         });
     } catch (error) {
-        if (error.code === 'ARG_UNKNOWN_OPTION') {
+        if ((0, _isError).default(error) && error.code === 'ARG_UNKNOWN_OPTION') {
             return (0, _utils).printAndExit(error.message, 1);
         }
         throw error;
@@ -80,7 +81,7 @@ const nextDev = (argv)=>{
     `);
         process.exit(0);
     }
-    const dir = (0, _path).resolve(args._[0] || '.');
+    const dir = (0, _getProjectDir).getProjectDir(args._[0]);
     // Check if pages dir exists and warn if not
     if (!(0, _fs).existsSync(dir)) {
         (0, _utils).printAndExit(`> No such directory exists as the project root: ${dir}`);
@@ -103,17 +104,23 @@ const nextDev = (argv)=>{
             Log.warn('Your project has both `sass` and `node-sass` installed as dependencies, but should only use one or the other. ' + 'Please remove the `node-sass` dependency from your project. ' + ' Read more: https://nextjs.org/docs/messages/duplicate-sass');
         }
     }
-    const port = args['--port'] || process.env.PORT && parseInt(process.env.PORT) || 3000;
+    let port = args['--port'] || process.env.PORT && parseInt(process.env.PORT) || 3000;
+    // we allow the server to use a random port while testing
+    // instead of attempting to find a random port and then hope
+    // it doesn't become occupied before we leverage it
+    if (process.env.__NEXT_RAND_PORT) {
+        port = 0;
+    }
     // We do not set a default host value here to prevent breaking
     // some set-ups that rely on listening on other interfaces
     const host = args['--hostname'];
-    const appUrl = `http://${!host || host === '0.0.0.0' ? 'localhost' : host}:${port}`;
     (0, _startServer).default({
         dir,
         dev: true,
         isNextDevCommand: true
-    }, port, host).then(async (app)=>{
-        (0, _output).startedDevelopmentServer(appUrl, `${host || '0.0.0.0'}:${port}`);
+    }, port, host).then(async ({ app , actualPort  })=>{
+        const appUrl = `http://${!host || host === '0.0.0.0' ? 'localhost' : host}:${actualPort}`;
+        (0, _output).startedDevelopmentServer(appUrl, `${host || '0.0.0.0'}:${actualPort}`);
         // Start preflight after server is listening and ignore errors:
         preflight().catch(()=>{
         });

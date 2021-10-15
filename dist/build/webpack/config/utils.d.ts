@@ -2,7 +2,7 @@ import { webpack } from 'next/dist/compiled/webpack/webpack';
 import { NextConfigComplete } from '../../../server/config-shared';
 export declare type ConfigurationContext = {
     rootDirectory: string;
-    customAppFile: string | null;
+    customAppFile: RegExp;
     isDevelopment: boolean;
     isProduction: boolean;
     isServer: boolean;

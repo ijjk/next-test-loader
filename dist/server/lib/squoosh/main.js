@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 exports.processBuffer = processBuffer;
+exports.decodeBuffer = decodeBuffer;
 var _jestWorker = require("jest-worker");
 var path = _interopRequireWildcard(require("path"));
 var _utils = require("../../../shared/lib/utils");
@@ -67,11 +68,20 @@ async function processBuffer(buffer, operations, encoding, quality) {
             return Buffer.from(await worker.encodeWebp(imageData, {
                 quality
             }));
+        case 'avif':
+            return Buffer.from(await worker.encodeAvif(imageData, {
+                quality
+            }));
         case 'png':
             return Buffer.from(await worker.encodePng(imageData));
         default:
             throw Error(`Unsupported encoding format`);
     }
+}
+async function decodeBuffer(buffer) {
+    const worker = getWorker();
+    const imageData = await worker.decodeBuffer(buffer);
+    return imageData;
 }
 
 //# sourceMappingURL=main.js.map

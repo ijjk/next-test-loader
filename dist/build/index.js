@@ -38,12 +38,13 @@ var _generateBuildId = require("./generate-build-id");
 var _isWriteable = require("./is-writeable");
 var Log = _interopRequireWildcard(require("./output/log"));
 var _spinner = _interopRequireDefault(require("./spinner"));
-var _trace = require("../telemetry/trace");
+var _trace = require("../trace");
 var _utils1 = require("./utils");
 var _webpackConfig = _interopRequireDefault(require("./webpack-config"));
 var _writeBuildId = require("./write-build-id");
 var _normalizeLocalePath = require("../shared/lib/i18n/normalize-locale-path");
-var _webpack = require("next/dist/compiled/webpack/webpack");
+var _isError = _interopRequireDefault(require("../lib/is-error"));
+var _telemetryPlugin = require("./webpack/plugins/telemetry-plugin");
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
         default: obj
@@ -74,17 +75,19 @@ function _interopRequireWildcard(obj) {
 }
 async function build(dir, conf = null, reactProductionProfiling = false, debugOutput = false, runLint = true) {
     const nextBuildSpan = (0, _trace).trace('next-build');
-    return nextBuildSpan.traceAsyncFn(async ()=>{
-        var ref, ref1, ref2;
+    const buildResult = await nextBuildSpan.traceAsyncFn(async ()=>{
+        var ref5;
         // attempt to load global env values so they are available in next.config.js
         const { loadedEnvFiles  } = nextBuildSpan.traceChild('load-dotenv').traceFn(()=>(0, _env).loadEnvConfig(dir, false, Log)
         );
         const config = await nextBuildSpan.traceChild('load-next-config').traceAsyncFn(()=>(0, _config).default(_constants1.PHASE_PRODUCTION_BUILD, dir, conf)
         );
+        const distDir = _path.default.join(dir, config.distDir);
+        (0, _trace).setGlobal('phase', _constants1.PHASE_PRODUCTION_BUILD);
+        (0, _trace).setGlobal('distDir', distDir);
         const { target  } = config;
         const buildId = await nextBuildSpan.traceChild('generate-buildid').traceAsyncFn(()=>(0, _generateBuildId).generateBuildId(config.generateBuildId, _indexCjs.nanoid)
         );
-        const distDir = _path.default.join(dir, config.distDir);
         const customRoutes = await nextBuildSpan.traceChild('load-custom-routes').traceAsyncFn(()=>(0, _loadCustomRoutes).default(config)
         );
         const { headers , rewrites , redirects  } = customRoutes;
@@ -105,7 +108,7 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
         const pagesDir = (0, _findPagesDir).findPagesDir(dir);
         const hasPublicDir = await (0, _fileExists).fileExists(publicDir);
         telemetry.record((0, _events).eventCliSession(_constants1.PHASE_PRODUCTION_BUILD, dir, {
-            webpackVersion: _webpack.isWebpack5 ? 5 : 4,
+            webpackVersion: 5,
             cliCommand: 'build',
             isSrcDir: _path.default.relative(dir, pagesDir).startsWith('src'),
             hasNowJson: !!await (0, _findUp).default('now.json', {
@@ -115,32 +118,33 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
         }));
         (0, _events).eventNextPlugins(_path.default.resolve(dir)).then((events)=>telemetry.record(events)
         );
-        const ignoreTypeScriptErrors = Boolean((ref = config.typescript) === null || ref === void 0 ? void 0 : ref.ignoreBuildErrors);
+        const ignoreTypeScriptErrors = Boolean(config.typescript.ignoreBuildErrors);
         const typeCheckStart = process.hrtime();
         const typeCheckingSpinner = (0, _spinner).default({
             prefixText: `${Log.prefixes.info} ${ignoreTypeScriptErrors ? 'Skipping validation of types' : 'Checking validity of types'}`
         });
-        const verifyResult = await nextBuildSpan.traceChild('verify-typescript-setup').traceAsyncFn(()=>(0, _verifyTypeScriptSetup).verifyTypeScriptSetup(dir, pagesDir, !ignoreTypeScriptErrors, !config.images.disableStaticImages, cacheDir)
+        const verifyResult = await nextBuildSpan.traceChild('verify-typescript-setup').traceAsyncFn(()=>(0, _verifyTypeScriptSetup).verifyTypeScriptSetup(dir, pagesDir, !ignoreTypeScriptErrors, config, cacheDir)
         );
         const typeCheckEnd = process.hrtime(typeCheckStart);
         if (!ignoreTypeScriptErrors) {
-            var ref9, ref10, ref11;
+            var ref, ref1, ref2;
             telemetry.record((0, _events).eventTypeCheckCompleted({
                 durationInSeconds: typeCheckEnd[0],
                 typescriptVersion: verifyResult.version,
-                inputFilesCount: (ref9 = verifyResult.result) === null || ref9 === void 0 ? void 0 : ref9.inputFilesCount,
-                totalFilesCount: (ref10 = verifyResult.result) === null || ref10 === void 0 ? void 0 : ref10.totalFilesCount,
-                incremental: (ref11 = verifyResult.result) === null || ref11 === void 0 ? void 0 : ref11.incremental
+                inputFilesCount: (ref = verifyResult.result) === null || ref === void 0 ? void 0 : ref.inputFilesCount,
+                totalFilesCount: (ref1 = verifyResult.result) === null || ref1 === void 0 ? void 0 : ref1.totalFilesCount,
+                incremental: (ref2 = verifyResult.result) === null || ref2 === void 0 ? void 0 : ref2.incremental
             }));
         }
         if (typeCheckingSpinner) {
             typeCheckingSpinner.stopAndPersist();
         }
-        const ignoreESLint = Boolean((ref1 = config.eslint) === null || ref1 === void 0 ? void 0 : ref1.ignoreDuringBuilds);
-        const lintDirs = (ref2 = config.eslint) === null || ref2 === void 0 ? void 0 : ref2.dirs;
+        const ignoreESLint = Boolean(config.eslint.ignoreDuringBuilds);
+        const eslintCacheDir = _path.default.join(cacheDir, 'eslint/');
         if (!ignoreESLint && runLint) {
             await nextBuildSpan.traceChild('verify-and-lint').traceAsyncFn(async ()=>{
-                await (0, _verifyAndLint).verifyAndLint(dir, lintDirs, config.experimental.cpus, config.experimental.workerThreads, telemetry);
+                var ref;
+                await (0, _verifyAndLint).verifyAndLint(dir, eslintCacheDir, (ref = config.eslint) === null || ref === void 0 ? void 0 : ref.dirs, config.experimental.cpus, config.experimental.workerThreads, telemetry);
             });
         }
         const buildSpinner = (0, _spinner).default({
@@ -158,7 +162,7 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
             previewModeSigningKey: _crypto.default.randomBytes(32).toString('hex'),
             previewModeEncryptionKey: _crypto.default.randomBytes(32).toString('hex')
         };
-        const mappedPages = nextBuildSpan.traceChild('create-pages-mapping').traceFn(()=>(0, _entries).createPagesMapping(pagePaths, config.pageExtensions)
+        const mappedPages = nextBuildSpan.traceChild('create-pages-mapping').traceFn(()=>(0, _entries).createPagesMapping(pagePaths, config.pageExtensions, false)
         );
         const entrypoints = nextBuildSpan.traceChild('create-entrypoints').traceFn(()=>(0, _entries).createEntrypoints(mappedPages, target, buildId, previewProps, config, loadedEnvFiles)
         );
@@ -264,7 +268,7 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
                 });
                 return true;
             } catch (err) {
-                if (err.code === 'EPERM') {
+                if ((0, _isError).default(err) && err.code === 'EPERM') {
                     return false;
                 }
                 throw err;
@@ -302,7 +306,8 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
                 ignore: []
             })
         );
-        const configs = await nextBuildSpan.traceChild('generate-webpack-config').traceAsyncFn(()=>Promise.all([
+        const runWebpackSpan = nextBuildSpan.traceChild('run-webpack-compiler');
+        const configs = await runWebpackSpan.traceChild('generate-webpack-config').traceAsyncFn(()=>Promise.all([
                 (0, _webpackConfig).default(dir, {
                     buildId,
                     reactProductionProfiling,
@@ -311,7 +316,8 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
                     target,
                     pagesDir,
                     entrypoints: entrypoints.client,
-                    rewrites
+                    rewrites,
+                    runWebpackSpan
                 }),
                 (0, _webpackConfig).default(dir, {
                     buildId,
@@ -321,7 +327,8 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
                     target,
                     pagesDir,
                     entrypoints: entrypoints.server,
-                    rewrites
+                    rewrites,
+                    runWebpackSpan
                 }), 
             ])
         );
@@ -335,8 +342,10 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
             errors: []
         };
         // We run client and server compilation separately to optimize for memory usage
-        await nextBuildSpan.traceChild('run-webpack-compiler').traceAsyncFn(async ()=>{
-            const clientResult = await (0, _compiler).runCompiler(clientConfig);
+        await runWebpackSpan.traceAsyncFn(async ()=>{
+            const clientResult = await (0, _compiler).runCompiler(clientConfig, {
+                runWebpackSpan
+            });
             // Fail build if clientResult contains errors
             if (clientResult.errors.length > 0) {
                 result = {
@@ -348,7 +357,9 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
                     ]
                 };
             } else {
-                const serverResult = await (0, _compiler).runCompiler(configs[1]);
+                const serverResult = await (0, _compiler).runCompiler(configs[1], {
+                    runWebpackSpan
+                });
                 result = {
                     warnings: [
                         ...clientResult.warnings,
@@ -412,6 +423,8 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
         const serverPropsPages = new Set();
         const additionalSsgPaths = new Map();
         const additionalSsgPathsEncoded = new Map();
+        const pageTraceIncludes = new Map();
+        const pageTraceExcludes = new Map();
         const pageInfos = new Map();
         const pagesManifest = JSON.parse(await _fs.promises.readFile(manifestPath, 'utf8'));
         const buildManifest = JSON.parse(await _fs.promises.readFile(buildManifestPath, 'utf8'));
@@ -465,8 +478,8 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
             const errorPageHasCustomGetInitialProps = nonStaticErrorPageSpan.traceAsyncFn(async ()=>hasCustomErrorPage && await staticWorkers.hasCustomGetInitialProps('/_error', distDir, isLikeServerless, runtimeEnvConfig, false)
             );
             const errorPageStaticResult = nonStaticErrorPageSpan.traceAsyncFn(async ()=>{
-                var ref12, ref13;
-                return hasCustomErrorPage && staticWorkers.isPageStatic('/_error', distDir, isLikeServerless, runtimeEnvConfig, config.httpAgentOptions, (ref12 = config.i18n) === null || ref12 === void 0 ? void 0 : ref12.locales, (ref13 = config.i18n) === null || ref13 === void 0 ? void 0 : ref13.defaultLocale);
+                var ref, ref10;
+                return hasCustomErrorPage && staticWorkers.isPageStatic('/_error', distDir, isLikeServerless, runtimeEnvConfig, config.httpAgentOptions, (ref = config.i18n) === null || ref === void 0 ? void 0 : ref.locales, (ref10 = config.i18n) === null || ref10 === void 0 ? void 0 : ref10.defaultLocale);
             });
             // we don't output _app in serverless mode so use _app export
             // from _error instead
@@ -474,9 +487,9 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
             const customAppGetInitialPropsPromise = staticWorkers.hasCustomGetInitialProps(appPageToCheck, distDir, isLikeServerless, runtimeEnvConfig, true);
             const namedExportsPromise = staticWorkers.getNamedExports(appPageToCheck, distDir, isLikeServerless, runtimeEnvConfig);
             // eslint-disable-next-line no-shadow
-            let isNextImageImported1;
+            let isNextImageImported;
             // eslint-disable-next-line no-shadow
-            let hasSsrAmpPages1 = false;
+            let hasSsrAmpPages = false;
             const computedManifestData = await (0, _utils1).computeFromManifest(buildManifest, distDir, config.experimental.gzipSize);
             await Promise.all(pageKeys.map(async (page)=>{
                 const checkPageSpan = staticCheckSpan.traceChild('check-page', {
@@ -494,18 +507,22 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
                         try {
                             let isPageStaticSpan = checkPageSpan.traceChild('is-page-static');
                             let workerResult = await isPageStaticSpan.traceAsyncFn(()=>{
-                                var ref14, ref15;
-                                return staticWorkers.isPageStatic(page, distDir, isLikeServerless, runtimeEnvConfig, config.httpAgentOptions, (ref14 = config.i18n) === null || ref14 === void 0 ? void 0 : ref14.locales, (ref15 = config.i18n) === null || ref15 === void 0 ? void 0 : ref15.defaultLocale, isPageStaticSpan.id);
+                                var ref, ref14;
+                                return staticWorkers.isPageStatic(page, distDir, isLikeServerless, runtimeEnvConfig, config.httpAgentOptions, (ref = config.i18n) === null || ref === void 0 ? void 0 : ref.locales, (ref14 = config.i18n) === null || ref14 === void 0 ? void 0 : ref14.defaultLocale, isPageStaticSpan.id);
                             });
+                            if (config.experimental.outputFileTracing) {
+                                pageTraceIncludes.set(page, workerResult.traceIncludes || []);
+                                pageTraceExcludes.set(page, workerResult.traceExcludes || []);
+                            }
                             if (workerResult.isStatic === false && (workerResult.isHybridAmp || workerResult.isAmpOnly)) {
-                                hasSsrAmpPages1 = true;
+                                hasSsrAmpPages = true;
                             }
                             if (workerResult.isHybridAmp) {
                                 isHybridAmp = true;
                                 hybridAmpPages.add(page);
                             }
                             if (workerResult.isNextImageImported) {
-                                isNextImageImported1 = true;
+                                isNextImageImported = true;
                             }
                             if (workerResult.hasStaticProps) {
                                 ssgPages.add(page);
@@ -540,7 +557,7 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
                                 throw new Error(`\`pages${page}\` ${_constants.STATIC_STATUS_PAGE_GET_INITIAL_PROPS_ERROR}`);
                             }
                         } catch (err) {
-                            if (err.message !== 'INVALID_DEFAULT_EXPORT') throw err;
+                            if ((0, _isError).default(err) && err.message !== 'INVALID_DEFAULT_EXPORT') throw err;
                             invalidPages.add(page);
                         }
                     }
@@ -562,8 +579,8 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
             const returnValue = {
                 customAppGetInitialProps: await customAppGetInitialPropsPromise,
                 namedExports: await namedExportsPromise,
-                isNextImageImported: isNextImageImported1,
-                hasSsrAmpPages: hasSsrAmpPages1,
+                isNextImageImported,
+                hasSsrAmpPages,
                 hasNonStaticErrorPage: nonStaticErrorPage
             };
             if (!sharedPool) staticWorkers.end();
@@ -575,6 +592,54 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
         }
         if (!hasSsrAmpPages) {
             requiredServerFiles.ignore.push(_path.default.relative(dir, _path.default.join(_path.default.dirname(require.resolve('next/dist/compiled/@ampproject/toolbox-optimizer')), '**/*')));
+        }
+        if (config.experimental.outputFileTracing) {
+            const globOrig = require('next/dist/compiled/glob');
+            const glob = (pattern)=>{
+                return new Promise((resolve, reject)=>{
+                    globOrig(pattern, {
+                        cwd: dir
+                    }, (err, files)=>{
+                        if (err) {
+                            return reject(err);
+                        }
+                        resolve(files);
+                    });
+                });
+            };
+            for (const page of pageKeys){
+                const includeGlobs = pageTraceIncludes.get(page);
+                const excludeGlobs = pageTraceExcludes.get(page);
+                if (!(includeGlobs === null || includeGlobs === void 0 ? void 0 : includeGlobs.length) && !(excludeGlobs === null || excludeGlobs === void 0 ? void 0 : excludeGlobs.length)) {
+                    continue;
+                }
+                const traceFile = _path.default.join(distDir, 'server/pages', `${page}.js.nft.json`);
+                const traceContent = JSON.parse(await _fs.promises.readFile(traceFile, 'utf8'));
+                let includes = [];
+                let excludes = [];
+                if (includeGlobs === null || includeGlobs === void 0 ? void 0 : includeGlobs.length) {
+                    for (const includeGlob of includeGlobs){
+                        includes.push(...await glob(includeGlob));
+                    }
+                }
+                if (excludeGlobs === null || excludeGlobs === void 0 ? void 0 : excludeGlobs.length) {
+                    for (const excludeGlob of excludeGlobs){
+                        excludes.push(...await glob(excludeGlob));
+                    }
+                }
+                const combined = new Set([
+                    ...traceContent.files,
+                    ...includes
+                ]);
+                excludes.forEach((file)=>combined.delete(file)
+                );
+                await _fs.promises.writeFile(traceFile, JSON.stringify({
+                    version: traceContent.version,
+                    files: [
+                        ...combined
+                    ]
+                }));
+            }
         }
         if (serverPropsPages.size > 0 || ssgPages.size > 0) {
             // We update the routes manifest after the build with the
@@ -620,6 +685,15 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
             requiredServerFiles.files.push(...cssFilePaths.map((filePath)=>_path.default.join(config.distDir, filePath)
             ));
         }
+        const optimizeCss = {
+            featureName: 'experimental/optimizeCss',
+            invocationCount: config.experimental.optimizeCss ? 1 : 0
+        };
+        telemetry.record({
+            // noop
+            eventName: _events.EVENT_BUILD_FEATURE_USAGE,
+            payload: optimizeCss
+        });
         await _fs.promises.writeFile(_path.default.join(distDir, _constants1.SERVER_FILES_MANIFEST), JSON.stringify(requiredServerFiles), 'utf8');
         const finalPrerenderRoutes = {
         };
@@ -745,12 +819,12 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
                                 const isDynamic = (0, _utils).isDynamicRoute(page);
                                 const isFallback = isSsg && ssgStaticFallbackPages.has(page);
                                 for (const locale of i18n.locales){
-                                    var ref16;
+                                    var ref;
                                     // skip fallback generation for SSG pages without fallback mode
                                     if (isSsg && isDynamic && !isFallback) continue;
                                     const outputPath = `/${locale}${page === '/' ? '' : page}`;
                                     defaultMap[outputPath] = {
-                                        page: ((ref16 = defaultMap[page]) === null || ref16 === void 0 ? void 0 : ref16.page) || page,
+                                        page: ((ref = defaultMap[page]) === null || ref === void 0 ? void 0 : ref.page) || page,
                                         query: {
                                             __nextLocale: locale
                                         }
@@ -768,7 +842,7 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
                         return defaultMap;
                     }
                 };
-                await exportApp(dir, exportOptions, exportConfig);
+                await exportApp(dir, exportOptions, nextBuildSpan, exportConfig);
                 const postBuildSpinner = (0, _spinner).default({
                     prefixText: `${Log.prefixes.info} Finalizing page optimization`
                 });
@@ -779,7 +853,7 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
                     await _fs.promises.unlink(serverBundle);
                 }
                 const serverOutputDir = _path.default.join(distDir, isLikeServerless ? _constants1.SERVERLESS_DIRECTORY : _constants1.SERVER_DIRECTORY);
-                const moveExportedPage = async (originPage, page1, file, isSsg, ext, additionalSsgFile = false)=>{
+                const moveExportedPage = async (originPage, page, file, isSsg, ext, additionalSsgFile = false)=>{
                     return staticGenerationSpan.traceChild('move-exported-page').traceAsyncFn(async ()=>{
                         file = `${file}.${ext}`;
                         const orig = _path.default.join(exportOptions.outdir, file);
@@ -791,10 +865,10 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
                         const dest = _path.default.join(distDir, isLikeServerless ? _constants1.SERVERLESS_DIRECTORY : _constants1.SERVER_DIRECTORY, relativeDest);
                         if (!isSsg && !// don't add static status page to manifest if it's
                         // the default generated version e.g. no pages/500
-                        (_constants1.STATIC_STATUS_PAGES.includes(page1) && !usedStaticStatusPages.includes(page1))) {
-                            pagesManifest[page1] = relativeDest;
+                        (_constants1.STATIC_STATUS_PAGES.includes(page) && !usedStaticStatusPages.includes(page))) {
+                            pagesManifest[page] = relativeDest;
                         }
-                        const isNotFound = ssgNotFoundPaths.includes(page1);
+                        const isNotFound = ssgNotFoundPaths.includes(page);
                         // for SSG files with i18n the non-prerendered variants are
                         // output with the locale prefixed so don't attempt moving
                         // without the prefix
@@ -806,21 +880,21 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
                         } else if (i18n && !isSsg) {
                             // this will be updated with the locale prefixed variant
                             // since all files are output with the locale prefix
-                            delete pagesManifest[page1];
+                            delete pagesManifest[page];
                         }
                         if (i18n) {
                             if (additionalSsgFile) return;
                             for (const locale of i18n.locales){
-                                const curPath = `/${locale}${page1 === '/' ? '' : page1}`;
-                                const localeExt = page1 === '/' ? _path.default.extname(file) : '';
+                                const curPath = `/${locale}${page === '/' ? '' : page}`;
+                                const localeExt = page === '/' ? _path.default.extname(file) : '';
                                 const relativeDestNoPages = relativeDest.substr('pages/'.length);
                                 if (isSsg && ssgNotFoundPaths.includes(curPath)) {
                                     continue;
                                 }
                                 const updatedRelativeDest = _path.default.join('pages', locale + localeExt, // if it's the top-most index page we want it to be locale.EXT
                                 // instead of locale/index.html
-                                page1 === '/' ? '' : relativeDestNoPages).replace(/\\/g, '/');
-                                const updatedOrig = _path.default.join(exportOptions.outdir, locale + localeExt, page1 === '/' ? '' : file);
+                                page === '/' ? '' : relativeDestNoPages).replace(/\\/g, '/');
+                                const updatedOrig = _path.default.join(exportOptions.outdir, locale + localeExt, page === '/' ? '' : file);
                                 const updatedDest = _path.default.join(distDir, isLikeServerless ? _constants1.SERVERLESS_DIRECTORY : _constants1.SERVER_DIRECTORY, updatedRelativeDest);
                                 if (!isSsg) {
                                     pagesManifest[curPath] = updatedRelativeDest;
@@ -935,7 +1009,7 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
             });
         }
         const analysisEnd = process.hrtime(analysisBegin);
-        var ref17;
+        var ref18;
         telemetry.record((0, _events).eventBuildOptimize(pagePaths, {
             durationInSeconds: analysisEnd[0],
             staticPageCount: staticPages.size,
@@ -943,7 +1017,7 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
             serverPropsPageCount: serverPropsPages.size,
             ssrPageCount: pagePaths.length - (staticPages.size + ssgPages.size + serverPropsPages.size),
             hasStatic404: useStatic404,
-            hasReportWebVitals: (ref17 = namedExports === null || namedExports === void 0 ? void 0 : namedExports.includes('reportWebVitals')) !== null && ref17 !== void 0 ? ref17 : false,
+            hasReportWebVitals: (ref18 = namedExports === null || namedExports === void 0 ? void 0 : namedExports.includes('reportWebVitals')) !== null && ref18 !== void 0 ? ref18 : false,
             rewritesCount: combinedRewrites.length,
             headersCount: headers.length,
             redirectsCount: redirects.length - 1,
@@ -954,8 +1028,13 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
             redirectsWithHasCount: redirects.filter((r)=>!!r.has
             ).length
         }));
+        const telemetryPlugin = (ref5 = clientConfig.plugins) === null || ref5 === void 0 ? void 0 : ref5.find(isTelemetryPlugin);
+        if (telemetryPlugin) {
+            const events = (0, _events).eventBuildFeatureUsage(telemetryPlugin);
+            telemetry.record(events);
+        }
         if (ssgPages.size > 0) {
-            var ref18;
+            var ref;
             const finalDynamicRoutes = {
             };
             tbdPrerenderRoutes.forEach((tbdRoute)=>{
@@ -979,7 +1058,7 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
             await generateClientSsgManifest(prerenderManifest, {
                 distDir,
                 buildId,
-                locales: ((ref18 = config.i18n) === null || ref18 === void 0 ? void 0 : ref18.locales) || []
+                locales: ((ref = config.i18n) === null || ref === void 0 ? void 0 : ref.locales) || []
             });
         } else {
             const prerenderManifest = {
@@ -1047,6 +1126,9 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
         await nextBuildSpan.traceChild('telemetry-flush').traceAsyncFn(()=>telemetry.flush()
         );
     });
+    // Ensure all traces are flushed before finishing the command
+    await (0, _trace).flushAllTraces();
+    return buildResult;
 }
 function generateClientSsgManifest(prerenderManifest, { buildId , distDir , locales  }) {
     const ssgPages = new Set([
@@ -1058,6 +1140,9 @@ function generateClientSsgManifest(prerenderManifest, { buildId , distDir , loca
     ]);
     const clientSsgManifestContent = `self.__SSG_MANIFEST=${(0, _devalue).default(ssgPages)};self.__SSG_MANIFEST_CB&&self.__SSG_MANIFEST_CB()`;
     (0, _fs).writeFileSync(_path.default.join(distDir, _constants1.CLIENT_STATIC_FILES_PATH, buildId, '_ssgManifest.js'), clientSsgManifestContent);
+}
+function isTelemetryPlugin(plugin) {
+    return plugin instanceof _telemetryPlugin.TelemetryPlugin;
 }
 
 //# sourceMappingURL=index.js.map

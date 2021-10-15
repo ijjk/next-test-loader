@@ -4,11 +4,12 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 exports.nextStart = void 0;
-var _path = require("path");
 var _indexJs = _interopRequireDefault(require("next/dist/compiled/arg/index.js"));
 var _startServer = _interopRequireDefault(require("../server/lib/start-server"));
 var _utils = require("../server/lib/utils");
 var Log = _interopRequireWildcard(require("../build/output/log"));
+var _isError = _interopRequireDefault(require("../lib/is-error"));
+var _getProjectDir = require("../lib/get-project-dir");
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
         default: obj
@@ -54,7 +55,7 @@ const nextStart = (argv)=>{
             argv
         });
     } catch (error) {
-        if (error.code === 'ARG_UNKNOWN_OPTION') {
+        if ((0, _isError).default(error) && error.code === 'ARG_UNKNOWN_OPTION') {
             return (0, _utils).printAndExit(error.message, 1);
         }
         throw error;
@@ -78,14 +79,17 @@ const nextStart = (argv)=>{
     `);
         process.exit(0);
     }
-    const dir = (0, _path).resolve(args._[0] || '.');
-    const port = args['--port'] || process.env.PORT && parseInt(process.env.PORT) || 3000;
+    const dir = (0, _getProjectDir).getProjectDir(args._[0]);
+    let port = args['--port'] || process.env.PORT && parseInt(process.env.PORT) || 3000;
     const host = args['--hostname'] || '0.0.0.0';
-    const appUrl = `http://${host === '0.0.0.0' ? 'localhost' : host}:${port}`;
+    if (process.env.__NEXT_RAND_PORT) {
+        port = 0;
+    }
     (0, _startServer).default({
         dir
-    }, port, host).then(async (app)=>{
-        Log.ready(`started server on ${host}:${port}, url: ${appUrl}`);
+    }, port, host).then(async ({ app , actualPort  })=>{
+        const appUrl = `http://${host === '0.0.0.0' ? 'localhost' : host}:${actualPort}`;
+        Log.ready(`started server on ${host}:${actualPort}, url: ${appUrl}`);
         await app.prepare();
     }).catch((err)=>{
         console.error(err);

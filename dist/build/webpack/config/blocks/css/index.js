@@ -4,20 +4,73 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.css = exports.regexLikeCss = void 0;
 var _lodashCurry = _interopRequireDefault(require("next/dist/compiled/lodash.curry"));
-var _path = _interopRequireDefault(require("path"));
-var _webpack = require("next/dist/compiled/webpack/webpack");
 var _miniCssExtractPlugin = _interopRequireDefault(require("../../../plugins/mini-css-extract-plugin"));
 var _helpers = require("../../helpers");
 var _utils = require("../../utils");
 var _loaders = require("./loaders");
 var _messages = require("./messages");
 var _plugins = require("./plugins");
+var _postcss = _interopRequireDefault(require("postcss"));
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
         default: obj
     };
 }
-const regexLikeCss = /\.(css|scss|sass)(\.webpack\[javascript\/auto\])?$/;
+// @ts-ignore backwards compat
+_postcss.default.plugin = function postcssPlugin(name, initializer) {
+    function creator(...args) {
+        let transformer = initializer(...args);
+        transformer.postcssPlugin = name;
+        // transformer.postcssVersion = new Processor().version
+        return transformer;
+    }
+    let cache;
+    Object.defineProperty(creator, 'postcss', {
+        get () {
+            if (!cache) cache = creator();
+            return cache;
+        }
+    });
+    creator.process = function(css, processOpts, pluginOpts) {
+        return (0, _postcss).default([
+            creator(pluginOpts)
+        ]).process(css, processOpts);
+    };
+    return creator;
+};
+// @ts-ignore backwards compat
+_postcss.default.vendor = {
+    /**
+   * Returns the vendor prefix extracted from an input string.
+   *
+   * @param {string} prop String with or without vendor prefix.
+   *
+   * @return {string} vendor prefix or empty string
+   *
+   * @example
+   * postcss.vendor.prefix('-moz-tab-size') //=> '-moz-'
+   * postcss.vendor.prefix('tab-size')      //=> ''
+   */ prefix: function prefix(prop) {
+        const match = prop.match(/^(-\w+-)/);
+        if (match) {
+            return match[0];
+        }
+        return '';
+    },
+    /**
+   * Returns the input string stripped of its vendor prefix.
+   *
+   * @param {string} prop String with or without vendor prefix.
+   *
+   * @return {string} String name without vendor prefixes.
+   *
+   * @example
+   * postcss.vendor.unprefixed('-moz-tab-size') //=> 'tab-size'
+   */ unprefixed: function unprefixed(prop) {
+        return prop.replace(/^-\w+-/, '');
+    }
+};
+const regexLikeCss = /\.(css|scss|sass)$/;
 exports.regexLikeCss = regexLikeCss;
 // RegExps for Style Sheets
 const regexCssGlobal = /(?<!\.module)\.css$/;
@@ -25,7 +78,7 @@ const regexCssModules = /\.module\.css$/;
 // RegExps for Syntactically Awesome Style Sheets
 const regexSassGlobal = /(?<!\.module)\.(scss|sass)$/;
 const regexSassModules = /\.module\.(scss|sass)$/;
-const css = (0, _lodashCurry).default(async function css1(ctx, config) {
+const css = (0, _lodashCurry).default(async function css(ctx, config) {
     const { prependData: sassPrependData , additionalData: sassAdditionalData , ...sassOptions } = ctx.sassOptions;
     const sassPreprocessors = [
         // First, process files with `sass-loader`: this inlines content, and
@@ -276,7 +329,7 @@ const css = (0, _lodashCurry).default(async function css1(ctx, config) {
                 use: {
                     loader: 'error-loader',
                     options: {
-                        reason: (0, _messages).getGlobalImportError(ctx.customAppFile && _path.default.relative(ctx.rootDirectory, ctx.customAppFile))
+                        reason: (0, _messages).getGlobalImportError()
                     }
                 }
             }, 
@@ -314,8 +367,7 @@ const css = (0, _lodashCurry).default(async function css1(ctx, config) {
         // Extract CSS as CSS file(s) in the client-side production bundle.
         fns.push((0, _helpers).plugin(// @ts-ignore webpack 5 compat
         new _miniCssExtractPlugin.default({
-            // noop
-            experimentalUseImportModule: _webpack.isWebpack5,
+            experimentalUseImportModule: true,
             filename: 'static/css/[contenthash].css',
             chunkFilename: 'static/css/[contenthash].css',
             // Next.js guarantees that CSS order "doesn't matter", due to imposed

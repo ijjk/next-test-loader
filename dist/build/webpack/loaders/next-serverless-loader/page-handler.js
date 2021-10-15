@@ -13,7 +13,8 @@ var _denormalizePagePath = require("../../../../server/denormalize-page-path");
 var _loadCustomRoutes = require("../../../../lib/load-custom-routes");
 var _getRouteFromAssetPath = _interopRequireDefault(require("../../../../shared/lib/router/utils/get-route-from-asset-path"));
 var _constants = require("../../../../shared/lib/constants");
-var _utils2 = require("../../../../server/utils");
+var _renderResult = _interopRequireDefault(require("../../../../server/render-result"));
+var _isError = _interopRequireDefault(require("../../../../lib/is-error"));
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
         default: obj
@@ -26,13 +27,13 @@ function getPageHandler(ctx) {
         let Component;
         let App;
         let config;
-        let Document1;
-        let Error1;
+        let Document;
+        let Error;
         let notFoundMod;
         let getStaticProps;
         let getStaticPaths;
         let getServerSideProps;
-        [getStaticProps, getServerSideProps, getStaticPaths, Component, App, config, { default: Document1  }, { default: Error1  }, notFoundMod, ] = await Promise.all([
+        [getStaticProps, getServerSideProps, getStaticPaths, Component, App, config, { default: Document  }, { default: Error  }, notFoundMod, ] = await Promise.all([
             pageGetStaticProps,
             pageGetServerSideProps,
             pageGetStaticPaths,
@@ -51,7 +52,7 @@ function getPageHandler(ctx) {
         }, 'cookies', (0, _apiUtils).getCookieParser(req.headers));
         const options = {
             App,
-            Document: Document1,
+            Document,
             buildManifest,
             getStaticProps,
             getServerSideProps,
@@ -66,6 +67,7 @@ function getPageHandler(ctx) {
             previewProps: encodedPreviewProps,
             env: process.env,
             basePath,
+            supportsDynamicHTML: false,
             ..._renderOpts
         };
         let _nextData = false;
@@ -199,7 +201,7 @@ function getPageHandler(ctx) {
                             res.end('{"notFound":true}');
                             return null;
                         }
-                        const NotFoundComponent = notFoundMod ? notFoundMod.default : Error1;
+                        const NotFoundComponent = notFoundMod ? notFoundMod.default : Error;
                         const errPathname = notFoundMod ? '/404' : '/_error';
                         const result2 = await (0, _render).renderToHTML(req, res, errPathname, parsedUrl.query, Object.assign({
                         }, options, {
@@ -212,14 +214,18 @@ function getPageHandler(ctx) {
                             locales: i18n === null || i18n === void 0 ? void 0 : i18n.locales,
                             defaultLocale: i18n === null || i18n === void 0 ? void 0 : i18n.defaultLocale
                         }));
-                        const html = result2 ? (await (0, _utils2).resultToChunks(result2)).join('') : '';
-                        (0, _sendPayload).sendPayload(req, res, html, 'html', {
+                        (0, _sendPayload).sendRenderResult({
+                            req,
+                            res,
+                            result: result2 !== null && result2 !== void 0 ? result2 : _renderResult.default.empty,
+                            type: 'html',
                             generateEtags,
-                            poweredByHeader
-                        }, {
-                            private: isPreviewMode || page === '/404',
-                            stateful: !!getServerSideProps,
-                            revalidate: renderOpts.revalidate
+                            poweredByHeader,
+                            options: {
+                                private: isPreviewMode || page === '/404',
+                                stateful: !!getServerSideProps,
+                                revalidate: renderOpts.revalidate
+                            }
                         });
                         return null;
                     } else if (renderOpts.isRedirect && !_nextData) {
@@ -240,13 +246,18 @@ function getPageHandler(ctx) {
                         res.end();
                         return null;
                     } else {
-                        (0, _sendPayload).sendPayload(req, res, _nextData ? JSON.stringify(renderOpts.pageData) : result, _nextData ? 'json' : 'html', {
+                        (0, _sendPayload).sendRenderResult({
+                            req,
+                            res,
+                            result: _nextData ? _renderResult.default.fromStatic(JSON.stringify(renderOpts.pageData)) : result !== null && result !== void 0 ? result : _renderResult.default.empty,
+                            type: _nextData ? 'json' : 'html',
                             generateEtags,
-                            poweredByHeader
-                        }, {
-                            private: isPreviewMode || renderOpts.is404Page,
-                            stateful: !!getServerSideProps,
-                            revalidate: renderOpts.revalidate
+                            poweredByHeader,
+                            options: {
+                                private: isPreviewMode || renderOpts.is404Page,
+                                stateful: !!getServerSideProps,
+                                revalidate: renderOpts.revalidate
+                            }
                         });
                         return null;
                     }
@@ -258,12 +269,12 @@ function getPageHandler(ctx) {
                 html: result,
                 renderOpts
             };
-            return result ? (await (0, _utils2).resultToChunks(result)).join('') : null;
+            return result ? result.toUnchunkedString() : null;
         } catch (err) {
             if (!parsedUrl) {
                 parsedUrl = (0, _url).parse(req.url, true);
             }
-            if (err.code === 'ENOENT') {
+            if ((0, _isError).default(err) && err.code === 'ENOENT') {
                 res.statusCode = 404;
             } else if (err instanceof _utils.DecodeError) {
                 res.statusCode = 400;
@@ -276,7 +287,7 @@ function getPageHandler(ctx) {
                         getStaticProps: undefined,
                         getStaticPaths: undefined,
                         getServerSideProps: undefined,
-                        Component: Error1,
+                        Component: Error,
                         err: err,
                         // Short-circuit rendering:
                         isDataReq: true
@@ -297,10 +308,10 @@ function getPageHandler(ctx) {
                 getStaticProps: undefined,
                 getStaticPaths: undefined,
                 getServerSideProps: undefined,
-                Component: Error1,
+                Component: Error,
                 err: res.statusCode === 404 ? undefined : err
             }));
-            return result2 ? (await (0, _utils2).resultToChunks(result2)).join('') : null;
+            return result2 ? result2.toUnchunkedString() : null;
         }
     }
     return {
@@ -309,7 +320,11 @@ function getPageHandler(ctx) {
             try {
                 const html = await renderReqToHTML(req, res);
                 if (html) {
-                    (0, _sendPayload).sendPayload(req, res, html, 'html', {
+                    (0, _sendPayload).sendRenderResult({
+                        req,
+                        res,
+                        result: _renderResult.default.fromStatic(html),
+                        type: 'html',
                         generateEtags,
                         poweredByHeader
                     });

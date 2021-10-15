@@ -4,12 +4,20 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.__overrideCssConfiguration = __overrideCssConfiguration;
 var _plugins = require("./plugins");
+var _postcss = _interopRequireDefault(require("postcss"));
+function _interopRequireDefault(obj) {
+    return obj && obj.__esModule ? obj : {
+        default: obj
+    };
+}
 async function __overrideCssConfiguration(rootDirectory, isProduction, config) {
     var ref, ref1;
     const postCssPlugins = await (0, _plugins).getPostCssPlugins(rootDirectory, isProduction);
     function patch(rule) {
         if (rule.options && typeof rule.options === 'object' && typeof rule.options.postcssOptions === 'object') {
             rule.options.postcssOptions.plugins = postCssPlugins;
+        } else if (rule.options && typeof rule.options === 'object' && typeof rule.options.postcss !== 'undefined') {
+            rule.options.postcss = (0, _postcss).default(postCssPlugins);
         } else if (Array.isArray(rule.oneOf)) {
             rule.oneOf.forEach(patch);
         } else if (Array.isArray(rule.use)) {

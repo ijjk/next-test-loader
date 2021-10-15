@@ -34,8 +34,12 @@ function withFuture(key, map, generator) {
         resolve: resolver,
         future: prom
     });
-    return generator ? generator().then((value)=>(resolver(value), value)
-    ) : prom;
+    return generator ? generator()// eslint-disable-next-line no-sequences
+    .then((value)=>(resolver(value), value)
+    ).catch((err)=>{
+        map.delete(key);
+        throw err;
+    }) : prom;
 }
 function hasPrefetch(link) {
     try {
@@ -50,7 +54,11 @@ function hasPrefetch(link) {
 const canPrefetch = hasPrefetch();
 function prefetchViaDom(href, as, link) {
     return new Promise((res, rej)=>{
-        if (document.querySelector(`link[rel="prefetch"][href^="${href}"]`)) {
+        const selector = `
+      link[rel="prefetch"][href^="${href}"],
+      link[rel="preload"][href^="${href}"],
+      script[src^="${href}"]`;
+        if (document.querySelector(selector)) {
             return res();
         }
         link = document.createElement('link');
@@ -169,16 +177,23 @@ function createRouteLoader(assetPrefix) {
     const styleSheets = new Map();
     const routes = new Map();
     function maybeExecuteScript(src) {
-        let prom = loadedScripts.get(src);
-        if (prom) {
+        // With HMR we might need to "reload" scripts when they are
+        // disposed and readded. Executing scripts twice has no functional
+        // differences
+        if (process.env.NODE_ENV !== 'development') {
+            let prom = loadedScripts.get(src);
+            if (prom) {
+                return prom;
+            }
+            // Skip executing script if it's already in the DOM:
+            if (document.querySelector(`script[src^="${src}"]`)) {
+                return Promise.resolve();
+            }
+            loadedScripts.set(src, prom = appendScript(src));
             return prom;
+        } else {
+            return appendScript(src);
         }
-        // Skip executing script if it's already in the DOM:
-        if (document.querySelector(`script[src^="${src}"]`)) {
-            return Promise.resolve();
-        }
-        loadedScripts.set(src, prom = appendScript(src));
-        return prom;
     }
     function fetchStyleSheet(href) {
         let prom = styleSheets.get(href);
@@ -204,7 +219,7 @@ function createRouteLoader(assetPrefix) {
             return withFuture(route, entrypoints);
         },
         onEntrypoint (route, execute) {
-            Promise.resolve(execute).then((fn)=>fn()
+            (execute ? Promise.resolve().then(()=>execute()
             ).then((exports)=>({
                     component: exports && exports.default || exports,
                     exports: exports
@@ -212,10 +227,24 @@ function createRouteLoader(assetPrefix) {
             , (err)=>({
                     error: err
                 })
-            ).then((input)=>{
+            ) : Promise.resolve(undefined)).then((input)=>{
                 const old = entrypoints.get(route);
-                entrypoints.set(route, input);
-                if (old && 'resolve' in old) old.resolve(input);
+                if (old && 'resolve' in old) {
+                    if (input) {
+                        entrypoints.set(route, input);
+                        old.resolve(input);
+                    }
+                } else {
+                    if (input) {
+                        entrypoints.set(route, input);
+                    } else {
+                        entrypoints.delete(route);
+                    }
+                    // when this entrypoint has been resolved before
+                    // the route is outdated and we want to invalidate
+                    // this cache entry
+                    routes.delete(route);
+                }
             });
         },
         loadRoute (route, prefetch) {

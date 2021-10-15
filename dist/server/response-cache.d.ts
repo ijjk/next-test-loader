@@ -1,5 +1,5 @@
 import { IncrementalCache } from './incremental-cache';
-import { RenderResult } from './utils';
+import RenderResult from './render-result';
 interface CachedRedirectValue {
     kind: 'REDIRECT';
     props: Object;

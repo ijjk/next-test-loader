@@ -30,7 +30,7 @@ async function installDependencies(baseDir, deps, dev = false) {
                 isOnline
             }
         };
-        await (0, _install).install(_path.default.resolve(baseDir), deps.map((dep1)=>dep1.pkg
+        await (0, _install).install(_path.default.resolve(baseDir), deps.map((dep)=>dep.pkg
         ), devInstallFlags);
         console.log();
     }

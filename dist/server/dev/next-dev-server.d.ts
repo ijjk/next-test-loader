@@ -31,6 +31,7 @@ export default class DevServer extends Server {
     protected hasPage(pathname: string): Promise<boolean>;
     protected _beforeCatchAllRender(req: IncomingMessage, res: ServerResponse, params: Params, parsedUrl: UrlWithParsedQuery): Promise<boolean>;
     run(req: IncomingMessage, res: ServerResponse, parsedUrl: UrlWithParsedQuery): Promise<void>;
+    private logErrorWithOriginalStack;
     protected getCustomRoutes(): CustomRoutes;
     private _devCachedPreviewProps;
     protected getPreviewProps(): __ApiPreviewProps;

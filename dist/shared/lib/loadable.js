@@ -42,8 +42,12 @@ function createLoadableComponent(loadFn, options) {
         delay: 200,
         timeout: null,
         webpack: null,
-        modules: null
+        modules: null,
+        suspense: false
     }, options);
+    if (opts.suspense) {
+        opts.lazy = _react.default.lazy(opts.loader);
+    }
     let subscription = null;
     function init() {
         if (!subscription) {
@@ -58,11 +62,11 @@ function createLoadableComponent(loadFn, options) {
         return subscription.promise();
     }
     // Server only
-    if (typeof window === 'undefined') {
+    if (typeof window === 'undefined' && !opts.suspense) {
         ALL_INITIALIZERS.push(init);
     }
     // Client only
-    if (!initialized && typeof window !== 'undefined' && typeof opts.webpack === 'function' && typeof require.resolveWeak === 'function') {
+    if (!initialized && typeof window !== 'undefined' && typeof opts.webpack === 'function' && typeof require.resolveWeak === 'function' && !opts.suspense) {
         const moduleIds = opts.webpack();
         READY_INITIALIZERS.push((ids)=>{
             for (const moduleId of moduleIds){
@@ -72,7 +76,7 @@ function createLoadableComponent(loadFn, options) {
             }
         });
     }
-    const LoadableComponent = (props, ref)=>{
+    function LoadableImpl(props, ref) {
         init();
         const context = _react.default.useContext(_loadableContext.LoadableContext);
         const state = (0, _useSubscription).useSubscription(subscription);
@@ -103,8 +107,15 @@ function createLoadableComponent(loadFn, options) {
             props,
             state
         ]);
-    };
-    LoadableComponent.preload = ()=>init()
+    }
+    function LazyImpl(props, ref) {
+        return _react.default.createElement(opts.lazy, {
+            ...props,
+            ref
+        });
+    }
+    const LoadableComponent = opts.suspense ? LazyImpl : LoadableImpl;
+    LoadableComponent.preload = ()=>!opts.suspense && init()
     ;
     LoadableComponent.displayName = 'LoadableComponent';
     return _react.default.forwardRef(LoadableComponent);
@@ -128,25 +139,25 @@ class LoadableSubscription {
             pastDelay: false,
             timedOut: false
         };
-        const { _res: res , _opts: opts1  } = this;
+        const { _res: res , _opts: opts  } = this;
         if (res.loading) {
-            if (typeof opts1.delay === 'number') {
-                if (opts1.delay === 0) {
+            if (typeof opts.delay === 'number') {
+                if (opts.delay === 0) {
                     this._state.pastDelay = true;
                 } else {
                     this._delay = setTimeout(()=>{
                         this._update({
                             pastDelay: true
                         });
-                    }, opts1.delay);
+                    }, opts.delay);
                 }
             }
-            if (typeof opts1.timeout === 'number') {
+            if (typeof opts.timeout === 'number') {
                 this._timeout = setTimeout(()=>{
                     this._update({
                         timedOut: true
                     });
-                }, opts1.timeout);
+                }, opts.timeout);
             }
         }
         this._res.promise.then(()=>{
@@ -186,8 +197,8 @@ class LoadableSubscription {
         };
     }
 }
-function Loadable(opts1) {
-    return createLoadableComponent(load, opts1);
+function Loadable(opts) {
+    return createLoadableComponent(load, opts);
 }
 function flushInitializers(initializers, ids) {
     let promises = [];

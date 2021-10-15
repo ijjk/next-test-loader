@@ -160,8 +160,8 @@ export default class Router implements BaseRouter {
     private change;
     changeState(method: HistoryMethod, url: string, as: string, options?: TransitionOptions): void;
     handleRouteInfoError(err: Error & {
-        code: any;
-        cancelled: boolean;
+        code?: any;
+        cancelled?: boolean;
     }, pathname: string, query: ParsedUrlQuery, as: string, routeProps: RouteProperties, loadErrorFail?: boolean): Promise<CompletePrivateRouteInfo>;
     getRouteInfo(route: string, pathname: string, query: any, as: string, resolvedAs: string, routeProps: RouteProperties): Promise<PrivateRouteInfo>;
     set(route: string, pathname: string, query: ParsedUrlQuery, as: string, data: PrivateRouteInfo, resetScroll: {

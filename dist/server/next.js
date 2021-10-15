@@ -45,8 +45,8 @@ const getServerImpl = async ()=>{
     return ServerImpl;
 };
 class NextServer {
-    constructor(options1){
-        this.options = options1;
+    constructor(options){
+        this.options = options;
     }
     getRequestHandler() {
         return async (req, res, parsedUrl)=>{
@@ -139,24 +139,24 @@ class NextServer {
 }
 exports.NextServer = NextServer;
 // This file is used for when users run `require('next')`
-function createServer(options2) {
+function createServer(options) {
     const standardEnv = [
         'production',
         'development',
         'test'
     ];
-    if (options2 == null) {
+    if (options == null) {
         throw new Error('The server has not been instantiated properly. https://nextjs.org/docs/messages/invalid-server-options');
     }
-    if (!options2.isNextDevCommand && process.env.NODE_ENV && !standardEnv.includes(process.env.NODE_ENV)) {
+    if (!options.isNextDevCommand && process.env.NODE_ENV && !standardEnv.includes(process.env.NODE_ENV)) {
         log.warn(_constants.NON_STANDARD_NODE_ENV);
     }
-    if (options2.dev) {
-        if (typeof options2.dev !== 'boolean') {
+    if (options.dev) {
+        if (typeof options.dev !== 'boolean') {
             console.warn("Warning: 'dev' is not a boolean which could introduce unexpected behavior. https://nextjs.org/docs/messages/invalid-server-options");
         }
     }
-    return new NextServer(options2);
+    return new NextServer(options);
 }
 // Support commonjs `require('next')`
 module.exports = createServer;

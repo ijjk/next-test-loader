@@ -44,7 +44,7 @@ var _default = _asyncToGenerator((function*({ assetPrefix  }) {
         _router.default.events.on('routeChangeComplete', _onDemandEntriesUtils.setupPing.bind(this, assetPrefix, ()=>_router.default.pathname
         ));
     });
-    (0, _onDemandEntriesUtils).setupPing(assetPrefix, ()=>_router.default.pathname
+    (0, _onDemandEntriesUtils).setupPing(assetPrefix, ()=>_router.default.query.__NEXT_PAGE || _router.default.pathname
     , _onDemandEntriesUtils.currentPage);
     // prevent HMR connection from being closed when running tests
     if (!process.env.__NEXT_TEST_MODE) {

@@ -4,4 +4,5 @@ export declare const HeadManagerContext: React.Context<{
     mountedInstances?: any;
     updateScripts?: (state: any) => void;
     scripts?: any;
+    getIsSsr?: () => boolean;
 }>;

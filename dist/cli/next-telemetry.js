@@ -8,6 +8,7 @@ var _chalk = _interopRequireDefault(require("chalk"));
 var _indexJs = _interopRequireDefault(require("next/dist/compiled/arg/index.js"));
 var _utils = require("../server/lib/utils");
 var _storage = require("../telemetry/storage");
+var _isError = _interopRequireDefault(require("../lib/is-error"));
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
         default: obj
@@ -28,7 +29,7 @@ const nextTelemetry = (argv)=>{
             argv
         });
     } catch (error) {
-        if (error.code === 'ARG_UNKNOWN_OPTION') {
+        if ((0, _isError).default(error) && error.code === 'ARG_UNKNOWN_OPTION') {
             return (0, _utils).printAndExit(error.message, 1);
         }
         throw error;

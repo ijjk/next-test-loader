@@ -1,9 +1,9 @@
 import { Header, Redirect, Rewrite } from '../lib/load-custom-routes';
-import { ImageConfig } from './image-config';
-declare type NoOptionals<T> = {
-    [P in keyof T]-?: T[P];
+import { ImageConfig, ImageConfigComplete } from './image-config';
+export declare type NextConfigComplete = Required<NextConfig> & {
+    images: ImageConfigComplete;
+    typescript: Required<TypeScriptConfig>;
 };
-export declare type NextConfigComplete = NoOptionals<NextConfig>;
 export interface I18NConfig {
     defaultLocale: string;
     domains?: DomainLocale[];
@@ -22,11 +22,18 @@ export interface ESLintConfig {
     /** Do not run ESLint during production builds (`next build`). */
     ignoreDuringBuilds?: boolean;
 }
+export interface TypeScriptConfig {
+    /** Do not run TypeScript during production builds (`next build`). */
+    ignoreBuildErrors?: boolean;
+    /** Relative path to a custom tsconfig file */
+    tsconfigPath?: string;
+}
 export declare type NextConfig = {
     [key: string]: any;
 } & {
     i18n?: I18NConfig | null;
     eslint?: ESLintConfig;
+    typescript?: TypeScriptConfig;
     headers?: () => Promise<Header[]>;
     rewrites?: () => Promise<Rewrite[] | {
         beforeFiles: Rewrite[];
@@ -95,6 +102,7 @@ export declare type NextConfig = {
         webpack5?: false;
         strictPostcssConfiguration?: boolean;
     };
+    crossOrigin?: false | 'anonymous' | 'use-credentials';
     experimental?: {
         swcMinify?: boolean;
         swcLoader?: boolean;
@@ -109,7 +117,6 @@ export declare type NextConfig = {
         optimizeImages?: boolean;
         optimizeCss?: boolean;
         scrollRestoration?: boolean;
-        stats?: boolean;
         externalDir?: boolean;
         conformance?: boolean;
         amp?: {
@@ -124,9 +131,11 @@ export declare type NextConfig = {
         esmExternals?: boolean | 'loose';
         staticPageGenerationTimeout?: number;
         isrMemoryCacheSize?: number;
+        outputFileTracing?: boolean;
         concurrentFeatures?: boolean;
+        serverComponents?: boolean;
+        fullySpecified?: boolean;
     };
 };
 export declare const defaultConfig: NextConfig;
 export declare function normalizeConfig(phase: string, config: any): any;
-export {};

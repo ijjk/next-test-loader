@@ -45,7 +45,7 @@ export declare type RenderPageResult = {
     html: string;
     head?: Array<JSX.Element | null>;
 };
-export declare type RenderPage = (options?: ComponentsEnhancer) => RenderPageResult | Promise<RenderPageResult>;
+export declare type RenderPage = (options?: ComponentsEnhancer) => DocumentInitialProps | Promise<DocumentInitialProps>;
 export declare type BaseContext = {
     res?: ServerResponse;
     [k: string]: any;
@@ -142,11 +142,13 @@ export declare type AppPropsType<R extends NextRouter = NextRouter, P = {}> = Ap
 };
 export declare type DocumentContext = NextPageContext & {
     renderPage: RenderPage;
+    defaultGetInitialProps(ctx: DocumentContext): Promise<DocumentInitialProps>;
 };
 export declare type DocumentInitialProps = RenderPageResult & {
     styles?: React.ReactElement[] | React.ReactFragment;
 };
 export declare type DocumentProps = DocumentInitialProps & HtmlProps;
+export declare type MaybeDeferContentHook = (name: string, contentFn: () => JSX.Element) => [boolean, JSX.Element];
 export declare type HtmlProps = {
     __NEXT_DATA__: NEXT_DATA;
     dangerousAsPath: string;
@@ -176,6 +178,7 @@ export declare type HtmlProps = {
     disableOptimizedLoading?: boolean;
     styles?: React.ReactElement[] | React.ReactFragment;
     head?: Array<JSX.Element | null>;
+    useMaybeDeferContent: MaybeDeferContentHook;
 };
 /**
  * Next `API` route request

@@ -3,27 +3,20 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 exports.base = void 0;
-var _isWsl = _interopRequireDefault(require("next/dist/compiled/is-wsl"));
 var _lodashCurry = _interopRequireDefault(require("next/dist/compiled/lodash.curry"));
-var _webpack = require("next/dist/compiled/webpack/webpack");
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
         default: obj
     };
 }
-const isWindows = process.platform === 'win32' || _isWsl.default;
-const base = (0, _lodashCurry).default(function base1(ctx, config) {
+const base = (0, _lodashCurry).default(function base(ctx, config) {
     config.mode = ctx.isDevelopment ? 'development' : 'production';
     config.name = ctx.isServer ? 'server' : 'client';
-    if (_webpack.isWebpack5) {
-        // @ts-ignore TODO webpack 5 typings
-        config.target = ctx.isServer ? 'node12.17' : [
-            'web',
-            'es5'
-        ];
-    } else {
-        config.target = ctx.isServer ? 'node' : 'web';
-    }
+    // @ts-ignore TODO webpack 5 typings
+    config.target = ctx.isServer ? 'node12.17' : [
+        'web',
+        'es5'
+    ];
     // Stop compilation early in a production build when an error is encountered.
     // This behavior isn't desirable in development due to how the HMR system
     // works, but is a good default for production.
@@ -32,11 +25,6 @@ const base = (0, _lodashCurry).default(function base1(ctx, config) {
     if (ctx.isDevelopment) {
         if (process.env.__NEXT_TEST_MODE && !process.env.__NEXT_TEST_WITH_DEVTOOL) {
             config.devtool = false;
-        } else if (isWindows) {
-            // Non-eval based source maps are slow to rebuild, so we only enable
-            // them for Windows. Unfortunately, eval source maps are flagged as
-            // suspicious by Windows Defender and block HMR.
-            config.devtool = 'inline-source-map';
         } else {
             // `eval-source-map` provides full-fidelity source maps for the
             // original source, including columns and original variable names.
@@ -58,7 +46,7 @@ const base = (0, _lodashCurry).default(function base1(ctx, config) {
         };
     }
     // TODO: add codemod for "Should not import the named export" with JSON files
-    config.module.strictExportPresence = !_webpack.isWebpack5;
+    // config.module.strictExportPresence = !isWebpack5
     return config;
 });
 exports.base = base;

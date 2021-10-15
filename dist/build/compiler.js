@@ -18,19 +18,20 @@ function generateStats(result, stat) {
 // Webpack 4 does not have this close method so in order to be backwards compatible we check if it exists
 function closeCompiler(compiler) {
     return new Promise((resolve, reject)=>{
-        if ('close' in compiler) {
-            // @ts-ignore Close only exists on the compiler in webpack 5
-            return compiler.close((err)=>err ? reject(err) : resolve()
-            );
-        }
-        resolve();
+        // @ts-ignore Close only exists on the compiler in webpack 5
+        return compiler.close((err)=>err ? reject(err) : resolve()
+        );
     });
 }
-function runCompiler(config) {
+function runCompiler(config, { runWebpackSpan  }) {
     return new Promise((resolve, reject)=>{
         const compiler = (0, _webpack).webpack(config);
-        compiler.run((err, statsOrMultiStats)=>{
-            closeCompiler(compiler).then(()=>{
+        compiler.run((err, stats)=>{
+            const webpackCloseSpan = runWebpackSpan.traceChild('webpack-close', {
+                name: config.name
+            });
+            webpackCloseSpan.traceAsyncFn(()=>closeCompiler(compiler)
+            ).then(()=>{
                 if (err) {
                     const reason = err === null || err === void 0 ? void 0 : err.toString();
                     if (reason) {
@@ -43,17 +44,11 @@ function runCompiler(config) {
                     }
                     return reject(err);
                 }
-                if ('stats' in statsOrMultiStats) {
-                    const result = statsOrMultiStats.stats.reduce(generateStats, {
+                const result = webpackCloseSpan.traceChild('webpack-generate-error-stats').traceFn(()=>generateStats({
                         errors: [],
                         warnings: []
-                    });
-                    return resolve(result);
-                }
-                const result = generateStats({
-                    errors: [],
-                    warnings: []
-                }, statsOrMultiStats);
+                    }, stats)
+                );
                 return resolve(result);
             });
         });

@@ -34,8 +34,9 @@ var _normalizeTrailingSlash = require("../client/normalize-trailing-slash");
 var _normalizeLocalePath = require("../shared/lib/i18n/normalize-locale-path");
 var Log = _interopRequireWildcard(require("./output/log"));
 var _loadComponents = require("../server/load-components");
-var _trace = require("../telemetry/trace");
+var _trace = require("../trace");
 var _config = require("../server/config");
+var _isError = _interopRequireDefault(require("../lib/is-error"));
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
         default: obj
@@ -383,7 +384,7 @@ async function computeFromManifest(manifest, distPath, gzipSize = true, pageInfo
                 await getSize(_path.default.join(distPath, f))
             ]
         ));
-    } catch (_) {
+    } catch (_1) {
         uniqueStats = [];
     }
     lastCompute = {
@@ -563,20 +564,19 @@ async function isPageStatic(page, distDir, serverless, runtimeEnvConfig, httpAge
         try {
             require('../shared/lib/runtime-config').setConfig(runtimeEnvConfig);
             (0, _config).setHttpAgentOptions(httpAgentOptions);
-            const components = await (0, _loadComponents).loadComponents(distDir, page, serverless);
-            const mod = components.ComponentMod;
-            const Comp = mod.default || mod;
+            const mod = await (0, _loadComponents).loadComponents(distDir, page, serverless);
+            const Comp = mod.Component;
             if (!Comp || !(0, _reactIs).isValidElementType(Comp) || typeof Comp === 'string') {
                 throw new Error('INVALID_DEFAULT_EXPORT');
             }
             const hasGetInitialProps = !!Comp.getInitialProps;
-            const hasStaticProps = !!await mod.getStaticProps;
-            const hasStaticPaths = !!await mod.getStaticPaths;
-            const hasServerProps = !!await mod.getServerSideProps;
-            const hasLegacyServerProps = !!await mod.unstable_getServerProps;
-            const hasLegacyStaticProps = !!await mod.unstable_getStaticProps;
-            const hasLegacyStaticPaths = !!await mod.unstable_getStaticPaths;
-            const hasLegacyStaticParams = !!await mod.unstable_getStaticParams;
+            const hasStaticProps = !!mod.getStaticProps;
+            const hasStaticPaths = !!mod.getStaticPaths;
+            const hasServerProps = !!mod.getServerSideProps;
+            const hasLegacyServerProps = !!await mod.ComponentMod.unstable_getServerProps;
+            const hasLegacyStaticProps = !!await mod.ComponentMod.unstable_getStaticProps;
+            const hasLegacyStaticPaths = !!await mod.ComponentMod.unstable_getStaticPaths;
+            const hasLegacyStaticParams = !!await mod.ComponentMod.unstable_getStaticParams;
             if (hasLegacyStaticParams) {
                 throw new Error(`unstable_getStaticParams was replaced with getStaticPaths. Please update your code.`);
             }
@@ -615,8 +615,7 @@ async function isPageStatic(page, distDir, serverless, runtimeEnvConfig, httpAge
                 ({ paths: prerenderRoutes , fallback: prerenderFallback , encodedPaths: encodedPrerenderRoutes ,  } = await buildStaticPaths(page, mod.getStaticPaths, locales, defaultLocale));
             }
             const isNextImageImported = global.__NEXT_IMAGE_IMPORTED;
-            const config = mod.config || {
-            };
+            const config = mod.pageConfig;
             return {
                 isStatic: !hasStaticProps && !hasGetInitialProps && !hasServerProps,
                 isHybridAmp: config.amp === 'hybrid',
@@ -626,10 +625,12 @@ async function isPageStatic(page, distDir, serverless, runtimeEnvConfig, httpAge
                 encodedPrerenderRoutes,
                 hasStaticProps,
                 hasServerProps,
-                isNextImageImported
+                isNextImageImported,
+                traceIncludes: config.unstable_includeFiles || [],
+                traceExcludes: config.unstable_excludeFiles || []
             };
         } catch (err) {
-            if (err.code === 'MODULE_NOT_FOUND') return {
+            if ((0, _isError).default(err) && err.code === 'MODULE_NOT_FOUND') return {
             };
             throw err;
         }
@@ -678,9 +679,9 @@ function detectConflictingPaths(combinedPages, ssgPages, additionalSsgPaths) {
             } else {
                 let conflictingPath;
                 conflictingPage = dynamicSsgPages.find((page)=>{
-                    var ref9;
+                    var ref;
                     if (page === pathsPage) return false;
-                    conflictingPath = (ref9 = additionalSsgPaths.get(page)) === null || ref9 === void 0 ? void 0 : ref9.find((compPath)=>compPath.toLowerCase() === lowerPath
+                    conflictingPath = (ref = additionalSsgPaths.get(page)) === null || ref === void 0 ? void 0 : ref.find((compPath)=>compPath.toLowerCase() === lowerPath
                     );
                     return conflictingPath;
                 });
@@ -711,7 +712,7 @@ function detectConflictingPaths(combinedPages, ssgPages, additionalSsgPaths) {
             });
             conflictingPathsOutput += '\n';
         });
-        Log.error('Conflicting paths returned from getStaticPaths, paths must unique per page.\n' + 'See more info here: https://nextjs.org/docs/messages/conflicting-ssg-paths\n\n' + conflictingPathsOutput);
+        Log.error('Conflicting paths returned from getStaticPaths, paths must be unique per page.\n' + 'See more info here: https://nextjs.org/docs/messages/conflicting-ssg-paths\n\n' + conflictingPathsOutput);
         process.exit(1);
     }
 }

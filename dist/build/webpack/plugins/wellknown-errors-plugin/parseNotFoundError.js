@@ -6,7 +6,6 @@ exports.getNotFoundError = getNotFoundError;
 var _chalk = _interopRequireDefault(require("chalk"));
 var _simpleWebpackError = require("./simpleWebpackError");
 var _middleware = require("@next/react-dev-overlay/lib/middleware");
-var _webpack = require("next/dist/compiled/webpack/webpack");
 var _path = _interopRequireDefault(require("path"));
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
@@ -79,9 +78,6 @@ async function getNotFoundError(compilation, input, fileName) {
         }
         const errorMessage = input.error.message.replace(/ in '.*?'/, '').replace(/Can't resolve '(.*)'/, `Can't resolve '${chalk.green('$1')}'`);
         const importTrace = ()=>{
-            if (!_webpack.isWebpack5) {
-                return '';
-            }
             let importTraceLine = '\nImport trace for requested module:\n';
             const moduleTrace = getModuleTrace(input, compilation);
             for (const { origin  } of moduleTrace){
@@ -99,7 +95,6 @@ async function getNotFoundError(compilation, input, fileName) {
         var ref2, ref3;
         return new _simpleWebpackError.SimpleWebpackError(`${chalk.cyan(fileName)}:${chalk.yellow((ref2 = (ref = result.originalStackFrame.lineNumber) === null || ref === void 0 ? void 0 : ref.toString()) !== null && ref2 !== void 0 ? ref2 : '')}:${chalk.yellow((ref3 = (ref1 = result.originalStackFrame.column) === null || ref1 === void 0 ? void 0 : ref1.toString()) !== null && ref3 !== void 0 ? ref3 : '')}`, message);
     } catch (err) {
-        console.log('Failed to parse source map:', err);
         // Don't fail on failure to resolve sourcemaps
         return input;
     }

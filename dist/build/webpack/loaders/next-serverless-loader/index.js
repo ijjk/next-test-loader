@@ -5,40 +5,38 @@ Object.defineProperty(exports, "__esModule", {
 exports.default = void 0;
 var _devalue = _interopRequireDefault(require("next/dist/compiled/devalue"));
 var _escapeStringRegexp = _interopRequireDefault(require("next/dist/compiled/escape-string-regexp"));
+var _loaderUtils = _interopRequireDefault(require("next/dist/compiled/loader-utils"));
 var _path = require("path");
 var _querystring = require("querystring");
 var _constants = require("../../../../lib/constants");
 var _utils = require("../../../../shared/lib/router/utils");
 var _constants1 = require("../../../../shared/lib/constants");
-var _trace = require("../../../../telemetry/trace");
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
         default: obj
     };
 }
 const nextServerlessLoader = function() {
-    const loaderSpan = (0, _trace).trace('next-serverless-loader');
-    return loaderSpan.traceFn(()=>{
-        const { distDir , absolutePagePath , page , buildId , canonicalBase , assetPrefix , absoluteAppPath , absoluteDocumentPath , absoluteErrorPath , absolute404Path , generateEtags , poweredByHeader , basePath , runtimeConfig , previewProps , loadedEnvFiles , i18n ,  } = typeof this.query === 'string' ? (0, _querystring).parse(this.query.substr(1)) : this.query;
-        const buildManifest = (0, _path).join(distDir, _constants1.BUILD_MANIFEST).replace(/\\/g, '/');
-        const reactLoadableManifest = (0, _path).join(distDir, _constants1.REACT_LOADABLE_MANIFEST).replace(/\\/g, '/');
-        const routesManifest = (0, _path).join(distDir, _constants1.ROUTES_MANIFEST).replace(/\\/g, '/');
-        const escapedBuildId = (0, _escapeStringRegexp).default(buildId);
-        const pageIsDynamicRoute = (0, _utils).isDynamicRoute(page);
-        const encodedPreviewProps = (0, _devalue).default(JSON.parse(previewProps));
-        const envLoading = `
+    const { distDir , absolutePagePath , page , buildId , canonicalBase , assetPrefix , absoluteAppPath , absoluteDocumentPath , absoluteErrorPath , absolute404Path , generateEtags , poweredByHeader , basePath , runtimeConfig , previewProps , loadedEnvFiles , i18n ,  } = typeof this.query === 'string' ? (0, _querystring).parse(this.query.substr(1)) : this.query;
+    const buildManifest = (0, _path).join(distDir, _constants1.BUILD_MANIFEST).replace(/\\/g, '/');
+    const reactLoadableManifest = (0, _path).join(distDir, _constants1.REACT_LOADABLE_MANIFEST).replace(/\\/g, '/');
+    const routesManifest = (0, _path).join(distDir, _constants1.ROUTES_MANIFEST).replace(/\\/g, '/');
+    const escapedBuildId = (0, _escapeStringRegexp).default(buildId);
+    const pageIsDynamicRoute = (0, _utils).isDynamicRoute(page);
+    const encodedPreviewProps = (0, _devalue).default(JSON.parse(previewProps));
+    const envLoading = `
       const { processEnv } = require('@next/env')
       processEnv(${Buffer.from(loadedEnvFiles, 'base64').toString()})
     `;
-        const runtimeConfigImports = runtimeConfig ? `
+    const runtimeConfigImports = runtimeConfig ? `
         const { setConfig } = require('next/config')
       ` : '';
-        const runtimeConfigSetter = runtimeConfig ? `
+    const runtimeConfigSetter = runtimeConfig ? `
         const runtimeConfig = ${runtimeConfig}
         setConfig(runtimeConfig)
       ` : 'const runtimeConfig = {}';
-        if (page.match(_constants.API_ROUTE)) {
-            return `
+    if (page.match(_constants.API_ROUTE)) {
+        return `
         ${envLoading}
         ${runtimeConfigImports}
         ${/*
@@ -60,7 +58,7 @@ const nextServerlessLoader = function() {
         }
 
         const apiHandler = getApiHandler({
-          pageModule: require("${absolutePagePath}"),
+          pageModule: require(${_loaderUtils.default.stringifyRequest(this, absolutePagePath)}),
           rewrites: combinedRewrites,
           i18n: ${i18n || 'undefined'},
           page: "${page}",
@@ -70,8 +68,8 @@ const nextServerlessLoader = function() {
         })
         export default apiHandler
       `;
-        } else {
-            return `
+    } else {
+        return `
       import 'next/dist/server/node-polyfill-fetch'
       import routesManifest from '${routesManifest}'
       import buildManifest from '${buildManifest}'
@@ -80,15 +78,15 @@ const nextServerlessLoader = function() {
       ${envLoading}
       ${runtimeConfigImports}
       ${// this needs to be called first so its available for any other imports
-            runtimeConfigSetter}
+        runtimeConfigSetter}
       import { getPageHandler } from 'next/dist/build/webpack/loaders/next-serverless-loader/page-handler'
 
-      const documentModule = require("${absoluteDocumentPath}")
+      const documentModule = require(${_loaderUtils.default.stringifyRequest(this, absoluteDocumentPath)})
 
-      const appMod = require('${absoluteAppPath}')
+      const appMod = require(${_loaderUtils.default.stringifyRequest(this, absoluteAppPath)})
       let App = appMod.default || appMod.then && appMod.then(mod => mod.default);
 
-      const compMod = require('${absolutePagePath}')
+      const compMod = require(${_loaderUtils.default.stringifyRequest(this, absolutePagePath)})
 
       const Component = compMod.default || compMod.then && compMod.then(mod => mod.default)
       export default Component
@@ -121,8 +119,8 @@ const nextServerlessLoader = function() {
         pageConfig: config,
         appModule: App,
         documentModule: documentModule,
-        errorModule: require("${absoluteErrorPath}"),
-        notFoundModule: ${absolute404Path ? `require("${absolute404Path}")` : undefined},
+        errorModule: require(${_loaderUtils.default.stringifyRequest(this, absoluteErrorPath)}),
+        notFoundModule: ${absolute404Path ? `require(${_loaderUtils.default.stringifyRequest(this, absolute404Path)})` : undefined},
         pageGetStaticProps: getStaticProps,
         pageGetStaticPaths: getStaticPaths,
         pageGetServerSideProps: getServerSideProps,
@@ -147,8 +145,7 @@ const nextServerlessLoader = function() {
       })
       export { renderReqToHTML, render }
     `;
-        }
-    });
+    }
 };
 var _default = nextServerlessLoader;
 exports.default = _default;

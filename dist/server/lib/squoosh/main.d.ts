@@ -13,6 +13,7 @@ declare type ResizeOperation = {
     width?: never;
 });
 export declare type Operation = RotateOperation | ResizeOperation;
-export declare type Encoding = 'jpeg' | 'png' | 'webp';
+export declare type Encoding = 'jpeg' | 'png' | 'webp' | 'avif';
 export declare function processBuffer(buffer: Buffer, operations: Operation[], encoding: Encoding, quality: number): Promise<Buffer>;
+export declare function decodeBuffer(buffer: Buffer): Promise<import("./image_data").default>;
 export {};

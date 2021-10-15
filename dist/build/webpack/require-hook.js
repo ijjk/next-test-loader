@@ -1,4 +1,7 @@
 "use strict";
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
 // sync injects a hook for webpack and webpack/... requires to use the internal ncc webpack version
 // this is in order for userland plugins to attach to the same webpack instance as next.js
 // the individual compiled modules are as defined for the compilation in bundles/webpack/packages/*
@@ -46,6 +49,78 @@ const hookPropertyMap = new Map([
     [
         'webpack/lib/node/NodeTargetPlugin.js',
         'next/dist/compiled/webpack/NodeTargetPlugin', 
+    ],
+    [
+        'webpack/lib/node/NodeTemplatePlugin',
+        'next/dist/compiled/webpack/NodeTemplatePlugin', 
+    ],
+    [
+        'webpack/lib/node/NodeTemplatePlugin.js',
+        'next/dist/compiled/webpack/NodeTemplatePlugin', 
+    ],
+    [
+        'webpack/lib/LibraryTemplatePlugin',
+        'next/dist/compiled/webpack/LibraryTemplatePlugin', 
+    ],
+    [
+        'webpack/lib/LibraryTemplatePlugin.js',
+        'next/dist/compiled/webpack/LibraryTemplatePlugin', 
+    ],
+    [
+        'webpack/lib/SingleEntryPlugin',
+        'next/dist/compiled/webpack/SingleEntryPlugin', 
+    ],
+    [
+        'webpack/lib/SingleEntryPlugin.js',
+        'next/dist/compiled/webpack/SingleEntryPlugin', 
+    ],
+    [
+        'webpack/lib/optimize/LimitChunkCountPlugin',
+        'next/dist/compiled/webpack/LimitChunkCountPlugin', 
+    ],
+    [
+        'webpack/lib/optimize/LimitChunkCountPlugin.js',
+        'next/dist/compiled/webpack/LimitChunkCountPlugin', 
+    ],
+    [
+        'webpack/lib/webworker/WebWorkerTemplatePlugin',
+        'next/dist/compiled/webpack/WebWorkerTemplatePlugin', 
+    ],
+    [
+        'webpack/lib/webworker/WebWorkerTemplatePlugin.js',
+        'next/dist/compiled/webpack/WebWorkerTemplatePlugin', 
+    ],
+    [
+        'webpack/lib/ExternalsPlugin',
+        'next/dist/compiled/webpack/ExternalsPlugin', 
+    ],
+    [
+        'webpack/lib/ExternalsPlugin.js',
+        'next/dist/compiled/webpack/ExternalsPlugin', 
+    ],
+    [
+        'webpack/lib/web/FetchCompileWasmTemplatePlugin',
+        'next/dist/compiled/webpack/FetchCompileWasmTemplatePlugin', 
+    ],
+    [
+        'webpack/lib/web/FetchCompileWasmTemplatePlugin.js',
+        'next/dist/compiled/webpack/FetchCompileWasmTemplatePlugin', 
+    ],
+    [
+        'webpack/lib/web/FetchCompileWasmPlugin',
+        'next/dist/compiled/webpack/FetchCompileWasmPlugin', 
+    ],
+    [
+        'webpack/lib/web/FetchCompileWasmPlugin.js',
+        'next/dist/compiled/webpack/FetchCompileWasmPlugin', 
+    ],
+    [
+        'webpack/lib/web/FetchCompileAsyncWasmPlugin',
+        'next/dist/compiled/webpack/FetchCompileAsyncWasmPlugin', 
+    ],
+    [
+        'webpack/lib/web/FetchCompileAsyncWasmPlugin.js',
+        'next/dist/compiled/webpack/FetchCompileAsyncWasmPlugin', 
     ],
     [
         'webpack/lib/ModuleFilenameHelpers',

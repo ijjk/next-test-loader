@@ -14,6 +14,7 @@ exports.resolveHref = resolveHref;
 exports.default = void 0;
 var _normalizeTrailingSlash = require("../../../client/normalize-trailing-slash");
 var _routeLoader = require("../../../client/route-loader");
+var _isError = _interopRequireDefault(require("../../../lib/is-error"));
 var _denormalizePagePath = require("../../../server/denormalize-page-path");
 var _normalizeLocalePath = require("../i18n/normalize-locale-path");
 var _mitt = _interopRequireDefault(require("../mitt"));
@@ -40,7 +41,11 @@ function buildCancellationError() {
     });
 }
 function addPathPrefix(path, prefix) {
-    return prefix && path.startsWith('/') ? path === '/' ? (0, _normalizeTrailingSlash).normalizePathTrailingSlash(prefix) : `${prefix}${pathNoQueryHash(path) === '/' ? path.substring(1) : path}` : path;
+    if (!path.startsWith('/') || !prefix) {
+        return path;
+    }
+    const pathname = pathNoQueryHash(path);
+    return (0, _normalizeTrailingSlash).normalizePathTrailingSlash(`${prefix}${pathname}`) + path.substr(pathname.length);
 }
 function getDomainLocale(path, locale, locales, domainLocales) {
     if (process.env.__NEXT_I18N_SUPPORT) {
@@ -202,7 +207,7 @@ function resolveHref(router, href, resolveAs) {
             resolvedHref,
             interpolatedAs || resolvedHref
         ] : resolvedHref;
-    } catch (_) {
+    } catch (_1) {
         return resolveAs ? [
             urlAsString
         ] : urlAsString;
@@ -300,7 +305,7 @@ function fetchNextData(dataHref, isServerRender) {
     });
 }
 class Router {
-    constructor(pathname1, query1, as1, { initialProps , pageLoader , App , wrapApp , Component: Component1 , err: err1 , subscription , isFallback , locale , locales , defaultLocale , domainLocales , isPreview  }){
+    constructor(pathname, query, as, { initialProps , pageLoader , App , wrapApp , Component , err , subscription , isFallback , locale , locales , defaultLocale , domainLocales , isPreview  }){
         // Static Data Cache
         this.sdc = {
         };
@@ -320,10 +325,10 @@ class Router {
                 // But we can simply replace the state with the new changes.
                 // Actually, for (1) we don't need to nothing. But it's hard to detect that event.
                 // So, doing the following for (1) does no harm.
-                const { pathname: pathname1 , query: query1  } = this;
+                const { pathname , query  } = this;
                 this.changeState('replaceState', (0, _utils).formatWithValidation({
-                    pathname: addBasePath(pathname1),
-                    query: query1
+                    pathname: addBasePath(pathname),
+                    query
                 }), (0, _utils).getURL());
                 return;
             }
@@ -331,7 +336,7 @@ class Router {
                 return;
             }
             let forcedScroll;
-            const { url , as: as1 , options , idx  } = state;
+            const { url , as , options , idx  } = state;
             if (process.env.__NEXT_SCROLL_RESTORATION) {
                 if (manualScrollRestoration) {
                     if (this._idx !== idx) {
@@ -357,10 +362,10 @@ class Router {
                 }
             }
             this._idx = idx;
-            const { pathname: pathname1  } = (0, _parseRelativeUrl).parseRelativeUrl(url);
+            const { pathname  } = (0, _parseRelativeUrl).parseRelativeUrl(url);
             // Make sure we don't re-render on initial load,
             // can be caused by navigating back from an external site
-            if (this.isSsr && as1 === this.asPath && pathname1 === this.pathname) {
+            if (this.isSsr && as === this.asPath && pathname === this.pathname) {
                 return;
             }
             // If the downstream application returns falsy, return.
@@ -368,26 +373,26 @@ class Router {
             if (this._bps && !this._bps(state)) {
                 return;
             }
-            this.change('replaceState', url, as1, Object.assign({
+            this.change('replaceState', url, as, Object.assign({
             }, options, {
                 shallow: options.shallow && this._shallow,
                 locale: options.locale || this.defaultLocale
             }), forcedScroll);
         };
         // represents the current component key
-        this.route = (0, _normalizeTrailingSlash).removePathTrailingSlash(pathname1);
+        this.route = (0, _normalizeTrailingSlash).removePathTrailingSlash(pathname);
         // set up the component cache (by route keys)
         this.components = {
         };
         // We should not keep the cache, if there's an error
         // Otherwise, this cause issues when when going back and
         // come again to the errored page.
-        if (pathname1 !== '/_error') {
+        if (pathname !== '/_error') {
             this.components[this.route] = {
-                Component: Component1,
+                Component,
                 initial: true,
                 props: initialProps,
-                err: err1,
+                err,
                 __N_SSG: initialProps && initialProps.__N_SSG,
                 __N_SSP: initialProps && initialProps.__N_SSP
             };
@@ -400,12 +405,12 @@ class Router {
         // TODO: Should be remove the following major version as it was never documented
         this.events = Router.events;
         this.pageLoader = pageLoader;
-        this.pathname = pathname1;
-        this.query = query1;
+        this.pathname = pathname;
+        this.query = query;
         // if auto prerendered and dynamic route wait to update asPath
         // until after mount to prevent hydration mismatch
-        const autoExportDynamic = (0, _isDynamic).isDynamicRoute(pathname1) && self.__NEXT_DATA__.autoExport;
-        this.asPath = autoExportDynamic ? pathname1 : as1;
+        const autoExportDynamic = (0, _isDynamic).isDynamicRoute(pathname) && self.__NEXT_DATA__.autoExport;
+        this.asPath = autoExportDynamic ? pathname : as;
         this.basePath = basePath;
         this.sub = subscription;
         this.clc = null;
@@ -427,16 +432,16 @@ class Router {
         if (typeof window !== 'undefined') {
             // make sure "as" doesn't start with double slashes or else it can
             // throw an error as it's considered invalid
-            if (as1.substr(0, 2) !== '//') {
+            if (as.substr(0, 2) !== '//') {
                 // in order for `e.state` to work on the `onpopstate` event
                 // we have to register the initial route upon initialization
                 const options = {
                     locale
                 };
-                options._shouldResolveHref = as1 !== pathname1;
+                options._shouldResolveHref = as !== pathname;
                 this.changeState('replaceState', (0, _utils).formatWithValidation({
-                    pathname: addBasePath(pathname1),
-                    query: query1
+                    pathname: addBasePath(pathname),
+                    query
                 }), (0, _utils).getURL(), options);
             }
             window.addEventListener('popstate', this.onPopState);
@@ -496,7 +501,7 @@ class Router {
             window.location.href = url;
             return false;
         }
-        const shouldResolveHref = url === as || options._h || options._shouldResolveHref;
+        const shouldResolveHref = options._h || options._shouldResolveHref || pathNoQueryHash(url) === pathNoQueryHash(as);
         // for static pages with query params in the URL we delay
         // marking the router ready until after the query is updated
         if (options._h) {
@@ -583,7 +588,7 @@ class Router {
             return true;
         }
         let parsed = (0, _parseRelativeUrl).parseRelativeUrl(url);
-        let { pathname: pathname1 , query: query1  } = parsed;
+        let { pathname , query  } = parsed;
         // The build manifest needs to be loaded before auto-static dynamic pages
         // get their query parameters to allow ensuring they can be parsed properly
         // when rewritten to
@@ -591,7 +596,7 @@ class Router {
         try {
             pages = await this.pageLoader.getPageList();
             ({ __rewrites: rewrites  } = await (0, _routeLoader).getClientBuildManifest());
-        } catch (err1) {
+        } catch (err) {
             // If we fail to resolve the page list or client-build manifest, we must
             // do a server-side transition:
             window.location.href = as;
@@ -611,30 +616,30 @@ class Router {
         // url and as should always be prefixed with basePath by this
         // point by either next/link or router.push/replace so strip the
         // basePath from the pathname to match the pages dir 1-to-1
-        pathname1 = pathname1 ? (0, _normalizeTrailingSlash).removePathTrailingSlash(delBasePath(pathname1)) : pathname1;
-        if (shouldResolveHref && pathname1 !== '/_error') {
+        pathname = pathname ? (0, _normalizeTrailingSlash).removePathTrailingSlash(delBasePath(pathname)) : pathname;
+        if (shouldResolveHref && pathname !== '/_error') {
             options._shouldResolveHref = true;
             if (process.env.__NEXT_HAS_REWRITES && as.startsWith('/')) {
-                const rewritesResult = (0, _resolveRewrites).default(addBasePath(addLocale(cleanedAs, this.locale)), pages, rewrites, query1, (p)=>resolveDynamicRoute(p, pages)
+                const rewritesResult = (0, _resolveRewrites).default(addBasePath(addLocale(cleanedAs, this.locale)), pages, rewrites, query, (p)=>resolveDynamicRoute(p, pages)
                 , this.locales);
                 resolvedAs = rewritesResult.asPath;
                 if (rewritesResult.matchedPage && rewritesResult.resolvedHref) {
                     // if this directly matches a page we need to update the href to
                     // allow the correct page chunk to be loaded
-                    pathname1 = rewritesResult.resolvedHref;
-                    parsed.pathname = addBasePath(pathname1);
+                    pathname = rewritesResult.resolvedHref;
+                    parsed.pathname = addBasePath(pathname);
                     url = (0, _utils).formatWithValidation(parsed);
                 }
             } else {
-                parsed.pathname = resolveDynamicRoute(pathname1, pages);
-                if (parsed.pathname !== pathname1) {
-                    pathname1 = parsed.pathname;
-                    parsed.pathname = addBasePath(pathname1);
+                parsed.pathname = resolveDynamicRoute(pathname, pages);
+                if (parsed.pathname !== pathname) {
+                    pathname = parsed.pathname;
+                    parsed.pathname = addBasePath(pathname);
                     url = (0, _utils).formatWithValidation(parsed);
                 }
             }
         }
-        const route = (0, _normalizeTrailingSlash).removePathTrailingSlash(pathname1);
+        const route = (0, _normalizeTrailingSlash).removePathTrailingSlash(pathname);
         if (!isLocalURL(as)) {
             if (process.env.NODE_ENV !== 'production') {
                 throw new Error(`Invalid href: "${url}" and as: "${as}", received relative href and external as` + `\nSee more info: https://nextjs.org/docs/messages/invalid-relative-url-external-as`);
@@ -649,10 +654,10 @@ class Router {
             const routeRegex = (0, _routeRegex).getRouteRegex(route);
             const routeMatch = (0, _routeMatcher).getRouteMatcher(routeRegex)(asPathname);
             const shouldInterpolate = route === asPathname;
-            const interpolatedAs = shouldInterpolate ? interpolateAs(route, asPathname, query1) : {
+            const interpolatedAs = shouldInterpolate ? interpolateAs(route, asPathname, query) : {
             };
             if (!routeMatch || shouldInterpolate && !interpolatedAs.result) {
-                const missingParams = Object.keys(routeRegex.groups).filter((param)=>!query1[param]
+                const missingParams = Object.keys(routeRegex.groups).filter((param)=>!query[param]
                 );
                 if (missingParams.length > 0) {
                     if (process.env.NODE_ENV !== 'production') {
@@ -664,17 +669,17 @@ class Router {
                 as = (0, _utils).formatWithValidation(Object.assign({
                 }, parsedAs, {
                     pathname: interpolatedAs.result,
-                    query: omitParmsFromQuery(query1, interpolatedAs.params)
+                    query: omitParmsFromQuery(query, interpolatedAs.params)
                 }));
             } else {
                 // Merge params into `query`, overwriting any specified in search
-                Object.assign(query1, routeMatch);
+                Object.assign(query, routeMatch);
             }
         }
         Router.events.emit('routeChangeStart', as, routeProps);
         try {
             var ref, ref1;
-            let routeInfo = await this.getRouteInfo(route, pathname1, query1, as, resolvedAs, routeProps);
+            let routeInfo = await this.getRouteInfo(route, pathname, query, as, resolvedAs, routeProps);
             let { error , props , __N_SSG , __N_SSP  } = routeInfo;
             // handle redirect on client-transition
             if ((__N_SSG || __N_SSP) && props) {
@@ -683,7 +688,7 @@ class Router {
                     // check if destination is internal (resolves to a page) and attempt
                     // client-navigation if it is falling back to hard navigation if
                     // it's not
-                    if (destination.startsWith('/')) {
+                    if (destination.startsWith('/') && props.pageProps.__N_REDIRECT_BASE_PATH !== false) {
                         const parsedHref = (0, _parseRelativeUrl).parseRelativeUrl(destination);
                         parsedHref.pathname = resolveDynamicRoute(parsedHref.pathname, pages);
                         const { url: newUrl , as: newAs  } = prepareUrlAs(this, destination, destination);
@@ -703,7 +708,7 @@ class Router {
                     } catch (_) {
                         notFoundRoute = '/_error';
                     }
-                    routeInfo = await this.getRouteInfo(notFoundRoute, notFoundRoute, query1, as, resolvedAs, {
+                    routeInfo = await this.getRouteInfo(notFoundRoute, notFoundRoute, query, as, resolvedAs, {
                         shallow: false
                     });
                 }
@@ -714,7 +719,7 @@ class Router {
                 const appComp = this.components['/_app'].Component;
                 window.next.isPrerendered = appComp.getInitialProps === appComp.origGetInitialProps && !routeInfo.Component.getInitialProps;
             }
-            if (options._h && pathname1 === '/_error' && ((ref = self.__NEXT_DATA__.props) === null || ref === void 0 ? void 0 : (ref1 = ref.pageProps) === null || ref1 === void 0 ? void 0 : ref1.statusCode) === 500 && (props === null || props === void 0 ? void 0 : props.pageProps)) {
+            if (options._h && pathname === '/_error' && ((ref = self.__NEXT_DATA__.props) === null || ref === void 0 ? void 0 : (ref1 = ref.pageProps) === null || ref1 === void 0 ? void 0 : ref1.statusCode) === 500 && (props === null || props === void 0 ? void 0 : props.pageProps)) {
                 // ensure statusCode is still correct for static 500 page
                 // when updating query information
                 props.pageProps.statusCode = 500;
@@ -727,7 +732,7 @@ class Router {
                 x: 0,
                 y: 0
             } : null;
-            await this.set(route, pathname1, query1, cleanedAs, routeInfo, forcedScroll !== null && forcedScroll !== void 0 ? forcedScroll : resetScroll).catch((e)=>{
+            await this.set(route, pathname, query, cleanedAs, routeInfo, forcedScroll !== null && forcedScroll !== void 0 ? forcedScroll : resetScroll).catch((e)=>{
                 if (e.cancelled) error = error || e;
                 else throw e;
             });
@@ -743,7 +748,7 @@ class Router {
             Router.events.emit('routeChangeComplete', as, routeProps);
             return true;
         } catch (err1) {
-            if (err1.cancelled) {
+            if ((0, _isError).default(err1) && err1.cancelled) {
                 return false;
             }
             throw err1;
@@ -793,22 +798,22 @@ class Router {
             throw buildCancellationError();
         }
         try {
-            let Component1;
+            let Component;
             let styleSheets;
             let props;
-            if (typeof Component1 === 'undefined' || typeof styleSheets === 'undefined') {
-                ({ page: Component1 , styleSheets  } = await this.fetchComponent('/_error'));
+            if (typeof Component === 'undefined' || typeof styleSheets === 'undefined') {
+                ({ page: Component , styleSheets  } = await this.fetchComponent('/_error'));
             }
             const routeInfo = {
                 props,
-                Component: Component1,
+                Component,
                 styleSheets,
                 err,
                 error: err
             };
             if (!routeInfo.props) {
                 try {
-                    routeInfo.props = await this.getInitialProps(Component1, {
+                    routeInfo.props = await this.getInitialProps(Component, {
                         err,
                         pathname,
                         query
@@ -821,7 +826,7 @@ class Router {
             }
             return routeInfo;
         } catch (routeInfoErr) {
-            return this.handleRouteInfoError(routeInfoErr, pathname, query, as, routeProps, true);
+            return this.handleRouteInfoError((0, _isError).default(routeInfoErr) ? routeInfoErr : new Error(routeInfoErr + ''), pathname, query, as, routeProps, true);
         }
     }
     async getRouteInfo(route, pathname, query, as, resolvedAs, routeProps) {
@@ -830,18 +835,23 @@ class Router {
             if (routeProps.shallow && existingRouteInfo && this.route === route) {
                 return existingRouteInfo;
             }
-            const cachedRouteInfo = existingRouteInfo && 'initial' in existingRouteInfo ? undefined : existingRouteInfo;
-            const routeInfo = cachedRouteInfo ? cachedRouteInfo : await this.fetchComponent(route).then((res)=>({
+            let cachedRouteInfo = undefined;
+            // can only use non-initial route info
+            // cannot reuse route info in development since it can change after HMR
+            if (process.env.NODE_ENV !== 'development' && existingRouteInfo && !('initial' in existingRouteInfo)) {
+                cachedRouteInfo = existingRouteInfo;
+            }
+            const routeInfo = cachedRouteInfo || await this.fetchComponent(route).then((res)=>({
                     Component: res.page,
                     styleSheets: res.styleSheets,
                     __N_SSG: res.mod.__N_SSG,
                     __N_SSP: res.mod.__N_SSP
                 })
             );
-            const { Component: Component1 , __N_SSG , __N_SSP  } = routeInfo;
+            const { Component , __N_SSG , __N_SSP  } = routeInfo;
             if (process.env.NODE_ENV !== 'production') {
                 const { isValidElementType  } = require('react-is');
-                if (!isValidElementType(Component1)) {
+                if (!isValidElementType(Component)) {
                     throw new Error(`The default export is not a React Component in page: "${pathname}"`);
                 }
             }
@@ -852,7 +862,7 @@ class Router {
                     query
                 }), resolvedAs, __N_SSG, this.locale);
             }
-            const props = await this._getData(()=>__N_SSG ? this._getStaticData(dataHref) : __N_SSP ? this._getServerData(dataHref) : this.getInitialProps(Component1, // we provide AppTree later so this needs to be `any`
+            const props = await this._getData(()=>__N_SSG ? this._getStaticData(dataHref) : __N_SSP ? this._getServerData(dataHref) : this.getInitialProps(Component, // we provide AppTree later so this needs to be `any`
                 {
                     pathname,
                     query,
@@ -865,8 +875,8 @@ class Router {
             routeInfo.props = props;
             this.components[route] = routeInfo;
             return routeInfo;
-        } catch (err2) {
-            return this.handleRouteInfoError(err2, pathname, query, as, routeProps);
+        } catch (err) {
+            return this.handleRouteInfoError((0, _isError).default(err) ? err : new Error(err + ''), pathname, query, as, routeProps);
         }
     }
     set(route, pathname, query, as, data, resetScroll) {
@@ -933,11 +943,11 @@ class Router {
    */ async prefetch(url, asPath = url, options = {
     }) {
         let parsed = (0, _parseRelativeUrl).parseRelativeUrl(url);
-        let { pathname: pathname2  } = parsed;
+        let { pathname  } = parsed;
         if (process.env.__NEXT_I18N_SUPPORT) {
             if (options.locale === false) {
-                pathname2 = (0, _normalizeLocalePath).normalizeLocalePath(pathname2, this.locales).pathname;
-                parsed.pathname = pathname2;
+                pathname = (0, _normalizeLocalePath).normalizeLocalePath(pathname, this.locales).pathname;
+                parsed.pathname = pathname;
                 url = (0, _utils).formatWithValidation(parsed);
                 let parsedAs = (0, _parseRelativeUrl).parseRelativeUrl(asPath);
                 const localePathResult = (0, _normalizeLocalePath).normalizeLocalePath(parsedAs.pathname, this.locales);
@@ -957,19 +967,19 @@ class Router {
             if (rewritesResult.matchedPage && rewritesResult.resolvedHref) {
                 // if this directly matches a page we need to update the href to
                 // allow the correct page chunk to be loaded
-                pathname2 = rewritesResult.resolvedHref;
-                parsed.pathname = pathname2;
+                pathname = rewritesResult.resolvedHref;
+                parsed.pathname = pathname;
                 url = (0, _utils).formatWithValidation(parsed);
             }
         } else {
             parsed.pathname = resolveDynamicRoute(parsed.pathname, pages);
-            if (parsed.pathname !== pathname2) {
-                pathname2 = parsed.pathname;
-                parsed.pathname = pathname2;
+            if (parsed.pathname !== pathname) {
+                pathname = parsed.pathname;
+                parsed.pathname = pathname;
                 url = (0, _utils).formatWithValidation(parsed);
             }
         }
-        const route = (0, _normalizeTrailingSlash).removePathTrailingSlash(pathname2);
+        const route = (0, _normalizeTrailingSlash).removePathTrailingSlash(pathname);
         // Prefetch is not supported in development mode because it would trigger on-demand-entries
         if (process.env.NODE_ENV !== 'production') {
             return;
@@ -986,16 +996,24 @@ class Router {
         const cancel = this.clc = ()=>{
             cancelled = true;
         };
-        const componentResult = await this.pageLoader.loadPage(route);
-        if (cancelled) {
-            const error = new Error(`Abort fetching component for route: "${route}"`);
-            error.cancelled = true;
-            throw error;
+        const handleCancelled = ()=>{
+            if (cancelled) {
+                const error = new Error(`Abort fetching component for route: "${route}"`);
+                error.cancelled = true;
+                throw error;
+            }
+            if (cancel === this.clc) {
+                this.clc = null;
+            }
+        };
+        try {
+            const componentResult = await this.pageLoader.loadPage(route);
+            handleCancelled();
+            return componentResult;
+        } catch (err) {
+            handleCancelled();
+            throw err;
         }
-        if (cancel === this.clc) {
-            this.clc = null;
-        }
-        return componentResult;
     }
     _getData(fn) {
         let cancelled = false;
@@ -1008,9 +1026,9 @@ class Router {
                 this.clc = null;
             }
             if (cancelled) {
-                const err2 = new Error('Loading initial props cancelled');
-                err2.cancelled = true;
-                throw err2;
+                const err = new Error('Loading initial props cancelled');
+                err.cancelled = true;
+                throw err;
             }
             return data;
         });
@@ -1027,22 +1045,22 @@ class Router {
     }
     _getServerData(dataHref) {
         const { href: resourceKey  } = new URL(dataHref, window.location.href);
-        if (this.sdr[resourceKey]) {
+        if (this.sdr[resourceKey] !== undefined) {
             return this.sdr[resourceKey];
         }
         return this.sdr[resourceKey] = fetchNextData(dataHref, this.isSsr).then((data)=>{
             delete this.sdr[resourceKey];
             return data;
-        }).catch((err2)=>{
+        }).catch((err)=>{
             delete this.sdr[resourceKey];
-            throw err2;
+            throw err;
         });
     }
     getInitialProps(Component, ctx) {
-        const { Component: App1  } = this.components['/_app'];
-        const AppTree = this._wrapApp(App1);
+        const { Component: App  } = this.components['/_app'];
+        const AppTree = this._wrapApp(App);
         ctx.AppTree = AppTree;
-        return (0, _utils).loadGetInitialProps(App1, {
+        return (0, _utils).loadGetInitialProps(App, {
             AppTree,
             Component,
             router: this,

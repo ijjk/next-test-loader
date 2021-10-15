@@ -5,6 +5,7 @@ Object.defineProperty(exports, "__esModule", {
 exports.default = void 0;
 var _crypto = _interopRequireDefault(require("crypto"));
 var _fs = _interopRequireDefault(require("fs"));
+var _chalk = _interopRequireDefault(require("chalk"));
 var _jestWorker = require("jest-worker");
 var _amphtmlValidator = _interopRequireDefault(require("next/dist/compiled/amphtml-validator"));
 var _findUp = _interopRequireDefault(require("next/dist/compiled/find-up"));
@@ -23,13 +24,17 @@ var _normalizePagePath = require("../normalize-page-path");
 var _router = _interopRequireWildcard(require("../router"));
 var _events = require("../../telemetry/events");
 var _storage = require("../../telemetry/storage");
-var _trace = require("../../telemetry/trace");
+var _trace = require("../../trace");
 var _hotReloader = _interopRequireDefault(require("./hot-reloader"));
 var _findPageFile = require("../lib/find-page-file");
 var _utils1 = require("../lib/utils");
 var _coalescedFunction = require("../../lib/coalesced-function");
 var _loadComponents = require("../load-components");
 var _utils2 = require("../../shared/lib/utils");
+var _parseStack = require("@next/react-dev-overlay/lib/internal/helpers/parseStack");
+var _middleware = require("@next/react-dev-overlay/lib/middleware");
+var Log = _interopRequireWildcard(require("../../build/output/log"));
+var _isError = _interopRequireDefault(require("../../lib/is-error"));
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
         default: obj
@@ -68,7 +73,7 @@ const ReactDevOverlay = (props)=>{
 };
 class DevServer extends _nextServer.default {
     constructor(options){
-        var ref, ref1;
+        var ref9, ref1;
         super({
             ...options,
             dev: true
@@ -79,7 +84,7 @@ class DevServer extends _nextServer.default {
             this.setDevReady = resolve;
         });
         var ref2;
-        this.renderOpts.ampSkipValidation = (ref2 = (ref = this.nextConfig.experimental) === null || ref === void 0 ? void 0 : (ref1 = ref.amp) === null || ref1 === void 0 ? void 0 : ref1.skipValidation) !== null && ref2 !== void 0 ? ref2 : false;
+        this.renderOpts.ampSkipValidation = (ref2 = (ref9 = this.nextConfig.experimental) === null || ref9 === void 0 ? void 0 : (ref1 = ref9.amp) === null || ref1 === void 0 ? void 0 : ref1.skipValidation) !== null && ref2 !== void 0 ? ref2 : false;
         this.renderOpts.ampValidator = (html, pathname)=>{
             const validatorPath = this.nextConfig.experimental && this.nextConfig.experimental.amp && this.nextConfig.experimental.amp.validator;
             return _amphtmlValidator.default.getInstance(validatorPath).then((validator)=>{
@@ -191,12 +196,12 @@ class DevServer extends _nextServer.default {
                     routedPages.push(pageName);
                 }
                 try {
-                    var ref3;
+                    var ref;
                     // we serve a separate manifest with all pages for the client in
                     // dev mode so that we can match a page after a rewrite on the client
                     // before it has been built and is populated in the _buildManifest
                     const sortedRoutes = (0, _utils).getSortedRoutes(routedPages);
-                    if (!((ref3 = this.sortedRoutes) === null || ref3 === void 0 ? void 0 : ref3.every((val, idx)=>val === sortedRoutes[idx]
+                    if (!((ref = this.sortedRoutes) === null || ref === void 0 ? void 0 : ref.every((val, idx)=>val === sortedRoutes[idx]
                     ))) {
                         // emit the change so clients fetch the update
                         this.hotReloader.send(undefined, {
@@ -233,7 +238,9 @@ class DevServer extends _nextServer.default {
         this.webpackWatcher = null;
     }
     async prepare() {
-        await (0, _verifyTypeScriptSetup).verifyTypeScriptSetup(this.dir, this.pagesDir, false, !this.nextConfig.images.disableStaticImages);
+        (0, _trace).setGlobal('distDir', this.distDir);
+        (0, _trace).setGlobal('phase', _constants1.PHASE_DEVELOPMENT_SERVER);
+        await (0, _verifyTypeScriptSetup).verifyTypeScriptSetup(this.dir, this.pagesDir, false, this.nextConfig);
         this.customRoutes = await (0, _loadCustomRoutes).default(this.nextConfig);
         // reload router
         const { redirects , rewrites , headers  } = this.customRoutes;
@@ -256,7 +263,7 @@ class DevServer extends _nextServer.default {
             distDir: this.distDir
         });
         telemetry.record((0, _events).eventCliSession(_constants1.PHASE_DEVELOPMENT_SERVER, this.distDir, {
-            webpackVersion: this.hotReloader.isWebpack5 ? 5 : 4,
+            webpackVersion: 5,
             cliCommand: 'dev',
             isSrcDir: (0, _path).relative(this.dir, this.pagesDir).startsWith('src'),
             hasNowJson: !!await (0, _findUp).default('now.json', {
@@ -266,6 +273,14 @@ class DevServer extends _nextServer.default {
         }));
         // This is required by the tracing subsystem.
         (0, _trace).setGlobal('telemetry', telemetry);
+        process.on('unhandledRejection', (reason)=>{
+            this.logErrorWithOriginalStack(reason, 'unhandledRejection').catch(()=>{
+            });
+        });
+        process.on('uncaughtException', (err)=>{
+            this.logErrorWithOriginalStack(err, 'uncaughtException').catch(()=>{
+            });
+        });
     }
     async close() {
         await this.stopWatcher();
@@ -314,11 +329,11 @@ class DevServer extends _nextServer.default {
         return false;
     }
     async run(req, res, parsedUrl) {
-        var ref4;
+        var ref;
         await this.devReady;
         const { basePath  } = this.nextConfig;
         let originalPathname = null;
-        if (basePath && ((ref4 = parsedUrl.pathname) === null || ref4 === void 0 ? void 0 : ref4.startsWith(basePath))) {
+        if (basePath && ((ref = parsedUrl.pathname) === null || ref === void 0 ? void 0 : ref.startsWith(basePath))) {
             // strip basePath before handling dev bundles
             // If replace ends up replacing the full url it'll be `undefined`, meaning we have to default it to `/`
             originalPathname = parsedUrl.pathname;
@@ -339,7 +354,64 @@ class DevServer extends _nextServer.default {
             // if they should match against the basePath or not
             parsedUrl.pathname = originalPathname;
         }
-        return super.run(req, res, parsedUrl);
+        try {
+            return await super.run(req, res, parsedUrl);
+        } catch (error) {
+            res.statusCode = 500;
+            const err = (0, _isError).default(error) ? error : error ? new Error(error + '') : null;
+            try {
+                this.logErrorWithOriginalStack(err).catch(()=>{
+                });
+                return await this.renderError(err, req, res, pathname, {
+                    __NEXT_PAGE: (0, _isError).default(err) && err.page || pathname || ''
+                });
+            } catch (internalErr) {
+                console.error(internalErr);
+                res.end('Internal Server Error');
+            }
+        }
+    }
+    async logErrorWithOriginalStack(err, type) {
+        let usedOriginalStack = false;
+        if ((0, _isError).default(err) && err.name && err.stack && err.message) {
+            try {
+                const frames = (0, _parseStack).parseStack(err.stack);
+                const frame = frames[0];
+                if (frame.lineNumber && (frame === null || frame === void 0 ? void 0 : frame.file)) {
+                    var ref, ref3, ref4, ref5;
+                    const compilation = (ref = this.hotReloader) === null || ref === void 0 ? void 0 : (ref3 = ref.serverStats) === null || ref3 === void 0 ? void 0 : ref3.compilation;
+                    const moduleId = frame.file.replace(/^(webpack-internal:\/\/\/|file:\/\/)/, '');
+                    const source = await (0, _middleware).getSourceById(!!((ref4 = frame.file) === null || ref4 === void 0 ? void 0 : ref4.startsWith(_path.sep)) || !!((ref5 = frame.file) === null || ref5 === void 0 ? void 0 : ref5.startsWith('file:')), moduleId, compilation);
+                    const originalFrame = await (0, _middleware).createOriginalStackFrame({
+                        line: frame.lineNumber,
+                        column: frame.column,
+                        source,
+                        frame,
+                        modulePath: moduleId,
+                        rootDirectory: this.dir
+                    });
+                    if (originalFrame) {
+                        const { originalCodeFrame , originalStackFrame  } = originalFrame;
+                        const { file , lineNumber , column , methodName  } = originalStackFrame;
+                        console.error(_chalk.default.red('error') + ' - ' + `${file} (${lineNumber}:${column}) @ ${methodName}`);
+                        console.error(`${_chalk.default.red(err.name)}: ${err.message}`);
+                        console.error(originalCodeFrame);
+                        usedOriginalStack = true;
+                    }
+                }
+            } catch (_) {
+            // failed to load original stack using source maps
+            // this un-actionable by users so we don't show the
+            // internal error and only show the provided stack
+            }
+        }
+        if (!usedOriginalStack) {
+            if (type) {
+                Log.error(`${type}:`, err + '');
+            } else {
+                Log.error(err + '');
+            }
+        }
     }
     // override production loading of routes-manifest
     getCustomRoutes() {
@@ -446,7 +518,7 @@ class DevServer extends _nextServer.default {
         // we lazy load the staticPaths to prevent the user
         // from waiting on them for the page to load in dev mode
         const __getStaticPaths = async ()=>{
-            const { publicRuntimeConfig , serverRuntimeConfig , httpAgentOptions ,  } = this.nextConfig;
+            const { publicRuntimeConfig , serverRuntimeConfig , httpAgentOptions  } = this.nextConfig;
             const { locales , defaultLocale  } = this.nextConfig.i18n || {
             };
             const paths = await this.staticPathsWorker.loadStaticPaths(this.distDir, pathname, !this.renderOpts.dev && this._isLikeServerless, {

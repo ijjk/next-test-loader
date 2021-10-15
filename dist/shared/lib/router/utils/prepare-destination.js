@@ -85,14 +85,16 @@ function matchHas(req, has, query) {
             return true;
         } else if (value) {
             const matcher = new RegExp(`^${hasItem.value}$`);
-            const matches = value.match(matcher);
+            const matches = Array.isArray(value) ? value.slice(-1)[0].match(matcher) : value.match(matcher);
             if (matches) {
-                if (matches.groups) {
-                    Object.keys(matches.groups).forEach((groupKey)=>{
-                        params[groupKey] = matches.groups[groupKey];
-                    });
-                } else if (hasItem.type === 'host' && matches[0]) {
-                    params.host = matches[0];
+                if (Array.isArray(matches)) {
+                    if (matches.groups) {
+                        Object.keys(matches.groups).forEach((groupKey)=>{
+                            params[groupKey] = matches.groups[groupKey];
+                        });
+                    } else if (hasItem.type === 'host' && matches[0]) {
+                        params.host = matches[0];
+                    }
                 }
                 return true;
             }
@@ -120,6 +122,10 @@ function compileNonPath(value, params) {
         validate: false
     })(params).substr(1);
 }
+const escapeSegment = (str, segmentName)=>str.replace(new RegExp(`:${segmentName}`, 'g'), `__ESC_COLON_${segmentName}`)
+;
+const unescapeSegments = (str)=>str.replace(/__ESC_COLON_/gi, ':')
+;
 function prepareDestination(destination, params, query, appendParamsToQuery) {
     // clone query so we don't modify the original
     query = Object.assign({
@@ -127,14 +133,27 @@ function prepareDestination(destination, params, query, appendParamsToQuery) {
     const hadLocale = query.__nextLocale;
     delete query.__nextLocale;
     delete query.__nextDefaultLocale;
-    const parsedDestination = (0, _parseUrl).parseUrl(destination);
+    let escapedDestination = destination;
+    for (const param of Object.keys({
+        ...params,
+        ...query
+    })){
+        escapedDestination = escapeSegment(escapedDestination, param);
+    }
+    const parsedDestination = (0, _parseUrl).parseUrl(escapedDestination);
     const destQuery = parsedDestination.query;
-    const destPath = `${parsedDestination.pathname}${parsedDestination.hash || ''}`;
+    const destPath = unescapeSegments(`${parsedDestination.pathname}${parsedDestination.hash || ''}`);
+    const destHostname = unescapeSegments(parsedDestination.hostname || '');
     const destPathParamKeys = [];
+    const destHostnameParamKeys = [];
     pathToRegexp.pathToRegexp(destPath, destPathParamKeys);
-    const destPathParams = destPathParamKeys.map((key)=>key.name
+    pathToRegexp.pathToRegexp(destHostname, destHostnameParamKeys);
+    const destParams = [];
+    destPathParamKeys.forEach((key)=>destParams.push(key.name)
     );
-    let destinationCompiler = pathToRegexp.compile(destPath, // we don't validate while compiling the destination since we should
+    destHostnameParamKeys.forEach((key)=>destParams.push(key.name)
+    );
+    const destPathCompiler = pathToRegexp.compile(destPath, // we don't validate while compiling the destination since we should
     // have already validated before we got to this point and validating
     // breaks compiling destinations with named pattern params from the source
     // e.g. /something:hello(.*) -> /another/:hello is broken with validation
@@ -143,16 +162,19 @@ function prepareDestination(destination, params, query, appendParamsToQuery) {
     {
         validate: false
     });
+    const destHostnameCompiler = pathToRegexp.compile(destHostname, {
+        validate: false
+    });
     let newUrl;
     // update any params in query values
     for (const [key, strOrArray] of Object.entries(destQuery)){
         // the value needs to start with a forward-slash to be compiled
         // correctly
         if (Array.isArray(strOrArray)) {
-            destQuery[key] = strOrArray.map((value)=>compileNonPath(value, params)
+            destQuery[key] = strOrArray.map((value)=>compileNonPath(unescapeSegments(value), params)
             );
         } else {
-            destQuery[key] = compileNonPath(strOrArray, params);
+            destQuery[key] = compileNonPath(unescapeSegments(strOrArray), params);
         }
     }
     // add path params to query if it's not a redirect and not
@@ -163,17 +185,18 @@ function prepareDestination(destination, params, query, appendParamsToQuery) {
         paramKeys = paramKeys.filter((name)=>name !== 'nextInternalLocale'
         );
     }
-    if (appendParamsToQuery && !paramKeys.some((key1)=>destPathParams.includes(key1)
+    if (appendParamsToQuery && !paramKeys.some((key)=>destParams.includes(key)
     )) {
-        for (const key1 of paramKeys){
-            if (!(key1 in destQuery)) {
-                destQuery[key1] = params[key1];
+        for (const key of paramKeys){
+            if (!(key in destQuery)) {
+                destQuery[key] = params[key];
             }
         }
     }
     try {
-        newUrl = destinationCompiler(params);
+        newUrl = destPathCompiler(params);
         const [pathname, hash] = newUrl.split('#');
+        parsedDestination.hostname = destHostnameCompiler(params);
         parsedDestination.pathname = pathname;
         parsedDestination.hash = `${hash ? '#' : ''}${hash || ''}`;
         delete parsedDestination.search;

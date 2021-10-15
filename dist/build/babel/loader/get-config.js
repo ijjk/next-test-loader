@@ -58,7 +58,7 @@ function getCacheCharacteristics(loaderOptions, source, filename) {
  * Return an array of Babel plugins, conditioned upon loader options and
  * source file characteristics.
  */ function getPlugins(loaderOptions, cacheCharacteristics) {
-    const { isServer , isPageFile , isNextDist , hasModuleExports ,  } = cacheCharacteristics;
+    const { isServer , isPageFile , isNextDist , hasModuleExports  } = cacheCharacteristics;
     const { hasReactRefresh , development  } = loaderOptions;
     const applyCommonJsItem = hasModuleExports ? (0, _core).createConfigItem(require('../plugins/commonjs'), {
         type: 'plugin'
@@ -138,7 +138,7 @@ const isJsFile = /\.js$/;
  * Generate a new, flat Babel config, ready to be handed to Babel-traverse.
  * This config should have no unresolved overrides, presets, etc.
  */ function getFreshConfig(cacheCharacteristics, loaderOptions, target, filename, inputSourceMap) {
-    let { isServer , pagesDir , development , hasJsxRuntime , configFile ,  } = loaderOptions;
+    let { isServer , pagesDir , development , hasJsxRuntime , configFile  } = loaderOptions;
     let customConfig = configFile ? getCustomBabelConfig(configFile) : undefined;
     let options = {
         babelrc: false,
@@ -216,7 +216,7 @@ const isJsFile = /\.js$/;
  * The conditions of permissible sharing between files is dependent on specific
  * file attributes and Next.js compiler states: `CharacteristicsGermaneToCaching`.
  */ function getCacheKey(cacheCharacteristics) {
-    const { isServer , isPageFile , isNextDist , hasModuleExports , fileExt ,  } = cacheCharacteristics;
+    const { isServer , isPageFile , isNextDist , hasModuleExports , fileExt  } = cacheCharacteristics;
     const flags = 0 | (isServer ? 1 : 0) | (isPageFile ? 2 : 0) | (isNextDist ? 4 : 0) | (hasModuleExports ? 8 : 0);
     return fileExt + flags;
 }

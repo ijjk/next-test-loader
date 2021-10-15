@@ -16,6 +16,13 @@ const defaultConfig = {
     },
     webpack: null,
     webpackDevMiddleware: null,
+    eslint: {
+        ignoreDuringBuilds: false
+    },
+    typescript: {
+        ignoreBuildErrors: false,
+        tsconfigPath: 'tsconfig.json'
+    },
     distDir: '.next',
     cleanDistDir: true,
     assetPrefix: '',
@@ -39,7 +46,7 @@ const defaultConfig = {
         buildActivity: true
     },
     onDemandEntries: {
-        maxInactiveAge: 60 * 1000,
+        maxInactiveAge: 15 * 1000,
         pagesBufferLength: 2
     },
     amp: {
@@ -52,7 +59,7 @@ const defaultConfig = {
     i18n: null,
     productionBrowserSourceMaps: false,
     optimizeFonts: true,
-    webpack5: Number(process.env.NEXT_PRIVATE_TEST_WEBPACK4_MODE) > 0 ? false : undefined,
+    webpack5: undefined,
     excludeDefaultMomentLocales: true,
     serverRuntimeConfig: {
     },
@@ -77,17 +84,19 @@ const defaultConfig = {
         optimizeImages: false,
         optimizeCss: false,
         scrollRestoration: false,
-        stats: false,
         externalDir: false,
         reactRoot: Number(process.env.NEXT_PRIVATE_REACT_ROOT) > 0,
         disableOptimizedLoading: false,
         gzipSize: true,
         craCompat: false,
-        esmExternals: false,
+        esmExternals: true,
         staticPageGenerationTimeout: 60,
         // default to 50MB limit
         isrMemoryCacheSize: 50 * 1024 * 1024,
-        concurrentFeatures: false
+        outputFileTracing: false,
+        concurrentFeatures: false,
+        serverComponents: false,
+        fullySpecified: false
     },
     future: {
         strictPostcssConfiguration: false

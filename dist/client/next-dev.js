@@ -53,6 +53,11 @@ window.next = {
             });
         } else if (event.data.indexOf('serverOnlyChanges') !== -1) {
             const { pages  } = JSON.parse(event.data);
+            // Make sure to reload when the dev-overlay is showing for an
+            // API route
+            if (pages.includes(_.router.query.__NEXT_PAGE)) {
+                return window.location.reload();
+            }
             if (!_.router.clc && pages.includes(_.router.pathname)) {
                 console.log('Refreshing page data due to server-side change');
                 buildIndicatorHandler('building');

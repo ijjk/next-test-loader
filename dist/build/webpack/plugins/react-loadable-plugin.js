@@ -10,28 +10,16 @@ function _interopRequireDefault(obj) {
     };
 }
 function getModuleId(compilation, module) {
-    if (_webpack.isWebpack5) {
-        return compilation.chunkGraph.getModuleId(module);
-    }
-    return module.id;
+    return compilation.chunkGraph.getModuleId(module);
 }
 function getModuleFromDependency(compilation, dep) {
-    if (_webpack.isWebpack5) {
-        return compilation.moduleGraph.getModule(dep);
-    }
-    return dep.module;
+    return compilation.moduleGraph.getModule(dep);
 }
 function getOriginModuleFromDependency(compilation, dep) {
-    if (_webpack.isWebpack5) {
-        return compilation.moduleGraph.getParentModule(dep);
-    }
-    return dep.originModule;
+    return compilation.moduleGraph.getParentModule(dep);
 }
 function getChunkGroupFromBlock(compilation, block) {
-    if (_webpack.isWebpack5) {
-        return compilation.chunkGraph.getBlockChunkGroup(block);
-    }
-    return block.chunkGroup;
+    return compilation.chunkGraph.getBlockChunkGroup(block);
 }
 function buildManifest(_compiler, compilation, pagesDir) {
     let manifest = {
@@ -115,21 +103,15 @@ class ReactLoadablePlugin {
         return assets;
     }
     apply(compiler) {
-        if (_webpack.isWebpack5) {
-            compiler.hooks.make.tap('ReactLoadableManifest', (compilation)=>{
+        compiler.hooks.make.tap('ReactLoadableManifest', (compilation)=>{
+            // @ts-ignore TODO: Remove ignore when webpack 5 is stable
+            compilation.hooks.processAssets.tap({
+                name: 'ReactLoadableManifest',
                 // @ts-ignore TODO: Remove ignore when webpack 5 is stable
-                compilation.hooks.processAssets.tap({
-                    name: 'ReactLoadableManifest',
-                    // @ts-ignore TODO: Remove ignore when webpack 5 is stable
-                    stage: _webpack.webpack.Compilation.PROCESS_ASSETS_STAGE_ADDITIONS
-                }, (assets)=>{
-                    this.createAssets(compiler, compilation, assets);
-                });
+                stage: _webpack.webpack.Compilation.PROCESS_ASSETS_STAGE_ADDITIONS
+            }, (assets)=>{
+                this.createAssets(compiler, compilation, assets);
             });
-            return;
-        }
-        compiler.hooks.emit.tap('ReactLoadableManifest', (compilation)=>{
-            this.createAssets(compiler, compilation, compilation.assets);
         });
     }
 }

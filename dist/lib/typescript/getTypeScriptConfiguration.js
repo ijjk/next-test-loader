@@ -5,8 +5,9 @@ Object.defineProperty(exports, "__esModule", {
 exports.getTypeScriptConfiguration = getTypeScriptConfiguration;
 var _chalk = _interopRequireDefault(require("chalk"));
 var _os = _interopRequireDefault(require("os"));
-var _path1 = _interopRequireDefault(require("path"));
+var _path = _interopRequireDefault(require("path"));
 var _fatalError = require("../fatal-error");
+var _isError = _interopRequireDefault(require("../is-error"));
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
         default: obj
@@ -35,7 +36,7 @@ async function getTypeScriptConfiguration(ts, tsConfigPath, metaOnly) {
                     extensions ? `file${extensions[0]}` : `file.ts`
                 ];
             }
-        } : ts.sys, _path1.default.dirname(tsConfigPath));
+        } : ts.sys, _path.default.dirname(tsConfigPath));
         if (result.errors) {
             result.errors = result.errors.filter(({ code  })=>// No inputs were found in config file
                 code !== 18003
@@ -46,9 +47,9 @@ async function getTypeScriptConfiguration(ts, tsConfigPath, metaOnly) {
         }
         return result;
     } catch (err) {
-        if ((err === null || err === void 0 ? void 0 : err.name) === 'SyntaxError') {
-            var ref1;
-            const reason = '\n' + ((ref1 = err === null || err === void 0 ? void 0 : err.message) !== null && ref1 !== void 0 ? ref1 : '');
+        if ((0, _isError).default(err) && err.name === 'SyntaxError') {
+            var _message;
+            const reason = '\n' + ((_message = err.message) !== null && _message !== void 0 ? _message : '');
             throw new _fatalError.FatalError(_chalk.default.red.bold('Could not parse', _chalk.default.cyan('tsconfig.json') + '.' + ' Please make sure it contains syntactically correct JSON.') + reason);
         }
         throw err;

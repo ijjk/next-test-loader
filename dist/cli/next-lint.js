@@ -16,15 +16,17 @@ var _config = _interopRequireDefault(require("../server/config"));
 var _constants1 = require("../shared/lib/constants");
 var _events = require("../telemetry/events");
 var _compileError = require("../lib/compile-error");
+var _isError = _interopRequireDefault(require("../lib/is-error"));
+var _getProjectDir = require("../lib/get-project-dir");
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
         default: obj
     };
 }
-var ref, ref1, ref2, ref3, ref4;
-const eslintOptions = (args)=>({
+var ref8, ref1, ref2, ref3;
+const eslintOptions = (args, defaultCacheLocation)=>({
         overrideConfigFile: args['--config'] || null,
-        extensions: (ref = args['--ext']) !== null && ref !== void 0 ? ref : [
+        extensions: (ref8 = args['--ext']) !== null && ref8 !== void 0 ? ref8 : [
             '.js',
             '.jsx',
             '.ts',
@@ -38,18 +40,21 @@ const eslintOptions = (args)=>({
         ignore: !Boolean(args['--no-ignore']),
         allowInlineConfig: !Boolean(args['--no-inline-config']),
         reportUnusedDisableDirectives: args['--report-unused-disable-directives'] || null,
-        cache: (ref4 = args['--cache']) !== null && ref4 !== void 0 ? ref4 : false,
-        cacheLocation: args['--cache-location'] || '.eslintcache',
+        cache: !Boolean(args['--no-cache']),
+        cacheLocation: args['--cache-location'] || defaultCacheLocation,
         errorOnUnmatchedPattern: args['--error-on-unmatched-pattern'] ? Boolean(args['--error-on-unmatched-pattern']) : false
     })
 ;
 const nextLint = async (argv)=>{
-    var ref5;
+    var ref;
     const validArgs = {
         // Types
         '--help': Boolean,
         '--base-dir': String,
         '--dir': [
+            String
+        ],
+        '--file': [
             String
         ],
         '--strict': Boolean,
@@ -79,6 +84,7 @@ const nextLint = async (argv)=>{
         '--no-inline-config': Boolean,
         '--report-unused-disable-directives': String,
         '--cache': Boolean,
+        '--no-cache': Boolean,
         '--cache-location': String,
         '--error-on-unmatched-pattern': Boolean,
         '--format': String,
@@ -95,7 +101,7 @@ const nextLint = async (argv)=>{
             argv
         });
     } catch (error) {
-        if (error.code === 'ARG_UNKNOWN_OPTION') {
+        if ((0, _isError).default(error) && error.code === 'ARG_UNKNOWN_OPTION') {
             return (0, _utils).printAndExit(error.message, 1);
         }
         throw error;
@@ -107,15 +113,16 @@ const nextLint = async (argv)=>{
         If not configured, ESLint will be set up for the first time.
 
       Usage
-        $ next lint <baseDir> [options]
-      
+        $ next lint <baseDir> [options]      
+
       <baseDir> represents the directory of the Next.js application.
       If no directory is provided, the current directory will be used.
 
       Options
         Basic configuration:
           -h, --help                     List this help
-          -d, --dir Array                Set directory, or directories, to run ESLint - default: 'pages', 'components', and 'lib'
+          -d, --dir Array                Include directory, or directories, to run ESLint - default: 'pages', 'components', and 'lib'
+          --file Array                   Include file, or files, to run ESLint
           -c, --config path::String      Use this configuration file, overriding all other config options
           --ext [String]                 Specify JavaScript file extensions - default: .js, .jsx, .ts, .tsx
           --resolve-plugins-relative-to path::String  A folder where plugins should be resolved from, CWD by default
@@ -146,37 +153,45 @@ const nextLint = async (argv)=>{
           --report-unused-disable-directives  Adds reported errors for unused eslint-disable directives ("error" | "warn" | "off")
 
         Caching:
-          --cache                        Only check changed files - default: false
+          --no-cache                     Disable caching
           --cache-location path::String  Path to the cache file or directory - default: .eslintcache
         
         Miscellaneous:
           --error-on-unmatched-pattern   Show errors when any file patterns are unmatched - default: false
           `, 0);
     }
-    const baseDir = (0, _path).resolve(args._[0] || '.');
+    const baseDir = (0, _getProjectDir).getProjectDir(args._[0]);
     // Check if the provided directory exists
     if (!(0, _fs).existsSync(baseDir)) {
         (0, _utils).printAndExit(`> No such directory exists as the project root: ${baseDir}`);
     }
-    const conf = await (0, _config).default(_constants1.PHASE_PRODUCTION_BUILD, baseDir);
-    var ref6;
-    const dirs = (ref6 = args['--dir']) !== null && ref6 !== void 0 ? ref6 : (ref5 = conf.eslint) === null || ref5 === void 0 ? void 0 : ref5.dirs;
-    const lintDirs = (dirs !== null && dirs !== void 0 ? dirs : _constants.ESLINT_DEFAULT_DIRS).reduce((res, d)=>{
+    const nextConfig = await (0, _config).default(_constants1.PHASE_PRODUCTION_BUILD, baseDir);
+    var ref4;
+    const files = (ref4 = args['--file']) !== null && ref4 !== void 0 ? ref4 : [];
+    var ref5;
+    const dirs = (ref5 = args['--dir']) !== null && ref5 !== void 0 ? ref5 : (ref = nextConfig.eslint) === null || ref === void 0 ? void 0 : ref.dirs;
+    const filesToLint = [
+        ...dirs !== null && dirs !== void 0 ? dirs : [],
+        ...files
+    ];
+    const pathsToLint = (filesToLint.length ? filesToLint : _constants.ESLINT_DEFAULT_DIRS).reduce((res, d)=>{
         const currDir = (0, _path).join(baseDir, d);
         if (!(0, _fs).existsSync(currDir)) return res;
         res.push(currDir);
         return res;
     }, []);
     const reportErrorsOnly = Boolean(args['--quiet']);
-    var ref7;
-    const maxWarnings = (ref7 = args['--max-warnings']) !== null && ref7 !== void 0 ? ref7 : -1;
+    var ref13;
+    const maxWarnings = (ref13 = args['--max-warnings']) !== null && ref13 !== void 0 ? ref13 : -1;
     const formatter = args['--format'] || null;
     const strict = Boolean(args['--strict']);
-    (0, _runLintCheck).runLintCheck(baseDir, lintDirs, false, eslintOptions(args), reportErrorsOnly, maxWarnings, formatter, strict).then(async (lintResults)=>{
+    const distDir = (0, _path).join(baseDir, nextConfig.distDir);
+    const defaultCacheLocation = (0, _path).join(distDir, 'cache', 'eslint/');
+    (0, _runLintCheck).runLintCheck(baseDir, pathsToLint, false, eslintOptions(args, defaultCacheLocation), reportErrorsOnly, maxWarnings, formatter, strict).then(async (lintResults)=>{
         const lintOutput = typeof lintResults === 'string' ? lintResults : lintResults === null || lintResults === void 0 ? void 0 : lintResults.output;
         if (typeof lintResults !== 'string' && (lintResults === null || lintResults === void 0 ? void 0 : lintResults.eventInfo)) {
             const telemetry = new _storage.Telemetry({
-                distDir: (0, _path).join(baseDir, conf.distDir)
+                distDir
             });
             telemetry.record((0, _events).eventLintCheckCompleted({
                 ...lintResults.eventInfo,
@@ -188,9 +203,9 @@ const nextLint = async (argv)=>{
             throw new _compileError.CompileError(lintOutput);
         }
         if (lintOutput) {
-            console.log(lintOutput);
+            (0, _utils).printAndExit(lintOutput, 0);
         } else if (lintResults && !lintOutput) {
-            console.log(_chalk.default.green('✔ No ESLint warnings or errors'));
+            (0, _utils).printAndExit(_chalk.default.green('✔ No ESLint warnings or errors'), 0);
         }
     }).catch((err)=>{
         (0, _utils).printAndExit(err.message);

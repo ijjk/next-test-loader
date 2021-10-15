@@ -29,6 +29,7 @@ var _sendPayload = require("./send-payload");
 var _serveStatic = require("./serve-static");
 var _incrementalCache = require("./incremental-cache");
 var _utils2 = require("./utils");
+var _renderResult = _interopRequireDefault(require("./render-result"));
 var _env = require("@next/env");
 require("./node-polyfill-fetch");
 var _normalizeTrailingSlash = require("../client/normalize-trailing-slash");
@@ -36,12 +37,12 @@ var _getRouteFromAssetPath = _interopRequireDefault(require("../shared/lib/route
 var _denormalizePagePath = require("./denormalize-page-path");
 var _normalizeLocalePath = require("../shared/lib/i18n/normalize-locale-path");
 var Log = _interopRequireWildcard(require("../build/output/log"));
-var _imageOptimizer = require("./image-optimizer");
 var _detectDomainLocale = require("../shared/lib/i18n/detect-domain-locale");
 var _escapePathDelimiters = _interopRequireDefault(require("../shared/lib/router/utils/escape-path-delimiters"));
 var _utils3 = require("../build/webpack/loaders/next-serverless-loader/utils");
 var _responseCache = _interopRequireDefault(require("./response-cache"));
 var _parseNextUrl = require("../shared/lib/router/utils/parse-next-url");
+var _isError = _interopRequireDefault(require("../lib/is-error"));
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
         default: obj
@@ -73,7 +74,7 @@ function _interopRequireWildcard(obj) {
 const getCustomRouteMatcher = (0, _pathMatch).default(true);
 class Server {
     constructor({ dir ='.' , quiet =false , conf , dev =false , minimalMode =false , customServer =true  }){
-        var ref, ref1, ref2;
+        var ref13, ref1, ref2;
         this.customErrorNo404Warn = (0, _utils1).execOnce(()=>{
             console.warn(_chalk.default.bold.yellow(`Warning: `) + _chalk.default.yellow(`You have added a custom /_error page without a custom /404 page. This prevents the 404 page from being auto statically optimized.\nSee here for info: https://nextjs.org/docs/messages/custom-error-no-custom-404`));
         });
@@ -98,7 +99,7 @@ class Server {
             generateEtags,
             previewProps: this.getPreviewProps(),
             customServer: customServer === true ? true : undefined,
-            ampOptimizerConfig: (ref = this.nextConfig.experimental.amp) === null || ref === void 0 ? void 0 : ref.optimizer,
+            ampOptimizerConfig: (ref13 = this.nextConfig.experimental.amp) === null || ref13 === void 0 ? void 0 : ref13.optimizer,
             basePath: this.nextConfig.basePath,
             images: JSON.stringify(this.nextConfig.images),
             optimizeFonts: !!this.nextConfig.optimizeFonts && !dev,
@@ -160,7 +161,7 @@ class Server {
         console.error(err);
     }
     async handleRequest(req, res, parsedUrl) {
-        var ref3, ref4, ref5, ref6, ref7, ref8;
+        var ref26, ref3, ref4, ref5, ref6, ref7;
         const urlParts = (req.url || '').split('?');
         const urlNoQuery = urlParts[0];
         if (urlNoQuery === null || urlNoQuery === void 0 ? void 0 : urlNoQuery.match(/(\\|\/\/)/)) {
@@ -189,16 +190,16 @@ class Server {
         const url = (0, _parseNextUrl).parseNextUrl({
             headers: req.headers,
             nextConfig: this.nextConfig,
-            url: (ref3 = req.url) === null || ref3 === void 0 ? void 0 : ref3.replace(/^\/+/, '/')
+            url: (ref26 = req.url) === null || ref26 === void 0 ? void 0 : ref26.replace(/^\/+/, '/')
         });
         if (url.basePath) {
             req._nextHadBasePath = true;
             req.url = req.url.replace(basePath, '') || '/';
         }
         if (this.minimalMode && req.headers['x-matched-path'] && typeof req.headers['x-matched-path'] === 'string') {
-            var ref9, ref10;
-            const reqUrlIsDataUrl = (ref9 = req.url) === null || ref9 === void 0 ? void 0 : ref9.includes('/_next/data');
-            const matchedPathIsDataUrl = (ref10 = req.headers['x-matched-path']) === null || ref10 === void 0 ? void 0 : ref10.includes('/_next/data');
+            var ref, ref24;
+            const reqUrlIsDataUrl = (ref = req.url) === null || ref === void 0 ? void 0 : ref.includes('/_next/data');
+            const matchedPathIsDataUrl = (ref24 = req.headers['x-matched-path']) === null || ref24 === void 0 ? void 0 : ref24.includes('/_next/data');
             const isDataUrl = reqUrlIsDataUrl || matchedPathIsDataUrl;
             let parsedPath = (0, _url).parse(isDataUrl ? req.url : req.headers['x-matched-path'], true);
             const { pathname , query  } = parsedPath;
@@ -261,11 +262,11 @@ class Server {
             }
             parsedUrl.pathname = `${basePath || ''}${matchedPathname === '/' && basePath ? '' : matchedPathname}`;
         }
-        req.__nextHadTrailingSlash = (ref4 = url.locale) === null || ref4 === void 0 ? void 0 : ref4.trailingSlash;
-        if ((ref5 = url.locale) === null || ref5 === void 0 ? void 0 : ref5.domain) {
+        req.__nextHadTrailingSlash = (ref3 = url.locale) === null || ref3 === void 0 ? void 0 : ref3.trailingSlash;
+        if ((ref4 = url.locale) === null || ref4 === void 0 ? void 0 : ref4.domain) {
             req.__nextIsLocaleDomain = true;
         }
-        if ((ref6 = url.locale) === null || ref6 === void 0 ? void 0 : ref6.path.detectedLocale) {
+        if ((ref5 = url.locale) === null || ref5 === void 0 ? void 0 : ref5.path.detectedLocale) {
             req.url = (0, _url).format(url);
             req.__nextStrippedLocale = true;
             if (url.pathname === '/api' || url.pathname.startsWith('/api/')) {
@@ -273,15 +274,15 @@ class Server {
             }
         }
         if (!this.minimalMode || !parsedUrl.query.__nextLocale) {
-            var ref11;
-            if (url === null || url === void 0 ? void 0 : (ref11 = url.locale) === null || ref11 === void 0 ? void 0 : ref11.locale) {
+            var ref;
+            if (url === null || url === void 0 ? void 0 : (ref = url.locale) === null || ref === void 0 ? void 0 : ref.locale) {
                 parsedUrl.query.__nextLocale = url.locale.locale;
             }
         }
-        if (url === null || url === void 0 ? void 0 : (ref7 = url.locale) === null || ref7 === void 0 ? void 0 : ref7.defaultLocale) {
+        if (url === null || url === void 0 ? void 0 : (ref6 = url.locale) === null || ref6 === void 0 ? void 0 : ref6.defaultLocale) {
             parsedUrl.query.__nextDefaultLocale = url.locale.defaultLocale;
         }
-        if ((ref8 = url.locale) === null || ref8 === void 0 ? void 0 : ref8.redirect) {
+        if ((ref7 = url.locale) === null || ref7 === void 0 ? void 0 : ref7.redirect) {
             res.setHeader('Location', url.locale.redirect);
             res.statusCode = _constants.TEMPORARY_REDIRECT_STATUS;
             res.end();
@@ -291,10 +292,10 @@ class Server {
         try {
             return await this.run(req, res, parsedUrl);
         } catch (err) {
-            if (this.minimalMode) {
+            if (this.minimalMode || this.renderOpts.dev) {
                 throw err;
             }
-            this.logError(err);
+            this.logError((0, _isError).default(err) ? err : new Error(err + ''));
             res.statusCode = 500;
             res.end('Internal Server Error');
         }
@@ -344,7 +345,7 @@ class Server {
         return this.getPrerenderManifest().preview;
     }
     generateRoutes() {
-        var ref12;
+        var ref;
         const server = this;
         const publicRoutes = _fs.default.existsSync(this.publicDir) ? this.generatePublicRoutes() : [];
         const staticFilesRoute = this.hasStaticDir ? [
@@ -402,8 +403,9 @@ class Server {
                     }
                     // remove buildId from URL
                     params.path.shift();
+                    const lastParam = params.path[params.path.length - 1];
                     // show 404 if it doesn't end with .json
-                    if (!params.path[params.path.length - 1].endsWith('.json')) {
+                    if (typeof lastParam !== 'string' || !lastParam.endsWith('.json')) {
                         await this.render404(req, res, _parsedUrl);
                         return {
                             finished: true
@@ -450,7 +452,17 @@ class Server {
                 match: (0, _router).route('/_next/image'),
                 type: 'route',
                 name: '_next/image catchall',
-                fn: (req, res, _params, parsedUrl)=>(0, _imageOptimizer).imageOptimizer(server, req, res, parsedUrl, server.nextConfig, server.distDir, this.renderOpts.dev)
+                fn: (req, res, _params, parsedUrl)=>{
+                    if (this.minimalMode) {
+                        res.statusCode = 400;
+                        res.end('Bad Request');
+                        return {
+                            finished: true
+                        };
+                    }
+                    const { imageOptimizer  } = require('./image-optimizer');
+                    return imageOptimizer(server, req, res, parsedUrl, server.nextConfig, server.distDir, this.renderOpts.dev);
+                }
             },
             {
                 match: (0, _router).route('/_next/:path*'),
@@ -638,8 +650,8 @@ class Server {
                 // next.js core assumes page path without trailing slash
                 pathname = (0, _normalizeTrailingSlash).removePathTrailingSlash(pathname);
                 if (this.nextConfig.i18n) {
-                    var ref13;
-                    const localePathResult = (0, _normalizeLocalePath).normalizeLocalePath(pathname, (ref13 = this.nextConfig.i18n) === null || ref13 === void 0 ? void 0 : ref13.locales);
+                    var ref;
+                    const localePathResult = (0, _normalizeLocalePath).normalizeLocalePath(pathname, (ref = this.nextConfig.i18n) === null || ref === void 0 ? void 0 : ref.locales);
                     if (localePathResult.detectedLocale) {
                         pathname = localePathResult.pathname;
                         parsedUrl.query.__nextLocale = localePathResult.detectedLocale;
@@ -688,7 +700,7 @@ class Server {
             dynamicRoutes: this.dynamicRoutes,
             basePath: this.nextConfig.basePath,
             pageChecker: this.hasPage.bind(this),
-            locales: ((ref12 = this.nextConfig.i18n) === null || ref12 === void 0 ? void 0 : ref12.locales) || []
+            locales: ((ref = this.nextConfig.i18n) === null || ref === void 0 ? void 0 : ref.locales) || []
         };
     }
     async getPagePath(pathname, locales) {
@@ -697,8 +709,8 @@ class Server {
     async hasPage(pathname) {
         let found = false;
         try {
-            var ref14;
-            found = !!await this.getPagePath(pathname, (ref14 = this.nextConfig.i18n) === null || ref14 === void 0 ? void 0 : ref14.locales);
+            var ref;
+            found = !!await this.getPagePath(pathname, (ref = this.nextConfig.i18n) === null || ref === void 0 ? void 0 : ref.locales);
         } catch (_) {
         }
         return found;
@@ -738,7 +750,7 @@ class Server {
         try {
             builtPagePath = await this.getPagePath(page);
         } catch (err) {
-            if (err.code === 'ENOENT') {
+            if ((0, _isError).default(err) && err.code === 'ENOENT') {
                 return false;
             }
             throw err;
@@ -757,7 +769,7 @@ class Server {
                 return true;
             }
         }
-        await (0, _apiUtils).apiResolver(req, res, query, pageModule, this.renderOpts.previewProps, this.minimalMode);
+        await (0, _apiUtils).apiResolver(req, res, query, pageModule, this.renderOpts.previewProps, this.minimalMode, this.renderOpts.dev, page);
         return true;
     }
     generatePublicRoutes() {
@@ -807,8 +819,8 @@ class Server {
     getDynamicRoutes() {
         const addedPages = new Set();
         return (0, _utils).getSortedRoutes(Object.keys(this.pagesManifest).map((page)=>{
-            var ref15;
-            return (0, _normalizeLocalePath).normalizeLocalePath(page, (ref15 = this.nextConfig.i18n) === null || ref15 === void 0 ? void 0 : ref15.locales).pathname;
+            var ref;
+            return (0, _normalizeLocalePath).normalizeLocalePath(page, (ref = this.nextConfig.i18n) === null || ref === void 0 ? void 0 : ref.locales).pathname;
         })).map((page)=>{
             if (addedPages.has(page) || !(0, _utils).isDynamicRoute(page)) return null;
             addedPages.add(page);
@@ -843,13 +855,12 @@ class Server {
         await this.render404(req, res, parsedUrl);
     }
     async pipe(fn, partialContext) {
-        // TODO: Determine when dynamic HTML is allowed
-        const requireStaticHTML = true;
+        const userAgent = partialContext.req.headers['user-agent'];
         const ctx = {
             ...partialContext,
             renderOpts: {
                 ...this.renderOpts,
-                requireStaticHTML
+                supportsDynamicHTML: userAgent ? !(0, _utils2).isBot(userAgent) : false
             }
         };
         const payload = await fn(ctx);
@@ -859,17 +870,17 @@ class Server {
         const { req , res  } = ctx;
         const { body , type , revalidateOptions  } = payload;
         if (!(0, _utils1).isResSent(res)) {
-            const { generateEtags: generateEtags1 , poweredByHeader , dev: dev1  } = this.renderOpts;
-            if (dev1) {
+            const { generateEtags , poweredByHeader , dev  } = this.renderOpts;
+            if (dev) {
                 // In dev, we should not cache pages for any reason.
                 res.setHeader('Cache-Control', 'no-store, must-revalidate');
             }
             return (0, _sendPayload).sendRenderResult({
                 req,
                 res,
-                resultOrPayload: requireStaticHTML ? (await (0, _utils2).resultToChunks(body)).join('') : body,
+                result: body,
                 type,
-                generateEtags: generateEtags1,
+                generateEtags,
                 poweredByHeader,
                 options: revalidateOptions
             });
@@ -880,14 +891,13 @@ class Server {
             ...partialContext,
             renderOpts: {
                 ...this.renderOpts,
-                requireStaticHTML: true
+                supportsDynamicHTML: false
             }
         });
         if (payload === null) {
             return null;
         }
-        const chunks = await (0, _utils2).resultToChunks(payload.body);
-        return chunks.join('');
+        return payload.body.toUnchunkedString();
     }
     async render(req, res, pathname, query = {
     }, parsedUrl) {
@@ -956,7 +966,7 @@ class Server {
                     }
                 };
             } catch (err) {
-                if (err.code !== 'ENOENT') throw err;
+                if ((0, _isError).default(err) && err.code !== 'ENOENT') throw err;
             }
         }
         return null;
@@ -973,10 +983,10 @@ class Server {
         };
     }
     async renderToResponseWithComponents({ req , res , pathname , renderOpts: opts  }, { components , query  }) {
-        var ref16, ref17;
+        var ref, ref26;
         const is404Page = pathname === '/404';
         const is500Page = pathname === '/500';
-        const isLikeServerless = typeof components.Component === 'object' && typeof components.Component.renderReqToHTML === 'function';
+        const isLikeServerless = typeof components.ComponentMod === 'object' && typeof components.ComponentMod.renderReqToHTML === 'function';
         const isSSG = !!components.getStaticProps;
         const hasServerProps = !!components.getServerSideProps;
         const hasStaticPaths = !!components.getStaticPaths;
@@ -997,17 +1007,21 @@ class Server {
         if (typeof components.Component === 'string') {
             return {
                 type: 'html',
-                // TODO: Static pages should be written as chunks
-                body: (0, _utils2).resultFromChunks([
-                    components.Component
-                ])
+                // TODO: Static pages should be serialized as RenderResult
+                body: _renderResult.default.fromStatic(components.Component)
             };
         }
         if (!query.amp) {
             delete query.amp;
         }
+        if (opts.supportsDynamicHTML === true) {
+            var ref;
+            // Disable dynamic HTML in cases that we know it won't be generated,
+            // so that we can continue generating a cache key when possible.
+            opts.supportsDynamicHTML = !isSSG && !isLikeServerless && !query.amp && !this.minimalMode && typeof ((ref = components.Document) === null || ref === void 0 ? void 0 : ref.getInitialProps) !== 'function';
+        }
         const locale = query.__nextLocale;
-        const defaultLocale = isSSG ? (ref16 = this.nextConfig.i18n) === null || ref16 === void 0 ? void 0 : ref16.defaultLocale : query.__nextDefaultLocale;
+        const defaultLocale = isSSG ? (ref = this.nextConfig.i18n) === null || ref === void 0 ? void 0 : ref.defaultLocale : query.__nextDefaultLocale;
         const { i18n  } = this.nextConfig;
         const locales = i18n === null || i18n === void 0 ? void 0 : i18n.locales;
         let previewData;
@@ -1022,7 +1036,7 @@ class Server {
         let urlPathname = (0, _url).parse(req.url || '').pathname || '/';
         let resolvedUrlPathname = req._nextRewroteUrl ? req._nextRewroteUrl : urlPathname;
         urlPathname = (0, _normalizeTrailingSlash).removePathTrailingSlash(urlPathname);
-        resolvedUrlPathname = (0, _normalizeLocalePath).normalizeLocalePath((0, _normalizeTrailingSlash).removePathTrailingSlash(resolvedUrlPathname), (ref17 = this.nextConfig.i18n) === null || ref17 === void 0 ? void 0 : ref17.locales).pathname;
+        resolvedUrlPathname = (0, _normalizeLocalePath).normalizeLocalePath((0, _normalizeTrailingSlash).removePathTrailingSlash(resolvedUrlPathname), (ref26 = this.nextConfig.i18n) === null || ref26 === void 0 ? void 0 : ref26.locales).pathname;
         const stripNextDataPath = (path)=>{
             if (path.includes(this.buildId)) {
                 const splitPath = path.substring(path.indexOf(this.buildId) + this.buildId.length);
@@ -1060,7 +1074,7 @@ class Server {
             resolvedUrlPathname = stripNextDataPath(resolvedUrlPathname);
             urlPathname = stripNextDataPath(urlPathname);
         }
-        let ssgCacheKey = isPreviewMode || !isSSG || this.minimalMode ? null // Preview mode bypasses the cache
+        let ssgCacheKey = isPreviewMode || !isSSG || this.minimalMode || opts.supportsDynamicHTML ? null // Preview mode bypasses the cache
          : `${locale ? `/${locale}` : ''}${(pathname === '/' || resolvedUrlPathname === '/') && locale ? '' : resolvedUrlPathname}${query.amp ? '.amp' : ''}`;
         if ((is404Page || is500Page) && isSSG) {
             ssgCacheKey = `${locale ? `/${locale}` : ''}${pathname}${query.amp ? '.amp' : ''}`;
@@ -1090,7 +1104,7 @@ class Server {
             let isRedirect;
             // handle serverless
             if (isLikeServerless) {
-                const renderResult = await components.Component.renderReqToHTML(req, res, 'passthrough', {
+                const renderResult = await components.ComponentMod.renderReqToHTML(req, res, 'passthrough', {
                     locale,
                     locales,
                     defaultLocale,
@@ -1165,10 +1179,13 @@ class Server {
             const isProduction = !this.renderOpts.dev;
             const isDynamicPathname = (0, _utils).isDynamicRoute(pathname);
             const didRespond = hasResolved || (0, _utils1).isResSent(res);
-            const { staticPaths , fallbackMode  } = hasStaticPaths ? await this.getStaticPaths(pathname) : {
+            let { staticPaths , fallbackMode  } = hasStaticPaths ? await this.getStaticPaths(pathname) : {
                 staticPaths: undefined,
                 fallbackMode: false
             };
+            if (fallbackMode === 'static' && (0, _utils2).isBot(req.headers['user-agent'] || '')) {
+                fallbackMode = 'blocking';
+            }
             // When we did not respond from cache, we need to choose to block on
             // rendering or return a skeleton.
             //
@@ -1202,9 +1219,7 @@ class Server {
                         return {
                             value: {
                                 kind: 'PAGE',
-                                html: (0, _utils2).resultFromChunks([
-                                    html
-                                ]),
+                                html: _renderResult.default.fromStatic(html),
                                 pageData: {
                                 }
                             }
@@ -1246,8 +1261,10 @@ class Server {
         }
         const { revalidate , value: cachedData  } = cacheEntry;
         const revalidateOptions = typeof revalidate !== 'undefined' && (!this.renderOpts.dev || hasServerProps && !isDataReq) ? {
-            // When the page is 404 cache-control should not be added
-            private: isPreviewMode || is404Page,
+            // When the page is 404 cache-control should not be added unless
+            // we are rendering the 404 page for notFound: true which should
+            // cache according to revalidate correctly
+            private: isPreviewMode || is404Page && cachedData,
             stateful: !isSSG,
             revalidate
         } : undefined;
@@ -1263,16 +1280,14 @@ class Server {
                 await this.render404(req, res, {
                     pathname,
                     query
-                });
+                }, false);
                 return null;
             }
         } else if (cachedData.kind === 'REDIRECT') {
             if (isDataReq) {
                 return {
                     type: 'json',
-                    body: (0, _utils2).resultFromChunks([
-                        JSON.stringify(cachedData.props)
-                    ]),
+                    body: _renderResult.default.fromStatic(JSON.stringify(cachedData.props)),
                     revalidateOptions
                 };
             } else {
@@ -1282,15 +1297,14 @@ class Server {
         } else {
             return {
                 type: isDataReq ? 'json' : 'html',
-                body: isDataReq ? (0, _utils2).resultFromChunks([
-                    JSON.stringify(cachedData.pageData)
-                ]) : cachedData.html,
+                body: isDataReq ? _renderResult.default.fromStatic(JSON.stringify(cachedData.pageData)) : cachedData.html,
                 revalidateOptions
             };
         }
     }
     async renderToResponse(ctx) {
         const { res , query , pathname  } = ctx;
+        let page = pathname;
         const bubbleNoFallback = !!query._nextBubbleNoFallback;
         delete query._nextBubbleNoFallback;
         try {
@@ -1314,6 +1328,7 @@ class Server {
                     const dynamicRouteResult = await this.findPageComponents(dynamicRoute.page, query, params);
                     if (dynamicRouteResult) {
                         try {
+                            page = dynamicRoute.page;
                             return await this.renderToResponseWithComponents({
                                 ...ctx,
                                 pathname: dynamicRoute.page,
@@ -1331,7 +1346,8 @@ class Server {
                     }
                 }
             }
-        } catch (err) {
+        } catch (error) {
+            const err = (0, _isError).default(error) ? error : error ? new Error(error + '') : null;
             if (err instanceof NoFallbackError && bubbleNoFallback) {
                 throw err;
             }
@@ -1343,10 +1359,11 @@ class Server {
             const isWrappedError = err instanceof WrappedBuildError;
             const response = await this.renderErrorToResponse(ctx, isWrappedError ? err.innerError : err);
             if (!isWrappedError) {
-                if (this.minimalMode) {
+                if (this.minimalMode || this.renderOpts.dev) {
+                    if ((0, _isError).default(err)) err.page = page;
                     throw err;
                 }
-                this.logError(err);
+                this.logError(err || new Error(error + ''));
             }
             return response;
         }
@@ -1422,10 +1439,11 @@ class Server {
                 }
                 throw maybeFallbackError;
             }
-        } catch (renderToHtmlError) {
+        } catch (error) {
+            const renderToHtmlError = (0, _isError).default(error) ? error : error ? new Error(error + '') : null;
             const isWrappedError = renderToHtmlError instanceof WrappedBuildError;
             if (!isWrappedError) {
-                this.logError(renderToHtmlError);
+                this.logError(renderToHtmlError || new Error(error + ''));
             }
             res.statusCode = 500;
             const fallbackComponents = await this.getFallbackErrorComponents();
@@ -1446,9 +1464,7 @@ class Server {
             }
             return {
                 type: 'html',
-                body: (0, _utils2).resultFromChunks([
-                    'Internal Server Error'
-                ])
+                body: _renderResult.default.fromStatic('Internal Server Error')
             };
         }
     }
@@ -1491,7 +1507,9 @@ class Server {
         }
         try {
             await (0, _serveStatic).serveStatic(req, res, path);
-        } catch (err) {
+        } catch (error) {
+            if (!(0, _isError).default(error)) throw error;
+            const err = error;
             if (err.code === 'ENOENT' || err.statusCode === 404) {
                 this.render404(req, res, parsedUrl);
             } else if (err.statusCode === 412) {

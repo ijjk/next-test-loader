@@ -6,16 +6,23 @@ exports.recursiveDelete = recursiveDelete;
 var _fs = require("fs");
 var _path = require("path");
 var _util = require("util");
+var _isError = _interopRequireDefault(require("./is-error"));
+function _interopRequireDefault(obj) {
+    return obj && obj.__esModule ? obj : {
+        default: obj
+    };
+}
 const sleep = (0, _util).promisify(setTimeout);
 const unlinkFile = async (p, t = 1)=>{
     try {
         await _fs.promises.unlink(p);
     } catch (e) {
-        if ((e.code === 'EBUSY' || e.code === 'ENOTEMPTY' || e.code === 'EPERM' || e.code === 'EMFILE') && t < 3) {
+        const code = (0, _isError).default(e) && e.code;
+        if ((code === 'EBUSY' || code === 'ENOTEMPTY' || code === 'EPERM' || code === 'EMFILE') && t < 3) {
             await sleep(t * 100);
             return unlinkFile(p, t++);
         }
-        if (e.code === 'ENOENT') {
+        if (code === 'ENOENT') {
             return;
         }
         throw e;
@@ -28,7 +35,7 @@ async function recursiveDelete(dir, exclude, previousPath = '') {
             withFileTypes: true
         });
     } catch (e) {
-        if (e.code === 'ENOENT') {
+        if ((0, _isError).default(e) && e.code === 'ENOENT') {
             return;
         }
         throw e;

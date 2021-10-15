@@ -153,7 +153,7 @@ function Link(props) {
         try {
             child = _react.default.Children.only(children);
         } catch (err) {
-            throw new Error(`Multiple children were passed to <Link> with \`href\` of \`${props.href}\` but only one child is supported https://nextjs.org/docs/messages/link-multiple-children` + (typeof window !== 'undefined' ? "\nOpen your browser's console to view the Component stack trace." : ''));
+            throw new Error(`Multiple children were passed to <Link> with \`href\` of \`${props.href}\` but only one child is supported https://nextjs.org/docs/messages/link-multiple-children` + (typeof window !== 'undefined' ? " \nOpen your browser's console to view the Component stack trace." : ''));
         }
     } else {
         child = _react.default.Children.only(children);

@@ -5,6 +5,7 @@ Object.defineProperty(exports, "__esModule", {
 exports.store = void 0;
 var _unistore = _interopRequireDefault(require("next/dist/compiled/unistore"));
 var _stripAnsi = _interopRequireDefault(require("next/dist/compiled/strip-ansi"));
+var _trace = require("../../trace");
 var Log = _interopRequireWildcard(require("./log"));
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
@@ -58,6 +59,7 @@ function hasStoreChanged(nextStore) {
     lastStore = nextStore;
     return true;
 }
+let startTime = 0;
 store.subscribe((state)=>{
     if (!hasStoreChanged(state)) {
         return;
@@ -66,10 +68,16 @@ store.subscribe((state)=>{
         if (state.appUrl) {
             Log.ready(`started server on ${state.bindAddr}, url: ${state.appUrl}`);
         }
+        if (startTime === 0) startTime = Date.now();
         return;
     }
     if (state.loading) {
-        Log.wait('compiling...');
+        if (state.trigger) {
+            Log.wait(`compiling ${state.trigger}...`);
+        } else {
+            Log.wait('compiling...');
+        }
+        if (startTime === 0) startTime = Date.now();
         return;
     }
     if (state.errors) {
@@ -85,20 +93,37 @@ store.subscribe((state)=>{
                 return;
             }
         }
+        // Ensure traces are flushed after each compile in development mode
+        (0, _trace).flushAllTraces();
         return;
+    }
+    let timeMessage = '';
+    if (startTime) {
+        const time = Date.now() - startTime;
+        startTime = 0;
+        timeMessage = time > 2000 ? ` in ${Math.round(time / 100) / 10}s` : ` in ${time} ms`;
+    }
+    let modulesMessage = '';
+    if (state.modules) {
+        modulesMessage = ` (${state.modules} modules)`;
+    }
+    let partialMessage = '';
+    if (state.partial) {
+        partialMessage = ` ${state.partial}`;
     }
     if (state.warnings) {
         Log.warn(state.warnings.join('\n\n'));
-        if (state.appUrl) {
-            Log.info(`ready on ${state.appUrl}`);
-        }
+        // Ensure traces are flushed after each compile in development mode
+        (0, _trace).flushAllTraces();
         return;
     }
     if (state.typeChecking) {
-        Log.info('bundled successfully, waiting for typecheck results...');
+        Log.info(`bundled${partialMessage} successfully${timeMessage}${modulesMessage}, waiting for typecheck results...`);
         return;
     }
-    Log.event('compiled successfully');
+    Log.event(`compiled${partialMessage} successfully${timeMessage}${modulesMessage}`);
+    // Ensure traces are flushed after each compile in development mode
+    (0, _trace).flushAllTraces();
 });
 
 //# sourceMappingURL=store.js.map

@@ -18,5 +18,8 @@ export declare function encodeJpeg(image: ImageData, { quality }: {
 export declare function encodeWebp(image: ImageData, { quality }: {
     quality: number;
 }): Promise<Buffer | Uint8Array>;
+export declare function encodeAvif(image: ImageData, { quality }: {
+    quality: number;
+}): Promise<Buffer | Uint8Array>;
 export declare function encodePng(image: ImageData): Promise<Buffer | Uint8Array>;
 export {};

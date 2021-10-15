@@ -3,7 +3,12 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 exports.default = void 0;
-var _utils = require("./utils");
+var _renderResult = _interopRequireDefault(require("./render-result"));
+function _interopRequireDefault(obj) {
+    return obj && obj.__esModule ? obj : {
+        default: obj
+    };
+}
 class ResponseCache {
     constructor(incrementalCache){
         this.incrementalCache = incrementalCache;
@@ -45,9 +50,7 @@ class ResponseCache {
                         revalidate: cachedResponse.curRevalidate,
                         value: ((ref = cachedResponse.value) === null || ref === void 0 ? void 0 : ref.kind) === 'PAGE' ? {
                             kind: 'PAGE',
-                            html: (0, _utils).resultFromChunks([
-                                cachedResponse.value.html
-                            ]),
+                            html: _renderResult.default.fromStatic(cachedResponse.value.html),
                             pageData: cachedResponse.value.pageData
                         } : cachedResponse.value
                     });
@@ -63,7 +66,7 @@ class ResponseCache {
                     var ref;
                     await this.incrementalCache.set(key, ((ref = cacheEntry.value) === null || ref === void 0 ? void 0 : ref.kind) === 'PAGE' ? {
                         kind: 'PAGE',
-                        html: (await (0, _utils).resultToChunks(cacheEntry.value.html)).join(''),
+                        html: cacheEntry.value.html.toUnchunkedString(),
                         pageData: cacheEntry.value.pageData
                     } : cacheEntry.value, cacheEntry.revalidate);
                 }

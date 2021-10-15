@@ -1,3 +1,4 @@
+import { TelemetryPlugin } from '../../build/webpack/plugins/telemetry-plugin';
 declare type EventTypeCheckCompleted = {
     durationInSeconds: number;
     typescriptVersion: string | null;
@@ -55,4 +56,13 @@ export declare function eventBuildOptimize(pagePaths: string[], event: Omit<Even
     eventName: string;
     payload: EventBuildOptimized;
 };
+export declare const EVENT_BUILD_FEATURE_USAGE = "NEXT_BUILD_FEATURE_USAGE";
+export declare type EventBuildFeatureUsage = {
+    featureName: 'next/image' | 'next/script' | 'next/dynamic' | 'experimental/optimizeCss';
+    invocationCount: number;
+};
+export declare function eventBuildFeatureUsage(telemetryPlugin: TelemetryPlugin): Array<{
+    eventName: string;
+    payload: EventBuildFeatureUsage;
+}>;
 export {};

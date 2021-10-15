@@ -22,9 +22,12 @@ export declare type LoadableBaseOptions<P = {}> = LoadableGeneratedOptions & {
     loadableGenerated?: LoadableGeneratedOptions;
     ssr?: boolean;
 };
+export declare type LoadableSuspenseOptions = {
+    suspense?: boolean;
+};
 export declare type LoadableOptions<P = {}> = LoadableBaseOptions<P>;
-export declare type DynamicOptions<P = {}> = LoadableBaseOptions<P>;
-export declare type LoadableFn<P = {}> = (opts: LoadableOptions<P>) => React.ComponentType<P>;
+export declare type DynamicOptions<P = {}> = LoadableBaseOptions<P> | LoadableSuspenseOptions;
+export declare type LoadableFn<P = {}> = (opts: LoadableOptions<P> | LoadableSuspenseOptions) => React.ComponentType<P>;
 export declare type LoadableComponent<P = {}> = React.ComponentType<P>;
-export declare function noSSR<P = {}>(LoadableInitializer: LoadableFn<P>, loadableOptions: LoadableOptions<P>): React.ComponentType<P>;
+export declare function noSSR<P = {}>(LoadableInitializer: LoadableFn<P>, loadableOptions: LoadableBaseOptions<P>): React.ComponentType<P>;
 export default function dynamic<P = {}>(dynamicOptions: DynamicOptions<P> | Loader<P>, options?: DynamicOptions<P>): React.ComponentType<P>;

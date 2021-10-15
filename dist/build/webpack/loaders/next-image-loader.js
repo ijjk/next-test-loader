@@ -4,7 +4,6 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.default = exports.raw = void 0;
 var _loaderUtils = _interopRequireDefault(require("next/dist/compiled/loader-utils"));
-var _imageSize = _interopRequireDefault(require("image-size"));
 var _imageOptimizer = require("../../../server/image-optimizer");
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
@@ -16,32 +15,34 @@ const BLUR_QUALITY = 70;
 const VALID_BLUR_EXT = [
     'jpeg',
     'png',
-    'webp'
-];
+    'webp',
+    'avif'
+] // should match next/client/image.tsx
+;
 function nextImageLoader(content) {
     const imageLoaderSpan = this.currentTraceSpan.traceChild('next-image-loader');
     return imageLoaderSpan.traceAsyncFn(async ()=>{
-        const { isServer , isDev , assetPrefix  } = _loaderUtils.default.getOptions(this);
+        const { isServer , isDev , assetPrefix , basePath  } = _loaderUtils.default.getOptions(this);
         const context = this.rootContext;
         const opts = {
             context,
             content
         };
         const interpolatedName = _loaderUtils.default.interpolateName(this, '/static/image/[path][name].[hash].[ext]', opts);
-        const outputPath = '/_next' + interpolatedName;
+        const outputPath = assetPrefix + '/_next' + interpolatedName;
         let extension = _loaderUtils.default.interpolateName(this, '[ext]', opts);
         if (extension === 'jpg') {
             extension = 'jpeg';
         }
         const imageSizeSpan = imageLoaderSpan.traceChild('image-size-calculation');
-        const imageSize = imageSizeSpan.traceFn(()=>(0, _imageSize).default(content)
+        const imageSize = await imageSizeSpan.traceAsyncFn(()=>(0, _imageOptimizer).getImageSize(content, extension)
         );
         let blurDataURL;
         if (VALID_BLUR_EXT.includes(extension)) {
             if (isDev) {
                 const prefix = 'http://localhost';
-                const url = new URL('/_next/image', prefix);
-                url.searchParams.set('url', assetPrefix + outputPath);
+                const url = new URL(`${basePath || ''}/_next/image`, prefix);
+                url.searchParams.set('url', outputPath);
                 url.searchParams.set('w', BLUR_IMG_SIZE);
                 url.searchParams.set('q', BLUR_QUALITY);
                 blurDataURL = url.href.slice(prefix.length);

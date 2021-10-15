@@ -94,6 +94,10 @@ class FontOptimizerMiddleware {
                 } else {
                     const nonceStr = nonce ? ` nonce="${nonce}"` : '';
                     result = result.replace('</head>', `<style data-href="${url}"${nonceStr}>${fontContent}</style></head>`);
+                    // Remove inert font tag
+                    const escapedUrl = url.replace(/&/g, '&amp;').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                    const fontRegex = new RegExp(`<link[^>]*data-href="${escapedUrl}"[^>]*/>`);
+                    result = result.replace(fontRegex, '');
                     const provider = _constants.OPTIMIZED_FONT_PROVIDERS.find((p)=>url.startsWith(p.url)
                     );
                     if (provider) {

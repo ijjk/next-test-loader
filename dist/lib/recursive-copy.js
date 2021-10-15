@@ -6,6 +6,7 @@ exports.recursiveCopy = recursiveCopy;
 var _path = _interopRequireDefault(require("path"));
 var _fs = require("fs");
 var _asyncSema = require("next/dist/compiled/async-sema");
+var _isError = _interopRequireDefault(require("./is-error"));
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
         default: obj
@@ -41,7 +42,7 @@ async function recursiveCopy(source, dest, { concurrency =32 , overwrite =false 
                 await _fs.promises.mkdir(target);
             } catch (err) {
                 // do not throw `folder already exists` errors
-                if (err.code !== 'EEXIST') {
+                if ((0, _isError).default(err) && err.code !== 'EEXIST') {
                     throw err;
                 }
             }

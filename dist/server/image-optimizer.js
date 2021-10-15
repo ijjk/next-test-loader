@@ -6,10 +6,12 @@ exports.imageOptimizer = imageOptimizer;
 exports.detectContentType = detectContentType;
 exports.getMaxAge = getMaxAge;
 exports.resizeImage = resizeImage;
+exports.getImageSize = getImageSize;
 var _accept = require("@hapi/accept");
 var _crypto = require("crypto");
 var _fs = require("fs");
 var _getOrientation = require("get-orientation");
+var _imageSize = _interopRequireDefault(require("image-size"));
 var _isAnimated = _interopRequireDefault(require("next/dist/compiled/is-animated"));
 var _path = require("path");
 var _stream = _interopRequireDefault(require("stream"));
@@ -25,16 +27,13 @@ function _interopRequireDefault(obj) {
         default: obj
     };
 }
-//const AVIF = 'image/avif'
+const AVIF = 'image/avif';
 const WEBP = 'image/webp';
 const PNG = 'image/png';
 const JPEG = 'image/jpeg';
 const GIF = 'image/gif';
 const SVG = 'image/svg+xml';
 const CACHE_VERSION = 3;
-const MODERN_TYPES = [
-    /* AVIF, */ WEBP
-];
 const ANIMATABLE_TYPES = [
     WEBP,
     PNG,
@@ -52,10 +51,13 @@ try {
 } catch (e) {
 // Sharp not present on the server, Squoosh fallback will be used
 }
-let shouldShowSharpWarning = process.env.NODE_ENV === 'production';
+let showSharpMissingWarning = process.env.NODE_ENV === 'production';
 async function imageOptimizer(server, req, res, parsedUrl, nextConfig, distDir, isDev = false) {
     const imageData = nextConfig.images || _imageConfig.imageConfigDefault;
-    const { deviceSizes =[] , imageSizes =[] , domains =[] , loader , minimumCacheTTL =60 ,  } = imageData;
+    const { deviceSizes =[] , imageSizes =[] , domains =[] , loader , minimumCacheTTL =60 , formats =[
+        'image/avif',
+        'image/webp'
+    ] ,  } = imageData;
     if (loader !== 'default') {
         await server.render404(req, res, parsedUrl);
         return {
@@ -64,7 +66,7 @@ async function imageOptimizer(server, req, res, parsedUrl, nextConfig, distDir, 
     }
     const { headers  } = req;
     const { url , w , q  } = parsedUrl.query;
-    const mimeType = getSupportedMimeType(MODERN_TYPES, headers.accept);
+    const mimeType = getSupportedMimeType(formats, headers.accept);
     let href;
     if (!url) {
         res.statusCode = 400;
@@ -141,7 +143,7 @@ async function imageOptimizer(server, req, res, parsedUrl, nextConfig, distDir, 
         };
     }
     // Should match output from next-image-loader
-    const isStatic = url.startsWith('/_next/static/image');
+    const isStatic = url.startsWith(`${nextConfig.basePath || ''}/_next/static/image`);
     const width = parseInt(w, 10);
     if (!width || isNaN(width)) {
         res.statusCode = 400;
@@ -327,7 +329,18 @@ async function imageOptimizer(server, req, res, parsedUrl, nextConfig, distDir, 
                 if (metaWidth && metaWidth > width) {
                     transformer.resize(width);
                 }
-                if (contentType === WEBP) {
+                if (contentType === AVIF) {
+                    if (transformer.avif) {
+                        transformer.avif({
+                            quality
+                        });
+                    } else {
+                        console.warn(_chalk.default.yellow.bold('Warning: ') + `Your installed version of the 'sharp' package does not support AVIF images. Run 'yarn add sharp@latest' to upgrade to the latest version.\n` + 'Read more: https://nextjs.org/docs/messages/sharp-version-avif');
+                        transformer.webp({
+                            quality
+                        });
+                    }
+                } else if (contentType === WEBP) {
                     transformer.webp({
                         quality
                     });
@@ -344,9 +357,9 @@ async function imageOptimizer(server, req, res, parsedUrl, nextConfig, distDir, 
             // End sharp transformation logic
             } else {
                 // Show sharp warning in production once
-                if (shouldShowSharpWarning) {
+                if (showSharpMissingWarning) {
                     console.warn(_chalk.default.yellow.bold('Warning: ') + `For production Image Optimization with Next.js, the optional 'sharp' package is strongly recommended. Run 'yarn add sharp', and Next.js will use it automatically for Image Optimization.\n` + 'Read more: https://nextjs.org/docs/messages/sharp-missing-in-production');
-                    shouldShowSharpWarning = false;
+                    showSharpMissingWarning = false;
                 }
                 // Begin Squoosh transformation logic
                 const orientation = await (0, _getOrientation).getOrientation(upstreamBuffer);
@@ -375,9 +388,9 @@ async function imageOptimizer(server, req, res, parsedUrl, nextConfig, distDir, 
                     type: 'resize',
                     width
                 });
-                //if (contentType === AVIF) {
-                //} else
-                if (contentType === WEBP) {
+                if (contentType === AVIF) {
+                    optimizedBuffer = await (0, _main).processBuffer(upstreamBuffer, operations, 'avif', quality);
+                } else if (contentType === WEBP) {
                     optimizedBuffer = await (0, _main).processBuffer(upstreamBuffer, operations, 'webp', quality);
                 } else if (contentType === PNG) {
                     optimizedBuffer = await (0, _main).processBuffer(upstreamBuffer, operations, 'png', quality);
@@ -441,6 +454,7 @@ function setResponseHeaders(req, res, url, etag, maxAge, contentType, isStatic, 
     if (fileName) {
         res.setHeader('Content-Disposition', `inline; filename="${fileName}"`);
     }
+    res.setHeader('Content-Security-Policy', `script-src 'none'; sandbox;`);
     return {
         finished: false
     };
@@ -542,6 +556,23 @@ function detectContentType(buffer) {
     )) {
         return SVG;
     }
+    if ([
+        0,
+        0,
+        0,
+        0,
+        102,
+        116,
+        121,
+        112,
+        97,
+        118,
+        105,
+        102
+    ].every((b, i)=>!b || buffer[i] === b
+    )) {
+        return AVIF;
+    }
     return null;
 }
 function getMaxAge(str) {
@@ -558,10 +589,22 @@ function getMaxAge(str) {
     }
     return 0;
 }
-async function resizeImage(content, dimension, size, extension, quality) {
+async function resizeImage(content, dimension, size, // Should match VALID_BLUR_EXT
+extension, quality) {
     if (sharp) {
         const transformer = sharp(content);
-        if (extension === 'webp') {
+        if (extension === 'avif') {
+            if (transformer.avif) {
+                transformer.avif({
+                    quality
+                });
+            } else {
+                console.warn(_chalk.default.yellow.bold('Warning: ') + `Your installed version of the 'sharp' package does not support AVIF images. Run 'yarn add sharp@latest' to upgrade to the latest version.\n` + 'Read more: https://nextjs.org/docs/messages/sharp-version-avif');
+                transformer.webp({
+                    quality
+                });
+            }
+        } else if (extension === 'webp') {
             transformer.webp({
                 quality
             });
@@ -594,6 +637,32 @@ async function resizeImage(content, dimension, size, extension, quality) {
         ], extension, quality);
         return buf;
     }
+}
+async function getImageSize(buffer, // Should match VALID_BLUR_EXT
+extension) {
+    // TODO: upgrade "image-size" package to support AVIF
+    // See https://github.com/image-size/image-size/issues/348
+    if (extension === 'avif') {
+        if (sharp) {
+            const transformer = sharp(buffer);
+            const { width , height  } = await transformer.metadata();
+            return {
+                width,
+                height
+            };
+        } else {
+            const { width , height  } = await (0, _main).decodeBuffer(buffer);
+            return {
+                width,
+                height
+            };
+        }
+    }
+    const { width , height  } = (0, _imageSize).default(buffer);
+    return {
+        width,
+        height
+    };
 }
 
 //# sourceMappingURL=image-optimizer.js.map

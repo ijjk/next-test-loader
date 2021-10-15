@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-exports.default = Image1;
+exports.default = Image;
 var _react = _interopRequireDefault(require("react"));
 var _head = _interopRequireDefault(require("../shared/lib/head"));
 var _toBase64 = require("../shared/lib/to-base-64");
@@ -73,6 +73,7 @@ function _objectWithoutPropertiesLoose(source, excluded) {
     return target;
 }
 const loadedImageURLs = new Set();
+const emptyDataURL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
 if (typeof window === 'undefined') {
     global.__NEXT_IMAGE_IMPORTED = true;
 }
@@ -228,12 +229,12 @@ function defaultImageLoader(loaderProps) {
 }
 // See https://stackoverflow.com/q/39777833/266535 for why we use this ref
 // handler instead of the img's onLoad attribute.
-function handleLoading(img, src, placeholder, onLoadingComplete) {
+function handleLoading(img, src, layout, placeholder, onLoadingComplete) {
     if (!img) {
         return;
     }
     const handleLoad = ()=>{
-        if (!img.src.startsWith('data:')) {
+        if (img.src !== emptyDataURL) {
             const p = 'decode' in img ? img.decode() : Promise.resolve();
             p.catch(()=>{
             }).then(()=>{
@@ -252,6 +253,17 @@ function handleLoading(img, src, placeholder, onLoadingComplete) {
                         naturalHeight
                     });
                 }
+                if (process.env.NODE_ENV !== 'production') {
+                    var ref;
+                    if ((ref = img.parentElement) === null || ref === void 0 ? void 0 : ref.parentElement) {
+                        const parent = getComputedStyle(img.parentElement.parentElement);
+                        if (layout === 'responsive' && parent.display === 'flex') {
+                            console.warn(`Image with src "${src}" may not render properly as a child of a flex container. Consider wrapping the image with a div to configure the width.`);
+                        } else if (layout === 'fill' && parent.position !== 'relative') {
+                            console.warn(`Image with src "${src}" may not render properly with a parent using position:"${parent.position}". Consider changing the parent style to position:"relative" with a width and height.`);
+                        }
+                    }
+                }
             });
         }
     };
@@ -264,7 +276,7 @@ function handleLoading(img, src, placeholder, onLoadingComplete) {
         img.onload = handleLoad;
     }
 }
-function Image1(_param) {
+function Image(_param) {
     var { src , sizes , unoptimized =false , priority =false , loading , lazyBoundary ='200px' , className , quality , width , height , objectFit , objectPosition , onLoadingComplete , loader =defaultImageLoader , placeholder ='empty' , blurDataURL  } = _param, all = _objectWithoutProperties(_param, ["src", "sizes", "unoptimized", "priority", "loading", "lazyBoundary", "className", "quality", "width", "height", "objectFit", "objectPosition", "onLoadingComplete", "loader", "placeholder", "blurDataURL"]);
     let rest = all;
     let layout = sizes ? 'responsive' : 'intrinsic';
@@ -295,7 +307,7 @@ function Image1(_param) {
     const heightInt = getInt(height);
     const qualityInt = getInt(quality);
     let isLazy = !priority && (loading === 'lazy' || typeof loading === 'undefined');
-    if (src.startsWith('data:')) {
+    if (src.startsWith('data:') || src.startsWith('blob:')) {
         // https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/Data_URIs
         unoptimized = true;
         isLazy = false;
@@ -334,7 +346,8 @@ function Image1(_param) {
                 const VALID_BLUR_EXT = [
                     'jpeg',
                     'png',
-                    'webp'
+                    'webp',
+                    'avif'
                 ] // should match next-image-loader
                 ;
                 throw new Error(`Image with src "${src}" has "placeholder='blur'" property but is missing the "blurDataURL" property.
@@ -460,7 +473,7 @@ function Image1(_param) {
         }
     }
     let imgAttributes = {
-        src: 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
+        src: emptyDataURL,
         srcSet: undefined,
         sizes: undefined
     };
@@ -491,7 +504,18 @@ function Image1(_param) {
         alt: "",
         "aria-hidden": true,
         src: `data:image/svg+xml;base64,${(0, _toBase64).toBase64(sizerSvg)}`
-    }) : null) : null, !isVisible && /*#__PURE__*/ _react.default.createElement("noscript", null, /*#__PURE__*/ _react.default.createElement("img", Object.assign({
+    }) : null) : null, /*#__PURE__*/ _react.default.createElement("img", Object.assign({
+    }, rest, imgAttributes, {
+        decoding: "async",
+        "data-nimg": layout,
+        className: className,
+        ref: (img)=>{
+            setRef(img);
+            handleLoading(img, srcString, layout, placeholder, onLoadingComplete);
+        },
+        style: _objectSpread({
+        }, imgStyle, blurStyle)
+    })), /*#__PURE__*/ _react.default.createElement("noscript", null, /*#__PURE__*/ _react.default.createElement("img", Object.assign({
     }, rest, generateImgAttrs({
         src,
         unoptimized,
@@ -502,21 +526,12 @@ function Image1(_param) {
         loader
     }), {
         decoding: "async",
-        "data-nimg": true,
+        "data-nimg": layout,
         style: imgStyle,
-        className: className
-    }))), /*#__PURE__*/ _react.default.createElement("img", Object.assign({
-    }, rest, imgAttributes, {
-        decoding: "async",
-        "data-nimg": true,
         className: className,
-        ref: (img)=>{
-            setRef(img);
-            handleLoading(img, srcString, placeholder, onLoadingComplete);
-        },
-        style: _objectSpread({
-        }, imgStyle, blurStyle)
-    })), priority ? // Note how we omit the `href` attribute, as it would only be relevant
+        // @ts-ignore - TODO: upgrade to `@types/react@17`
+        loading: loading || 'lazy'
+    }))), priority ? // Note how we omit the `href` attribute, as it would only be relevant
     // for browsers that do not support `imagesrcset`, and in those cases
     // it would likely cause the incorrect image to be preloaded.
     //

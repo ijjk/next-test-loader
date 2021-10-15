@@ -2,98 +2,167 @@
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-exports.spans = void 0;
+exports.spans = exports.webpackInvalidSpans = void 0;
 var _webpack = require("next/dist/compiled/webpack/webpack");
-var _trace = require("../../../telemetry/trace");
 const pluginName = 'ProfilingPlugin';
 const spans = new WeakMap();
 exports.spans = spans;
-function getNormalModuleLoaderHook(compilation) {
-    if (_webpack.isWebpack5) {
-        // @ts-ignore TODO: Remove ignore when webpack 5 is stable
-        return _webpack.webpack.NormalModule.getCompilationHooks(compilation).loader;
-    }
-    return compilation.hooks.normalModuleLoader;
-}
+const moduleSpansByCompilation = new WeakMap();
+const webpackInvalidSpans = new WeakMap();
+exports.webpackInvalidSpans = webpackInvalidSpans;
 class ProfilingPlugin {
+    constructor({ runWebpackSpan  }){
+        this.runWebpackSpan = runWebpackSpan;
+    }
     apply(compiler) {
         this.traceTopLevelHooks(compiler);
         this.traceCompilationHooks(compiler);
         this.compiler = compiler;
     }
-    traceHookPair(spanName, startHook, stopHook, attrs, onSetSpan) {
+    traceHookPair(spanName, startHook, stopHook, { parentSpan , attrs , onStart , onStop  } = {
+    }) {
         let span;
-        startHook.tap(pluginName, ()=>{
-            span = (0, _trace).stackPush(this.compiler, spanName, attrs);
-            onSetSpan === null || onSetSpan === void 0 ? void 0 : onSetSpan(span);
+        startHook.tap({
+            name: pluginName,
+            stage: -Infinity
+        }, (...params)=>{
+            const name = typeof spanName === 'function' ? spanName() : spanName;
+            const attributes = attrs ? attrs(...params) : attrs;
+            span = parentSpan ? parentSpan().traceChild(name, attributes) : this.runWebpackSpan.traceChild(name, attributes);
+            if (onStart) onStart(span, ...params);
         });
-        stopHook.tap(pluginName, ()=>{
+        stopHook.tap({
+            name: pluginName,
+            stage: Infinity
+        }, ()=>{
             // `stopHook` may be triggered when `startHook` has not in cases
             // where `stopHook` is used as the terminating event for more
             // than one pair of hooks.
             if (!span) {
                 return;
             }
-            (0, _trace).stackPop(this.compiler, span);
-        });
-    }
-    traceLoopedHook(spanName, startHook, stopHook) {
-        let span;
-        startHook.tap(pluginName, ()=>{
-            if (!span) {
-                span = (0, _trace).stackPush(this.compiler, spanName);
-            }
-        });
-        stopHook.tap(pluginName, ()=>{
-            (0, _trace).stackPop(this.compiler, span);
+            if (onStop) onStop();
+            span.stop();
         });
     }
     traceTopLevelHooks(compiler) {
-        this.traceHookPair('webpack-compile', compiler.hooks.compile, compiler.hooks.done, ()=>{
-            return {
-                name: compiler.name
-            };
-        }, (span)=>spans.set(compiler, span)
-        );
-        this.traceHookPair('webpack-prepare-env', compiler.hooks.environment, compiler.hooks.afterEnvironment);
-        if (compiler.options.mode === 'development') {
-            this.traceHookPair('webpack-invalidated', compiler.hooks.invalid, compiler.hooks.done, ()=>({
+        this.traceHookPair('webpack-compilation', compiler.hooks.compilation, compiler.hooks.afterCompile, {
+            parentSpan: ()=>webpackInvalidSpans.get(compiler) || this.runWebpackSpan
+            ,
+            attrs: ()=>({
                     name: compiler.name
                 })
-            );
+            ,
+            onStart: (span, compilation)=>{
+                spans.set(compilation, span);
+                spans.set(compiler, span);
+                moduleSpansByCompilation.set(compilation, new WeakMap());
+            }
+        });
+        if (compiler.options.mode === 'development') {
+            this.traceHookPair(()=>`webpack-invalidated-${compiler.name}`
+            , compiler.hooks.invalid, compiler.hooks.done, {
+                onStart: (span)=>webpackInvalidSpans.set(compiler, span)
+                ,
+                onStop: ()=>webpackInvalidSpans.delete(compiler)
+                ,
+                attrs: (fileName)=>({
+                        trigger: fileName || 'manual'
+                    })
+            });
         }
     }
     traceCompilationHooks(compiler) {
-        if (_webpack.isWebpack5) {
-            this.traceHookPair('webpack-compilation', compiler.hooks.beforeCompile, compiler.hooks.afterCompile, ()=>({
-                    name: compiler.name
-                })
-            );
-        }
+        this.traceHookPair('emit', compiler.hooks.emit, compiler.hooks.afterEmit, {
+            parentSpan: ()=>webpackInvalidSpans.get(compiler) || this.runWebpackSpan
+        });
+        this.traceHookPair('make', compiler.hooks.make, compiler.hooks.finishMake, {
+            parentSpan: ()=>webpackInvalidSpans.get(compiler) || this.runWebpackSpan
+        });
         compiler.hooks.compilation.tap(pluginName, (compilation)=>{
             compilation.hooks.buildModule.tap(pluginName, (module)=>{
-                const compilerSpan = spans.get(compiler);
-                if (!compilerSpan) {
+                var ref;
+                const compilationSpan = spans.get(compilation);
+                if (!compilationSpan) {
                     return;
                 }
-                const span = (0, _trace).trace('build-module', compilerSpan.id);
+                const moduleType = (()=>{
+                    if (!module.userRequest) {
+                        return '';
+                    }
+                    return module.userRequest.split('.').pop();
+                })();
+                const issuerModule = compilation === null || compilation === void 0 ? void 0 : (ref = compilation.moduleGraph) === null || ref === void 0 ? void 0 : ref.getIssuer(module);
+                let span;
+                const moduleSpans = moduleSpansByCompilation.get(compilation);
+                const spanName = `build-module${moduleType ? `-${moduleType}` : ''}`;
+                const issuerSpan = issuerModule && (moduleSpans === null || moduleSpans === void 0 ? void 0 : moduleSpans.get(issuerModule));
+                if (issuerSpan) {
+                    span = issuerSpan.traceChild(spanName);
+                } else {
+                    span = compilationSpan.traceChild(spanName);
+                }
                 span.setAttribute('name', module.userRequest);
-                spans.set(module, span);
+                moduleSpans.set(module, span);
             });
-            getNormalModuleLoaderHook(compilation).tap(pluginName, (loaderContext, module)=>{
-                const parentSpan = spans.get(module);
-                loaderContext.currentTraceSpan = parentSpan;
+            const moduleHooks = _webpack.NormalModule.getCompilationHooks(compilation);
+            // @ts-ignore TODO: remove ignore when using webpack 5 types
+            moduleHooks.readResource.for(undefined).intercept({
+                register (tapInfo) {
+                    const fn = tapInfo.fn;
+                    tapInfo.fn = (loaderContext, callback)=>{
+                        const moduleSpan = loaderContext.currentTraceSpan.traceChild(`read-resource`);
+                        fn(loaderContext, (err, result)=>{
+                            moduleSpan.stop();
+                            callback(err, result);
+                        });
+                    };
+                    return tapInfo;
+                }
+            });
+            moduleHooks.loader.tap(pluginName, (loaderContext, module)=>{
+                var ref;
+                const moduleSpan = (ref = moduleSpansByCompilation.get(compilation)) === null || ref === void 0 ? void 0 : ref.get(module);
+                loaderContext.currentTraceSpan = moduleSpan;
             });
             compilation.hooks.succeedModule.tap(pluginName, (module)=>{
-                var ref;
-                (ref = spans.get(module)) === null || ref === void 0 ? void 0 : ref.stop();
+                var ref, ref1;
+                (ref1 = (ref = moduleSpansByCompilation === null || moduleSpansByCompilation === void 0 ? void 0 : moduleSpansByCompilation.get(compilation)) === null || ref === void 0 ? void 0 : ref.get(module)) === null || ref1 === void 0 ? void 0 : ref1.stop();
             });
-            this.traceHookPair('webpack-compilation-chunk-graph', compilation.hooks.beforeChunks, compilation.hooks.afterChunks);
-            this.traceHookPair('webpack-compilation-optimize', compilation.hooks.optimize, compilation.hooks.reviveModules);
-            this.traceLoopedHook('webpack-compilation-optimize-modules', compilation.hooks.optimizeModules, compilation.hooks.afterOptimizeModules);
-            this.traceLoopedHook('webpack-compilation-optimize-chunks', compilation.hooks.optimizeChunks, compilation.hooks.afterOptimizeChunks);
-            this.traceHookPair('webpack-compilation-optimize-tree', compilation.hooks.optimizeTree, compilation.hooks.afterOptimizeTree);
-            this.traceHookPair('webpack-compilation-hash', compilation.hooks.beforeHash, compilation.hooks.afterHash);
+            this.traceHookPair('webpack-compilation-seal', compilation.hooks.seal, compilation.hooks.afterSeal, {
+                parentSpan: ()=>spans.get(compilation)
+            });
+            compilation.hooks.addEntry.tap(pluginName, (entry)=>{
+                const compilationSpan = spans.get(compilation);
+                if (!compilationSpan) {
+                    return;
+                }
+                const addEntrySpan = compilationSpan.traceChild('add-entry');
+                addEntrySpan.setAttribute('request', entry.request);
+                spans.set(entry, addEntrySpan);
+            });
+            compilation.hooks.succeedEntry.tap(pluginName, (entry)=>{
+                var ref;
+                (ref = spans.get(entry)) === null || ref === void 0 ? void 0 : ref.stop();
+            });
+            this.traceHookPair('webpack-compilation-chunk-graph', compilation.hooks.beforeChunks, compilation.hooks.afterChunks, {
+                parentSpan: ()=>spans.get(compilation) || spans.get(compiler)
+            });
+            this.traceHookPair('webpack-compilation-optimize', compilation.hooks.optimize, compilation.hooks.reviveModules, {
+                parentSpan: ()=>spans.get(compilation) || spans.get(compiler)
+            });
+            this.traceHookPair('webpack-compilation-optimize-modules', compilation.hooks.optimizeModules, compilation.hooks.afterOptimizeModules, {
+                parentSpan: ()=>spans.get(compilation) || spans.get(compiler)
+            });
+            this.traceHookPair('webpack-compilation-optimize-chunks', compilation.hooks.optimizeChunks, compilation.hooks.afterOptimizeChunks, {
+                parentSpan: ()=>spans.get(compilation) || spans.get(compiler)
+            });
+            this.traceHookPair('webpack-compilation-optimize-tree', compilation.hooks.optimizeTree, compilation.hooks.afterOptimizeTree, {
+                parentSpan: ()=>spans.get(compilation) || spans.get(compiler)
+            });
+            this.traceHookPair('webpack-compilation-hash', compilation.hooks.beforeHash, compilation.hooks.afterHash, {
+                parentSpan: ()=>spans.get(compilation) || spans.get(compiler)
+            });
         });
     }
 }

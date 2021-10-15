@@ -12,8 +12,8 @@ function _interopRequireDefault(obj) {
         default: obj
     };
 }
-function getGlobalImportError(file) {
-    return `Global CSS ${_chalk.default.bold('cannot')} be imported from files other than your ${_chalk.default.bold('Custom <App>')}. Due to the Global nature of stylesheets, and to avoid conflicts, Please move all first-party global CSS imports to ${_chalk.default.cyan(file ? file : 'pages/_app.js')}. Or convert the import to Component-Level CSS (CSS Modules).\nRead more: https://nextjs.org/docs/messages/css-global`;
+function getGlobalImportError() {
+    return `Global CSS ${_chalk.default.bold('cannot')} be imported from files other than your ${_chalk.default.bold('Custom <App>')}. Due to the Global nature of stylesheets, and to avoid conflicts, Please move all first-party global CSS imports to ${_chalk.default.cyan('pages/_app.js')}. Or convert the import to Component-Level CSS (CSS Modules).\nRead more: https://nextjs.org/docs/messages/css-global`;
 }
 function getGlobalModuleImportError() {
     return `Global CSS ${_chalk.default.bold('cannot')} be imported from within ${_chalk.default.bold('node_modules')}.\nRead more: https://nextjs.org/docs/messages/css-npm`;

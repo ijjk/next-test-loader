@@ -4,7 +4,7 @@ Object.defineProperty(exports, "__esModule", {
 });
 var _jestWorker = require("jest-worker");
 const RESTARTED = Symbol('restarted');
-class Worker1 {
+class Worker {
     constructor(workerPath, options){
         let { timeout , onRestart , ...farmOptions } = options;
         let restartPromise;
@@ -64,6 +64,6 @@ class Worker1 {
         return worker.end();
     }
 }
-exports.Worker = Worker1;
+exports.Worker = Worker;
 
 //# sourceMappingURL=worker.js.map

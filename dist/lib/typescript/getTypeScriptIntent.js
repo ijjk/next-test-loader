@@ -12,8 +12,8 @@ function _interopRequireDefault(obj) {
         default: obj
     };
 }
-async function getTypeScriptIntent(baseDir, pagesDir) {
-    const tsConfigPath = _path.default.join(baseDir, 'tsconfig.json');
+async function getTypeScriptIntent(baseDir, pagesDir, config) {
+    const tsConfigPath = _path.default.join(baseDir, config.typescript.tsconfigPath);
     // The integration turns on if we find a `tsconfig.json` in the user's
     // project.
     const hasTypeScriptConfiguration = await (0, _fileExists).fileExists(tsConfigPath);

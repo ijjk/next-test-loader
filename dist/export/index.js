@@ -23,7 +23,6 @@ var _storage = require("../telemetry/storage");
 var _normalizePagePath = require("../server/normalize-page-path");
 var _env = require("@next/env");
 var _require = require("../server/require");
-var _trace = require("../telemetry/trace");
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
         default: obj
@@ -122,8 +121,8 @@ const createProgress = (total, label)=>{
         }
     };
 };
-async function exportApp(dir, options, configuration) {
-    const nextExportSpan = (0, _trace).trace('next-export');
+async function exportApp(dir, options, span, configuration) {
+    const nextExportSpan = span.traceChild('next-export');
     return nextExportSpan.traceAsyncFn(async ()=>{
         var ref, ref1, ref2, ref3;
         dir = (0, _path).resolve(dir);
@@ -283,8 +282,9 @@ async function exportApp(dir, options, configuration) {
             domainLocales: i18n === null || i18n === void 0 ? void 0 : i18n.domains,
             trailingSlash: nextConfig.trailingSlash,
             disableOptimizedLoading: nextConfig.experimental.disableOptimizedLoading,
-            // TODO: We should support dynamic HTML too
-            requireStaticHTML: true
+            // Exported pages do not currently support dynamic HTML.
+            supportsDynamicHTML: false,
+            concurrentFeatures: nextConfig.experimental.concurrentFeatures
         };
         const { serverRuntimeConfig , publicRuntimeConfig  } = nextConfig;
         if (Object.keys(publicRuntimeConfig).length > 0) {
@@ -424,8 +424,8 @@ async function exportApp(dir, options, configuration) {
                     httpAgentOptions: nextConfig.httpAgentOptions
                 });
                 for (const validation of result.ampValidations || []){
-                    const { page: page1 , result: ampValidationResult  } = validation;
-                    ampValidations[page1] = ampValidationResult;
+                    const { page , result: ampValidationResult  } = validation;
+                    ampValidations[page] = ampValidationResult;
                     hadValidationError = hadValidationError || Array.isArray(ampValidationResult === null || ampValidationResult === void 0 ? void 0 : ampValidationResult.errors) && ampValidationResult.errors.length > 0;
                 }
                 renderError = renderError || !!result.error;
@@ -450,12 +450,17 @@ async function exportApp(dir, options, configuration) {
             await Promise.all(Object.keys(prerenderManifest.routes).map(async (route)=>{
                 const { srcRoute  } = prerenderManifest.routes[route];
                 const pageName = srcRoute || route;
+                route = (0, _normalizePagePath).normalizePagePath(route);
+                // returning notFound: true from getStaticProps will not
+                // output html/json files during the build
+                if (prerenderManifest.notFoundRoutes.includes(route)) {
+                    return;
+                }
                 const pagePath = (0, _require).getPagePath(pageName, distDir, isLikeServerless);
                 const distPagesDir = (0, _path).join(pagePath, // strip leading / and then recurse number of nested dirs
                 // to place from base folder
                 pageName.substr(1).split('/').map(()=>'..'
                 ).join('/'));
-                route = (0, _normalizePagePath).normalizePagePath(route);
                 const orig = (0, _path).join(distPagesDir, route);
                 const htmlDest = (0, _path).join(outDir, `${route}${subFolders && route !== '/index' ? `${_path.sep}index` : ''}.html`);
                 const ampHtmlDest = (0, _path).join(outDir, `${route}.amp${subFolders ? `${_path.sep}index` : ''}.html`);
@@ -466,8 +471,10 @@ async function exportApp(dir, options, configuration) {
                 await _fs.promises.mkdir((0, _path).dirname(jsonDest), {
                     recursive: true
                 });
-                await _fs.promises.copyFile(`${orig}.html`, htmlDest);
-                await _fs.promises.copyFile(`${orig}.json`, jsonDest);
+                const htmlSrc = `${orig}.html`;
+                const jsonSrc = `${orig}.json`;
+                await _fs.promises.copyFile(htmlSrc, htmlDest);
+                await _fs.promises.copyFile(jsonSrc, jsonDest);
                 if (await exists(`${orig}.amp.html`)) {
                     await _fs.promises.mkdir((0, _path).dirname(ampHtmlDest), {
                         recursive: true

@@ -7,12 +7,12 @@ exports.default = void 0;
 // Available under MIT License (MIT)
 // Only tries to support IE11 and nothing below
 var document = window.document;
-var Response1 = window.Response;
-var TextDecoder1 = window.TextDecoder;
-var TextEncoder1 = window.TextEncoder;
-var AbortController1 = window.AbortController;
-if (AbortController1 == undefined) {
-    AbortController1 = function() {
+var Response = window.Response;
+var TextDecoder = window.TextDecoder;
+var TextEncoder = window.TextEncoder;
+var AbortController = window.AbortController;
+if (AbortController == undefined) {
+    AbortController = function() {
         this.signal = null;
         this.abort = function() {
         };
@@ -101,7 +101,7 @@ TextDecoderPolyfill.prototype.decode = function(octets) {
 // Firefox < 38 throws an error with stream option
 var supportsStreamOption = function() {
     try {
-        return new TextDecoder1().decode(new TextEncoder1().encode('test'), {
+        return new TextDecoder().decode(new TextEncoder().encode('test'), {
             stream: true
         }) === 'test';
     } catch (error) {
@@ -110,8 +110,8 @@ var supportsStreamOption = function() {
     return false;
 };
 // IE, Edge
-if (TextDecoder1 == undefined || TextEncoder1 == undefined || !supportsStreamOption()) {
-    TextDecoder1 = TextDecoderPolyfill;
+if (TextDecoder == undefined || TextEncoder == undefined || !supportsStreamOption()) {
+    TextDecoder = TextDecoderPolyfill;
 }
 var k = function() {
 };
@@ -353,8 +353,8 @@ XHRTransport.prototype.open = function(xhr, onStartCallback, onProgressCallback,
             var status = xhr.status;
             var statusText = xhr.statusText;
             var contentType = xhr.getResponseHeader('Content-Type');
-            var headers1 = xhr.getAllResponseHeaders();
-            onStartCallback(status, statusText, contentType, new HeadersPolyfill(headers1), function() {
+            var headers = xhr.getAllResponseHeaders();
+            onStartCallback(status, statusText, contentType, new HeadersPolyfill(headers), function() {
                 xhr.abort();
             });
         } else if (xhr.readyState === 4) {
@@ -370,21 +370,21 @@ XHRTransport.prototype.open = function(xhr, onStartCallback, onProgressCallback,
     }
     xhr.send();
 };
-function HeadersWrapper(headers2) {
-    this._headers = headers2;
+function HeadersWrapper(headers) {
+    this._headers = headers;
 }
 HeadersWrapper.prototype.get = function(name) {
     return this._headers.get(name);
 };
 function FetchTransport() {
 }
-FetchTransport.prototype.open = function(xhr, onStartCallback, onProgressCallback, onFinishCallback, url, withCredentials, headers2) {
-    var controller = new AbortController1();
+FetchTransport.prototype.open = function(xhr, onStartCallback, onProgressCallback, onFinishCallback, url, withCredentials, headers) {
+    var controller = new AbortController();
     var signal = controller.signal // see #120
     ;
-    var textDecoder = new TextDecoder1();
+    var textDecoder = new TextDecoder();
     fetch(url, {
-        headers: headers2,
+        headers: headers,
         credentials: withCredentials ? 'include' : 'same-origin',
         signal: signal,
         cache: 'no-store'
@@ -421,7 +421,7 @@ FetchTransport.prototype.open = function(xhr, onStartCallback, onProgressCallbac
         return Promise.reject(error);
     });
 };
-function EventTarget1() {
+function EventTarget() {
     this._listeners = Object.create(null);
 }
 function throwError(e) {
@@ -429,7 +429,7 @@ function throwError(e) {
         throw e;
     }, 0);
 }
-EventTarget1.prototype.dispatchEvent = function(event) {
+EventTarget.prototype.dispatchEvent = function(event) {
     event.target = this;
     var typeListeners = this._listeners[event.type];
     if (typeListeners != undefined) {
@@ -448,7 +448,7 @@ EventTarget1.prototype.dispatchEvent = function(event) {
         }
     }
 };
-EventTarget1.prototype.addEventListener = function(type, listener) {
+EventTarget.prototype.addEventListener = function(type, listener) {
     type = String(type);
     var listeners = this._listeners;
     var typeListeners = listeners[type];
@@ -466,7 +466,7 @@ EventTarget1.prototype.addEventListener = function(type, listener) {
         typeListeners.push(listener);
     }
 };
-EventTarget1.prototype.removeEventListener = function(type, listener) {
+EventTarget.prototype.removeEventListener = function(type, listener) {
     type = String(type);
     var listeners = this._listeners;
     var typeListeners = listeners[type];
@@ -484,23 +484,23 @@ EventTarget1.prototype.removeEventListener = function(type, listener) {
         }
     }
 };
-function Event1(type) {
+function Event(type) {
     this.type = type;
     this.target = undefined;
 }
-function MessageEvent1(type, options) {
-    Event1.call(this, type);
+function MessageEvent(type, options) {
+    Event.call(this, type);
     this.data = options.data;
     this.lastEventId = options.lastEventId;
 }
-MessageEvent1.prototype = Object.create(Event1.prototype);
+MessageEvent.prototype = Object.create(Event.prototype);
 function ConnectionEvent(type, options) {
-    Event1.call(this, type);
+    Event.call(this, type);
     this.status = options.status;
     this.statusText = options.statusText;
     this.headers = options.headers;
 }
-ConnectionEvent.prototype = Object.create(Event1.prototype);
+ConnectionEvent.prototype = Object.create(Event.prototype);
 var WAITING = -1;
 var CONNECTING = 0;
 var OPEN = 1;
@@ -533,7 +533,7 @@ var fire = function(that, f, event) {
     }
 };
 function EventSourcePolyfill(url, options) {
-    EventTarget1.call(this);
+    EventTarget.call(this);
     this.onopen = undefined;
     this.onmessage = undefined;
     this.onerror = undefined;
@@ -543,7 +543,7 @@ function EventSourcePolyfill(url, options) {
     this._close = undefined;
     start(this, url, options);
 }
-var isFetchSupported = fetch != undefined && Response1 != undefined && 'body' in Response1.prototype;
+var isFetchSupported = fetch != undefined && Response != undefined && 'body' in Response.prototype;
 function start(es, url, options) {
     url = String(url);
     var withCredentials = options != undefined && Boolean(options.withCredentials);
@@ -552,7 +552,7 @@ function start(es, url, options) {
     var lastEventId = '';
     var retry = initialRetry;
     var wasActivity = false;
-    var headers2 = options != undefined && options.headers != undefined ? JSON.parse(JSON.stringify(options.headers)) : undefined;
+    var headers = options != undefined && options.headers != undefined ? JSON.parse(JSON.stringify(options.headers)) : undefined;
     var CurrentTransport = options != undefined && options.Transport != undefined ? options.Transport : XMLHttpRequest;
     var xhr = isFetchSupported && !(options != undefined && options.Transport != undefined) ? undefined : new XHRWrapper(new CurrentTransport());
     var transport = xhr == undefined ? new FetchTransport() : new XHRTransport();
@@ -566,7 +566,7 @@ function start(es, url, options) {
     var state = FIELD_START;
     var fieldStart = 0;
     var valueStart = 0;
-    var onStart = function(status, statusText, contentType, headers3, cancel) {
+    var onStart = function(status, statusText, contentType, headers, cancel) {
         if (currentState === CONNECTING) {
             cancelFunction = cancel;
             if (status === 200 && contentType != undefined && contentTypeRegExp.test(contentType)) {
@@ -577,7 +577,7 @@ function start(es, url, options) {
                 var event = new ConnectionEvent('open', {
                     status: status,
                     statusText: statusText,
-                    headers: headers3
+                    headers: headers
                 });
                 es.dispatchEvent(event);
                 fire(es, es.onopen, event);
@@ -596,7 +596,7 @@ function start(es, url, options) {
                 var event = new ConnectionEvent('error', {
                     status: status,
                     statusText: statusText,
-                    headers: headers3
+                    headers: headers
                 });
                 es.dispatchEvent(event);
                 fire(es, es.onerror, event);
@@ -658,7 +658,7 @@ function start(es, url, options) {
                                 if (eventTypeBuffer === '') {
                                     eventTypeBuffer = 'message';
                                 }
-                                var event = new MessageEvent1(eventTypeBuffer, {
+                                var event = new MessageEvent(eventTypeBuffer, {
                                     data: dataBuffer.slice(1),
                                     lastEventId: lastEventIdBuffer
                                 });
@@ -704,7 +704,7 @@ function start(es, url, options) {
             }, retry);
             retry = clampDuration(Math.min(initialRetry * 16, retry * 2));
             es.readyState = CONNECTING;
-            var event = new Event1('error');
+            var event = new Event('error');
             es.dispatchEvent(event);
             fire(es, es.onerror, event);
         }
@@ -759,10 +759,10 @@ function start(es, url, options) {
         var requestHeaders = {
         };
         requestHeaders['Accept'] = 'text/event-stream';
-        if (headers2 != undefined) {
-            for(var name in headers2){
-                if (Object.prototype.hasOwnProperty.call(headers2, name)) {
-                    requestHeaders[name] = headers2[name];
+        if (headers != undefined) {
+            for(var name in headers){
+                if (Object.prototype.hasOwnProperty.call(headers, name)) {
+                    requestHeaders[name] = headers[name];
                 }
             }
         }
@@ -779,7 +779,7 @@ function start(es, url, options) {
     es._close = close;
     onTimeout();
 }
-EventSourcePolyfill.prototype = Object.create(EventTarget1.prototype);
+EventSourcePolyfill.prototype = Object.create(EventTarget.prototype);
 EventSourcePolyfill.prototype.CONNECTING = CONNECTING;
 EventSourcePolyfill.prototype.OPEN = OPEN;
 EventSourcePolyfill.prototype.CLOSED = CLOSED;

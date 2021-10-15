@@ -7,6 +7,7 @@ exports.writeConfigurationDefaults = writeConfigurationDefaults;
 var _fs = require("fs");
 var _chalk = _interopRequireDefault(require("chalk"));
 var CommentJson = _interopRequireWildcard(require("next/dist/compiled/comment-json"));
+var _semver = _interopRequireDefault(require("next/dist/compiled/semver"));
 var _os = _interopRequireDefault(require("os"));
 var _getTypeScriptConfiguration = require("./getTypeScriptConfiguration");
 function _interopRequireDefault(obj) {
@@ -66,6 +67,11 @@ function getDesiredCompilerOptions(ts) {
         noEmit: {
             suggested: true
         },
+        ..._semver.default.gte(ts.version, '4.4.2') ? {
+            incremental: {
+                suggested: true
+            }
+        } : undefined,
         // These values are required and cannot be changed by the user
         // Keep this in sync with the webpack config
         // 'parsedValue' matches the output value from ts.parseJsonConfigFileContent()
@@ -125,7 +131,7 @@ async function writeConfigurationDefaults(ts, tsConfigPath, isFirstTimeSetup) {
         await _fs.promises.writeFile(tsConfigPath, '{}' + _os.default.EOL);
     }
     const desiredCompilerOptions = getDesiredCompilerOptions(ts);
-    const { options: tsOptions , raw: rawConfig ,  } = await (0, _getTypeScriptConfiguration).getTypeScriptConfiguration(ts, tsConfigPath, true);
+    const { options: tsOptions , raw: rawConfig  } = await (0, _getTypeScriptConfiguration).getTypeScriptConfiguration(ts, tsConfigPath, true);
     const userTsConfigContent = await _fs.promises.readFile(tsConfigPath, {
         encoding: 'utf8'
     });

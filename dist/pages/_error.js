@@ -22,7 +22,7 @@ function _getInitialProps({ res , err  }) {
         statusCode
     };
 }
-class Error1 extends _react.default.Component {
+class Error extends _react.default.Component {
     render() {
         const { statusCode  } = this.props;
         const title = this.props.title || statusCodes[statusCode] || 'An unexpected error has occurred';
@@ -41,10 +41,10 @@ class Error1 extends _react.default.Component {
         }, this.props.title || statusCode ? title : /*#__PURE__*/ _react.default.createElement(_react.default.Fragment, null, "Application error: a client-side exception has occurred (see the browser console for more information)"), ".")))));
     }
 }
-Error1.displayName = 'ErrorPage';
-Error1.getInitialProps = _getInitialProps;
-Error1.origGetInitialProps = _getInitialProps;
-exports.default = Error1;
+Error.displayName = 'ErrorPage';
+Error.getInitialProps = _getInitialProps;
+Error.origGetInitialProps = _getInitialProps;
+exports.default = Error;
 const styles = {
     error: {
         color: '#000',

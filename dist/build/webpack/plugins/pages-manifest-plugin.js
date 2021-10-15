@@ -25,37 +25,27 @@ class PagesManifestPlugin {
             if (!pagePath) {
                 continue;
             }
-            const files = entrypoint.getFiles().filter((file)=>!file.includes('webpack-runtime') && file.endsWith('.js')
+            const files = entrypoint.getFiles().filter((file)=>!file.includes('webpack-runtime') && !file.includes('webpack-api-runtime') && file.endsWith('.js')
             );
-            if (!_webpack.isWebpack5 && files.length > 1) {
-                console.log(`Found more than one file in server entrypoint ${entrypoint.name}`, files);
-                continue;
-            }
             // Write filename, replace any backslashes in path (on windows) with forwardslashes for cross-platform consistency.
             pages[pagePath] = files[files.length - 1];
-            if (_webpack.isWebpack5 && !this.dev) {
+            if (!this.dev) {
                 pages[pagePath] = pages[pagePath].slice(3);
             }
             pages[pagePath] = pages[pagePath].replace(/\\/g, '/');
         }
-        assets[`${_webpack.isWebpack5 && !this.dev ? '../' : ''}` + _constants.PAGES_MANIFEST] = new _webpack.sources.RawSource(JSON.stringify(pages, null, 2));
+        assets[`${!this.dev ? '../' : ''}` + _constants.PAGES_MANIFEST] = new _webpack.sources.RawSource(JSON.stringify(pages, null, 2));
     }
     apply(compiler) {
-        if (_webpack.isWebpack5) {
-            compiler.hooks.make.tap('NextJsPagesManifest', (compilation)=>{
+        compiler.hooks.make.tap('NextJsPagesManifest', (compilation)=>{
+            // @ts-ignore TODO: Remove ignore when webpack 5 is stable
+            compilation.hooks.processAssets.tap({
+                name: 'NextJsPagesManifest',
                 // @ts-ignore TODO: Remove ignore when webpack 5 is stable
-                compilation.hooks.processAssets.tap({
-                    name: 'NextJsPagesManifest',
-                    // @ts-ignore TODO: Remove ignore when webpack 5 is stable
-                    stage: _webpack.webpack.Compilation.PROCESS_ASSETS_STAGE_ADDITIONS
-                }, (assets)=>{
-                    this.createAssets(compilation, assets);
-                });
+                stage: _webpack.webpack.Compilation.PROCESS_ASSETS_STAGE_ADDITIONS
+            }, (assets)=>{
+                this.createAssets(compilation, assets);
             });
-            return;
-        }
-        compiler.hooks.emit.tap('NextJsPagesManifest', (compilation)=>{
-            this.createAssets(compilation, compilation.assets);
         });
     }
 }

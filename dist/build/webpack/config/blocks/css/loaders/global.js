@@ -5,6 +5,12 @@ Object.defineProperty(exports, "__esModule", {
 exports.getGlobalCssLoader = getGlobalCssLoader;
 var _client = require("./client");
 var _fileResolve = require("./file-resolve");
+var _postcss = _interopRequireDefault(require("postcss"));
+function _interopRequireDefault(obj) {
+    return obj && obj.__esModule ? obj : {
+        default: obj
+    };
+}
 function getGlobalCssLoader(ctx, postCssPlugins, preProcessors = []) {
     const loaders = [];
     if (ctx.isClient) {
@@ -17,10 +23,9 @@ function getGlobalCssLoader(ctx, postCssPlugins, preProcessors = []) {
     }
     // Resolve CSS `@import`s and `url()`s
     loaders.push({
-        loader: require.resolve('next/dist/compiled/css-loader'),
+        loader: require.resolve('../../../../loaders/css-loader/src'),
         options: {
             importLoaders: 1 + preProcessors.length,
-            sourceMap: true,
             // Next.js controls CSS Modules eligibility:
             modules: false,
             url: _fileResolve.cssFileResolve,
@@ -29,13 +34,9 @@ function getGlobalCssLoader(ctx, postCssPlugins, preProcessors = []) {
     });
     // Compile CSS
     loaders.push({
-        loader: require.resolve('next/dist/compiled/postcss-loader'),
+        loader: require.resolve('../../../../loaders/postcss-loader/src'),
         options: {
-            postcssOptions: {
-                plugins: postCssPlugins,
-                config: false
-            },
-            sourceMap: true
+            postcss: (0, _postcss).default(postCssPlugins)
         }
     });
     loaders.push(// Webpack loaders run like a stack, so we need to reverse the natural

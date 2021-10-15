@@ -10,12 +10,13 @@ var _path = require("path");
 var _constants = require("./constants");
 var _events = require("../telemetry/events");
 var _compileError = require("./compile-error");
+var _isError = _interopRequireDefault(require("./is-error"));
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
         default: obj
     };
 }
-async function verifyAndLint(dir, configLintDirs, numWorkers, enableWorkerThreads, telemetry) {
+async function verifyAndLint(dir, cacheLocation, configLintDirs, numWorkers, enableWorkerThreads, telemetry) {
     try {
         const lintWorkers = new _jestWorker.Worker(require.resolve('./eslint/runLintCheck'), {
             numWorkers,
@@ -29,7 +30,9 @@ async function verifyAndLint(dir, configLintDirs, numWorkers, enableWorkerThread
             res.push(currDir);
             return res;
         }, []);
-        const lintResults = await lintWorkers.runLintCheck(dir, lintDirs, true);
+        const lintResults = await lintWorkers.runLintCheck(dir, lintDirs, true, {
+            cacheLocation
+        });
         const lintOutput = typeof lintResults === 'string' ? lintResults : lintResults === null || lintResults === void 0 ? void 0 : lintResults.output;
         if (typeof lintResults !== 'string' && (lintResults === null || lintResults === void 0 ? void 0 : lintResults.eventInfo)) {
             telemetry.record((0, _events).eventLintCheckCompleted({
@@ -46,13 +49,15 @@ async function verifyAndLint(dir, configLintDirs, numWorkers, enableWorkerThread
         }
         lintWorkers.end();
     } catch (err) {
-        if (err.type === 'CompileError' || err instanceof _compileError.CompileError) {
-            console.error(_chalk.default.red('\nFailed to compile.'));
-            console.error(err.message);
-            process.exit(1);
-        } else if (err.type === 'FatalError') {
-            console.error(err.message);
-            process.exit(1);
+        if ((0, _isError).default(err)) {
+            if (err.type === 'CompileError' || err instanceof _compileError.CompileError) {
+                console.error(_chalk.default.red('\nFailed to compile.'));
+                console.error(err.message);
+                process.exit(1);
+            } else if (err.type === 'FatalError') {
+                console.error(err.message);
+                process.exit(1);
+            }
         }
         throw err;
     }

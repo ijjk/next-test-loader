@@ -27,7 +27,7 @@ export declare const CLIENT_STATIC_FILES_RUNTIME_MAIN = "main";
 export declare const CLIENT_STATIC_FILES_RUNTIME_REACT_REFRESH = "react-refresh";
 export declare const CLIENT_STATIC_FILES_RUNTIME_AMP = "amp";
 export declare const CLIENT_STATIC_FILES_RUNTIME_WEBPACK = "webpack";
-export declare const CLIENT_STATIC_FILES_RUNTIME_POLYFILLS = "polyfills";
+export declare const CLIENT_STATIC_FILES_RUNTIME_POLYFILLS_SYMBOL: unique symbol;
 export declare const TEMPORARY_REDIRECT_STATUS = 307;
 export declare const PERMANENT_REDIRECT_STATUS = 308;
 export declare const STATIC_PROPS_ID = "__N_SSG";
@@ -38,3 +38,4 @@ export declare const OPTIMIZED_FONT_PROVIDERS: {
     preconnect: string;
 }[];
 export declare const STATIC_STATUS_PAGES: string[];
+export declare const TRACE_OUTPUT_VERSION = 1;

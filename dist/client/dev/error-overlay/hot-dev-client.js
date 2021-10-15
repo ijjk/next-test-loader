@@ -217,6 +217,7 @@ function tryApplyUpdates(onHotUpdateSuccess) {
         return;
     }
     if (!isUpdateAvailable() || !canApplyUpdates()) {
+        (0, _client).onBuildOk();
         return;
     }
     function handleApplyUpdates(err, updatedModules) {
@@ -236,8 +237,9 @@ function tryApplyUpdates(onHotUpdateSuccess) {
         }
         if (isUpdateAvailable()) {
             // While we were updating, there was a new update! Do it again.
-            tryApplyUpdates(hasUpdates ? undefined : onHotUpdateSuccess);
+            tryApplyUpdates(hasUpdates ? _client.onBuildOk : onHotUpdateSuccess);
         } else {
+            (0, _client).onBuildOk();
             if (process.env.__NEXT_TEST_MODE) {
                 afterApplyUpdates(()=>{
                     if (self.__NEXT_HMR_CB) {

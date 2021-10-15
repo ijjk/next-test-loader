@@ -10,10 +10,12 @@ var _mozjpegNodeEncJs = _interopRequireDefault(require("./mozjpeg/mozjpeg_node_e
 var _mozjpegNodeDecJs = _interopRequireDefault(require("./mozjpeg/mozjpeg_node_dec.js"));
 var _webpNodeEncJs = _interopRequireDefault(require("./webp/webp_node_enc.js"));
 var _webpNodeDecJs = _interopRequireDefault(require("./webp/webp_node_dec.js"));
+var _avifNodeEncJs = _interopRequireDefault(require("./avif/avif_node_enc.js"));
+var _avifNodeDecJs = _interopRequireDefault(require("./avif/avif_node_dec.js"));
 var pngEncDec = _interopRequireWildcard(require("./png/squoosh_png.js"));
 var oxipng = _interopRequireWildcard(require("./png/squoosh_oxipng.js"));
 var resize = _interopRequireWildcard(require("./resize/squoosh_resize.js"));
-var _imageDataJs = _interopRequireDefault(require("./image_data.js"));
+var _imageData = _interopRequireDefault(require("./image_data"));
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
         default: obj
@@ -46,6 +48,8 @@ const mozEncWasm = path.resolve(__dirname, './mozjpeg/mozjpeg_node_enc.wasm');
 const mozDecWasm = path.resolve(__dirname, './mozjpeg/mozjpeg_node_dec.wasm');
 const webpEncWasm = path.resolve(__dirname, './webp/webp_node_enc.wasm');
 const webpDecWasm = path.resolve(__dirname, './webp/webp_node_dec.wasm');
+const avifEncWasm = path.resolve(__dirname, './avif/avif_node_enc.wasm');
+const avifDecWasm = path.resolve(__dirname, './avif/avif_node_dec.wasm');
 const pngEncDecWasm = path.resolve(__dirname, './png/squoosh_png_bg.wasm');
 const pngEncDecInit = ()=>pngEncDec.default(_fs.promises.readFile((0, _emscriptenUtilsJs).pathify(pngEncDecWasm)))
 ;
@@ -57,8 +61,7 @@ const resizeInit = ()=>resize.default(_fs.promises.readFile((0, _emscriptenUtils
 ;
 // rotate
 const rotateWasm = path.resolve(__dirname, './rotate/rotate.wasm');
-global.ImageData = _imageDataJs.default // mandatory for wasm binaries
-;
+global.ImageData = _imageData.default;
 function resizeNameToIndex(name) {
     switch(name){
         case 'triangle':
@@ -89,13 +92,10 @@ function resizeWithAspect({ input_width , input_height , target_width , target_h
             height: target_height
         };
     }
-    if (!target_height) {
-        return {
-            width: target_width,
-            height: Math.round(input_height / input_width * target_width)
-        };
-    }
-    throw Error('invariant');
+    return {
+        width: target_width,
+        height: Math.round(input_height / input_width * target_width)
+    };
 }
 const preprocessors = {
     resize: {
@@ -110,7 +110,7 @@ const preprocessors = {
                     target_width: width,
                     target_height: height
                 }));
-                const imageData = new _imageDataJs.default(resize.resize(buffer, input_width, input_height, width, height, resizeNameToIndex(method), premultiply, linearRGB), width, height);
+                const imageData = new _imageData.default(resize.resize(buffer, input_width, input_height, width, height, resizeNameToIndex(method), premultiply, linearRGB), width, height);
                 resize.cleanup();
                 return imageData;
             };
@@ -130,17 +130,16 @@ const preprocessors = {
                 const degrees = numRotations * 90 % 360;
                 const sameDimensions = degrees === 0 || degrees === 180;
                 const size = width * height * 4;
-                const { instance  } = await WebAssembly.instantiate(await _fs.promises.readFile((0, _emscriptenUtilsJs).pathify(rotateWasm)));
-                const exports = instance.exports;
-                const { memory  } = exports;
+                const instance = (await WebAssembly.instantiate(await _fs.promises.readFile((0, _emscriptenUtilsJs).pathify(rotateWasm)))).instance;
+                const { memory  } = instance.exports;
                 const additionalPagesNeeded = Math.ceil((size * 2 - memory.buffer.byteLength + 8) / (64 * 1024));
                 if (additionalPagesNeeded > 0) {
                     memory.grow(additionalPagesNeeded);
                 }
                 const view = new Uint8ClampedArray(memory.buffer);
                 view.set(buffer, 8);
-                exports.rotate(width, height, degrees);
-                return new _imageDataJs.default(Buffer.from(view.slice(size + 8, size * 2 + 8)), sameDimensions ? width : height, sameDimensions ? height : width);
+                instance.exports.rotate(width, height, degrees);
+                return new _imageData.default(view.slice(size + 8, size * 2 + 8), sameDimensions ? width : height, sameDimensions ? height : width);
             };
         },
         defaultOptions: {
@@ -188,7 +187,7 @@ const codecs = {
         name: 'WebP',
         extension: 'webp',
         detectors: [
-            /^RIFF....WEBPVP8[LX ]/
+            /^RIFF....WEBPVP8[LX ]/s
         ],
         dec: ()=>(0, _emscriptenUtilsJs).instantiateEmscriptenWasm(_webpNodeDecJs.default, webpDecWasm)
         ,
@@ -229,6 +228,36 @@ const codecs = {
             max: 100
         }
     },
+    avif: {
+        name: 'AVIF',
+        extension: 'avif',
+        // eslint-disable-next-line no-control-regex
+        detectors: [
+            /^\x00\x00\x00 ftypavif\x00\x00\x00\x00/
+        ],
+        dec: ()=>(0, _emscriptenUtilsJs).instantiateEmscriptenWasm(_avifNodeDecJs.default, avifDecWasm)
+        ,
+        enc: async ()=>{
+            return (0, _emscriptenUtilsJs).instantiateEmscriptenWasm(_avifNodeEncJs.default, avifEncWasm);
+        },
+        defaultEncoderOptions: {
+            cqLevel: 33,
+            cqAlphaLevel: -1,
+            denoiseLevel: 0,
+            tileColsLog2: 0,
+            tileRowsLog2: 0,
+            speed: 6,
+            subsample: 1,
+            chromaDeltaQ: false,
+            sharpness: 0,
+            tune: 0 /* AVIFTune.auto */ 
+        },
+        autoOptimize: {
+            option: 'cqLevel',
+            min: 62,
+            max: 0
+        }
+    },
     oxipng: {
         name: 'OxiPNG',
         extension: 'png',
@@ -252,7 +281,7 @@ const codecs = {
             return {
                 encode: (buffer, width, height, opts)=>{
                     const simplePng = pngEncDec.encode(new Uint8Array(buffer), width, height);
-                    const imageData = oxipng.optimise(simplePng, opts.level);
+                    const imageData = oxipng.optimise(simplePng, opts.level, false);
                     oxipng.cleanup();
                     return imageData;
                 }

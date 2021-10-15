@@ -47,5 +47,5 @@ export declare class NextScript extends Component<OriginProps> {
     getScripts(files: DocumentFiles): JSX.Element[];
     getPolyfillScripts(): JSX.Element[];
     static getInlineScriptSource(context: Readonly<HtmlProps>): string;
-    render(): JSX.Element | null;
+    render(): JSX.Element;
 }

@@ -13,7 +13,7 @@ export declare type __ApiPreviewProps = {
     previewModeEncryptionKey: string;
     previewModeSigningKey: string;
 };
-export declare function apiResolver(req: IncomingMessage, res: ServerResponse, query: any, resolverModule: any, apiContext: __ApiPreviewProps, propagateError: boolean): Promise<void>;
+export declare function apiResolver(req: IncomingMessage, res: ServerResponse, query: any, resolverModule: any, apiContext: __ApiPreviewProps, propagateError: boolean, dev?: boolean, page?: string): Promise<void>;
 /**
  * Parse incoming message like `json` or `urlencoded`
  * @param req request object

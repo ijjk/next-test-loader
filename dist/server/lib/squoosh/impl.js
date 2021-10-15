@@ -7,6 +7,7 @@ exports.rotate = rotate;
 exports.resize = resize;
 exports.encodeJpeg = encodeJpeg;
 exports.encodeWebp = encodeWebp;
+exports.encodeAvif = encodeAvif;
 exports.encodePng = encodePng;
 var _semver = _interopRequireDefault(require("next/dist/compiled/semver"));
 var _codecs = require("./codecs");
@@ -50,8 +51,10 @@ async function decodeBuffer(_buffer) {
     if (!key) {
         throw Error(`Buffer has an unsupported format`);
     }
-    const d = await _codecs.codecs[key].dec();
-    return d.decode(new Uint8Array(buffer));
+    const encoder = _codecs.codecs[key];
+    const mod = await encoder.dec();
+    const rgba = mod.decode(new Uint8Array(buffer));
+    return rgba;
 }
 async function rotate(image, numRotations) {
     image = _imageData.default.from(image);
@@ -90,6 +93,20 @@ async function encodeWebp(image, { quality  }) {
     const r = await m.encode(image.data, image.width, image.height, {
         ...e.defaultEncoderOptions,
         quality
+    });
+    return Buffer.from(r);
+}
+async function encodeAvif(image, { quality  }) {
+    image = _imageData.default.from(image);
+    const e = _codecs.codecs['avif'];
+    const m = await e.enc();
+    await maybeDelay();
+    const val = e.autoOptimize.min;
+    const r = await m.encode(image.data, image.width, image.height, {
+        ...e.defaultEncoderOptions,
+        // Think of cqLevel as the "amount" of quantization (0 to 62),
+        // so a lower value yields higher quality (0 to 100).
+        cqLevel: quality === 0 ? val : Math.round(val - quality / 100 * val)
     });
     return Buffer.from(r);
 }

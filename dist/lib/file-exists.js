@@ -4,6 +4,12 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.fileExists = fileExists;
 var _fs = require("fs");
+var _isError = _interopRequireDefault(require("./is-error"));
+function _interopRequireDefault(obj) {
+    return obj && obj.__esModule ? obj : {
+        default: obj
+    };
+}
 async function fileExists(fileName, type) {
     try {
         if (type === 'file') {
@@ -17,7 +23,7 @@ async function fileExists(fileName, type) {
         }
         return true;
     } catch (err) {
-        if (err.code === 'ENOENT' || err.code === 'ENAMETOOLONG') {
+        if ((0, _isError).default(err) && (err.code === 'ENOENT' || err.code === 'ENAMETOOLONG')) {
             return false;
         }
         throw err;

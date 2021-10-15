@@ -4,6 +4,7 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.createPagesMapping = createPagesMapping;
 exports.createEntrypoints = createEntrypoints;
+exports.finalizeEntrypoint = finalizeEntrypoint;
 var _chalk = _interopRequireDefault(require("chalk"));
 var _path = require("path");
 var _querystring = require("querystring");
@@ -16,7 +17,7 @@ function _interopRequireDefault(obj) {
         default: obj
     };
 }
-function createPagesMapping(pagePaths, extensions) {
+function createPagesMapping(pagePaths, extensions, isDev) {
     const previousPages = {
     };
     const pages = pagePaths.reduce((result, pagePath)=>{
@@ -31,9 +32,18 @@ function createPagesMapping(pagePaths, extensions) {
         return result;
     }, {
     });
-    pages['/_app'] = pages['/_app'] || 'next/dist/pages/_app';
-    pages['/_error'] = pages['/_error'] || 'next/dist/pages/_error';
-    pages['/_document'] = pages['/_document'] || 'next/dist/pages/_document';
+    // we alias these in development and allow webpack to
+    // allow falling back to the correct source file so
+    // that HMR can work properly when a file is added/removed
+    if (isDev) {
+        pages['/_app'] = `${_constants.PAGES_DIR_ALIAS}/_app`;
+        pages['/_error'] = `${_constants.PAGES_DIR_ALIAS}/_error`;
+        pages['/_document'] = `${_constants.PAGES_DIR_ALIAS}/_document`;
+    } else {
+        pages['/_app'] = pages['/_app'] || 'next/dist/pages/_app';
+        pages['/_error'] = pages['/_error'] || 'next/dist/pages/_error';
+        pages['/_document'] = pages['/_document'] || 'next/dist/pages/_document';
+    }
     return pages;
 }
 function createEntrypoints(pages, target, buildId, previewMode, config, loadedEnvFiles) {
@@ -111,6 +121,45 @@ function createEntrypoints(pages, target, buildId, previewMode, config, loadedEn
         client,
         server
     };
+}
+function finalizeEntrypoint(name, value, isServer) {
+    if (isServer) {
+        const isApi = name.startsWith('pages/api/');
+        const runtime = isApi ? 'webpack-api-runtime' : 'webpack-runtime';
+        const layer = isApi ? 'api' : undefined;
+        const publicPath = isApi ? '' : undefined;
+        if (typeof value === 'object' && !Array.isArray(value)) {
+            return {
+                publicPath,
+                runtime,
+                layer,
+                ...value
+            };
+        } else {
+            return {
+                import: value,
+                publicPath,
+                runtime,
+                layer
+            };
+        }
+    } else {
+        if (name !== 'polyfills' && name !== 'main' && name !== 'amp' && name !== 'react-refresh') {
+            const dependOn = name.startsWith('pages/') && name !== 'pages/_app' ? 'pages/_app' : 'main';
+            if (typeof value === 'object' && !Array.isArray(value)) {
+                return {
+                    dependOn,
+                    ...value
+                };
+            } else {
+                return {
+                    import: value,
+                    dependOn
+                };
+            }
+        }
+    }
+    return value;
 }
 
 //# sourceMappingURL=entries.js.map

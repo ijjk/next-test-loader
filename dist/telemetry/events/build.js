@@ -6,6 +6,8 @@ exports.eventTypeCheckCompleted = eventTypeCheckCompleted;
 exports.eventLintCheckCompleted = eventLintCheckCompleted;
 exports.eventBuildCompleted = eventBuildCompleted;
 exports.eventBuildOptimize = eventBuildOptimize;
+exports.eventBuildFeatureUsage = eventBuildFeatureUsage;
+exports.EVENT_BUILD_FEATURE_USAGE = void 0;
 const REGEXP_DIRECTORY_DUNDER = /[\\/]__[^\\/]+(?<![\\/]__(?:tests|mocks))__[\\/]/i;
 const REGEXP_DIRECTORY_TESTS = /[\\/]__(tests|mocks)__[\\/]/i;
 const REGEXP_FILE_TEST = /\.(?:spec|test)\.[^.]+$/i;
@@ -50,6 +52,18 @@ function eventBuildOptimize(pagePaths, event) {
             )
         }
     };
+}
+const EVENT_BUILD_FEATURE_USAGE = 'NEXT_BUILD_FEATURE_USAGE';
+exports.EVENT_BUILD_FEATURE_USAGE = EVENT_BUILD_FEATURE_USAGE;
+function eventBuildFeatureUsage(telemetryPlugin) {
+    return telemetryPlugin.usages().map(({ featureName , invocationCount  })=>({
+            eventName: EVENT_BUILD_FEATURE_USAGE,
+            payload: {
+                featureName,
+                invocationCount
+            }
+        })
+    );
 }
 
 //# sourceMappingURL=build.js.map

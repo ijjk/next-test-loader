@@ -17,9 +17,9 @@ function _interopRequireDefault(obj) {
 }
 // This function takes the asset map generated in BuildManifestPlugin and creates a
 // reduced version to send to the client.
-function generateClientManifest(compiler, assetMap, rewrites) {
-    const compilerSpan = _profilingPlugin.spans.get(compiler);
-    const genClientManifestSpan = compilerSpan === null || compilerSpan === void 0 ? void 0 : compilerSpan.traceChild('NextJsBuildManifest-generateClientManifest');
+function generateClientManifest(compiler, compilation, assetMap, rewrites) {
+    const compilationSpan = _profilingPlugin.spans.get(compilation) || _profilingPlugin.spans.get(compiler);
+    const genClientManifestSpan = compilationSpan === null || compilationSpan === void 0 ? void 0 : compilationSpan.traceChild('NextJsBuildManifest-generateClientManifest');
     return genClientManifestSpan === null || genClientManifestSpan === void 0 ? void 0 : genClientManifestSpan.traceFn(()=>{
         const clientManifest = {
             // TODO: update manifest type to include rewrites
@@ -78,8 +78,8 @@ class BuildManifestPlugin {
         this.rewrites.fallback = options.rewrites.fallback.map(processRoute);
     }
     createAssets(compiler, compilation, assets) {
-        const compilerSpan = _profilingPlugin.spans.get(compiler);
-        const createAssetsSpan = compilerSpan === null || compilerSpan === void 0 ? void 0 : compilerSpan.traceChild('NextJsBuildManifest-createassets');
+        const compilationSpan = _profilingPlugin.spans.get(compilation) || _profilingPlugin.spans.get(compiler);
+        const createAssetsSpan = compilationSpan === null || compilationSpan === void 0 ? void 0 : compilationSpan.traceChild('NextJsBuildManifest-createassets');
         return createAssetsSpan === null || createAssetsSpan === void 0 ? void 0 : createAssetsSpan.traceFn(()=>{
             const entrypoints = compilation.entrypoints;
             const assetMap = {
@@ -103,14 +103,20 @@ class BuildManifestPlugin {
                 }
             }
             const mainFiles = new Set(getEntrypointFiles(entrypoints.get(_constants.CLIENT_STATIC_FILES_RUNTIME_MAIN)));
-            assetMap.polyfillFiles = getEntrypointFiles(entrypoints.get(_constants.CLIENT_STATIC_FILES_RUNTIME_POLYFILLS)).filter((file)=>!mainFiles.has(file)
+            const compilationAssets = compilation.getAssets();
+            assetMap.polyfillFiles = compilationAssets.filter((p)=>{
+                // Ensure only .js files are passed through
+                if (!p.name.endsWith('.js')) {
+                    return false;
+                }
+                return p.info && _constants.CLIENT_STATIC_FILES_RUNTIME_POLYFILLS_SYMBOL in p.info;
+            }).map((v)=>v.name
             );
             assetMap.devFiles = getEntrypointFiles(entrypoints.get(_constants.CLIENT_STATIC_FILES_RUNTIME_REACT_REFRESH)).filter((file)=>!mainFiles.has(file)
             );
             assetMap.ampDevFiles = getEntrypointFiles(entrypoints.get(_constants.CLIENT_STATIC_FILES_RUNTIME_AMP));
             const systemEntrypoints = new Set([
                 _constants.CLIENT_STATIC_FILES_RUNTIME_MAIN,
-                _constants.CLIENT_STATIC_FILES_RUNTIME_POLYFILLS,
                 _constants.CLIENT_STATIC_FILES_RUNTIME_REACT_REFRESH,
                 _constants.CLIENT_STATIC_FILES_RUNTIME_AMP, 
             ]);
@@ -152,28 +158,23 @@ class BuildManifestPlugin {
             assets[buildManifestName] = new _webpack.sources.RawSource(JSON.stringify(assetMap, null, 2));
             if (!this.isDevFallback) {
                 const clientManifestPath = `${_constants.CLIENT_STATIC_FILES_PATH}/${this.buildId}/_buildManifest.js`;
-                assets[clientManifestPath] = new _webpack.sources.RawSource(`self.__BUILD_MANIFEST = ${generateClientManifest(compiler, assetMap, this.rewrites)};self.__BUILD_MANIFEST_CB && self.__BUILD_MANIFEST_CB()`);
+                assets[clientManifestPath] = new _webpack.sources.RawSource(`self.__BUILD_MANIFEST = ${generateClientManifest(compiler, compilation, assetMap, this.rewrites)};self.__BUILD_MANIFEST_CB && self.__BUILD_MANIFEST_CB()`);
             }
             return assets;
         });
     }
     apply(compiler) {
-        if (_webpack.isWebpack5) {
-            compiler.hooks.make.tap('NextJsBuildManifest', (compilation)=>{
+        compiler.hooks.make.tap('NextJsBuildManifest', (compilation)=>{
+            // @ts-ignore TODO: Remove ignore when webpack 5 is stable
+            compilation.hooks.processAssets.tap({
+                name: 'NextJsBuildManifest',
                 // @ts-ignore TODO: Remove ignore when webpack 5 is stable
-                compilation.hooks.processAssets.tap({
-                    name: 'NextJsBuildManifest',
-                    // @ts-ignore TODO: Remove ignore when webpack 5 is stable
-                    stage: _webpack.webpack.Compilation.PROCESS_ASSETS_STAGE_ADDITIONS
-                }, (assets)=>{
-                    this.createAssets(compiler, compilation, assets);
-                });
+                stage: _webpack.webpack.Compilation.PROCESS_ASSETS_STAGE_ADDITIONS
+            }, (assets)=>{
+                this.createAssets(compiler, compilation, assets);
             });
-            return;
-        }
-        compiler.hooks.emit.tap('NextJsBuildManifest', (compilation)=>{
-            this.createAssets(compiler, compilation, compilation.assets);
         });
+        return;
     }
 }
 exports.default = BuildManifestPlugin;

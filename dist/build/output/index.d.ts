@@ -15,4 +15,5 @@ export declare type AmpPageStatus = {
 export declare function formatAmpMessages(amp: AmpPageStatus): string;
 export declare function ampValidation(page: string, errors: AmpStatus[], warnings: AmpStatus[]): void;
 export declare function watchCompilers(client: import('webpack').Compiler, server: import('webpack').Compiler): void;
+export declare function reportTrigger(trigger: string): void;
 export {};

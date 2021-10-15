@@ -9,6 +9,7 @@ exports.emitter = exports.version = exports.router = void 0;
 require("@next/polyfill-module");
 var _react = _interopRequireDefault(require("react"));
 var _reactDom = _interopRequireDefault(require("react-dom"));
+var _styledJsx = require("styled-jsx");
 var _headManagerContext = require("../shared/lib/head-manager-context");
 var _mitt = _interopRequireDefault(require("../shared/lib/mitt"));
 var _routerContext = require("../shared/lib/router-context");
@@ -23,6 +24,8 @@ var _pageLoader = _interopRequireDefault(require("./page-loader"));
 var _performanceRelayer = _interopRequireDefault(require("./performance-relayer"));
 var _routeAnnouncer = require("./route-announcer");
 var _router1 = require("./router");
+var _isError = _interopRequireDefault(require("../lib/is-error"));
+var _vitals = require("./vitals");
 function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) {
     try {
         var info = gen[key](arg);
@@ -111,7 +114,7 @@ function _objectSpread(target) {
 }
 const data = JSON.parse(document.getElementById('__NEXT_DATA__').textContent);
 window.__NEXT_DATA__ = data;
-const version = "11.1.1-canary.6";
+const version = "11.1.3-canary.70";
 exports.version = version;
 const looseToArray = (input)=>[].slice.call(input)
 ;
@@ -135,10 +138,10 @@ if ((0, _router).hasBasePath(asPath)) {
     asPath = (0, _router).delBasePath(asPath);
 }
 if (process.env.__NEXT_I18N_SUPPORT) {
-    const { normalizeLocalePath ,  } = require('../shared/lib/i18n/normalize-locale-path');
-    const { detectDomainLocale ,  } = require('../shared/lib/i18n/detect-domain-locale');
-    const { parseRelativeUrl ,  } = require('../shared/lib/router/utils/parse-relative-url');
-    const { formatUrl ,  } = require('../shared/lib/router/utils/format-url');
+    const { normalizeLocalePath  } = require('../shared/lib/i18n/normalize-locale-path');
+    const { detectDomainLocale  } = require('../shared/lib/i18n/detect-domain-locale');
+    const { parseRelativeUrl  } = require('../shared/lib/router/utils/parse-relative-url');
+    const { formatUrl  } = require('../shared/lib/router/utils/format-url');
     if (locales) {
         const parsedAs = parseRelativeUrl(asPath);
         const localePathResult = normalizeLocalePath(parsedAs.pathname, locales);
@@ -183,6 +186,9 @@ let webpackHMR;
 let router;
 exports.router = router;
 let CachedApp, onPerfEntry;
+headManager.getIsSsr = ()=>{
+    return router.isSsr;
+};
 class Container extends _react.default.Component {
     componentDidCatch(componentErr, info) {
         this.props.fn(componentErr, info);
@@ -253,23 +259,24 @@ function _initNext() {
             }
             const { component: app , exports: mod  } = appEntrypoint;
             CachedApp = app;
-            if (mod && mod.reportWebVitals) {
-                onPerfEntry = ({ id , name , startTime , value , duration , entryType , entries ,  })=>{
-                    // Combines timestamp with random number for unique ID
-                    const uniqueID = `${Date.now()}-${Math.floor(Math.random() * (9000000000000 - 1)) + 1000000000000}`;
-                    let perfStartEntry;
-                    if (entries && entries.length) {
-                        perfStartEntry = entries[0].startTime;
-                    }
-                    mod.reportWebVitals({
-                        id: id || uniqueID,
-                        name,
-                        startTime: startTime || perfStartEntry,
-                        value: value == null ? duration : value,
-                        label: entryType === 'mark' || entryType === 'measure' ? 'custom' : 'web-vital'
-                    });
+            const exportedReportWebVitals = mod && mod.reportWebVitals;
+            onPerfEntry = ({ id , name , startTime , value , duration , entryType , entries  })=>{
+                // Combines timestamp with random number for unique ID
+                const uniqueID = `${Date.now()}-${Math.floor(Math.random() * (9000000000000 - 1)) + 1000000000000}`;
+                let perfStartEntry;
+                if (entries && entries.length) {
+                    perfStartEntry = entries[0].startTime;
+                }
+                const webVitals = {
+                    id: id || uniqueID,
+                    name,
+                    startTime: startTime || perfStartEntry,
+                    value: value == null ? duration : value,
+                    label: entryType === 'mark' || entryType === 'measure' ? 'custom' : 'web-vital'
                 };
-            }
+                exportedReportWebVitals === null || exportedReportWebVitals === void 0 ? void 0 : exportedReportWebVitals(webVitals);
+                (0, _vitals).trackWebVitalMetric(webVitals);
+            };
             const pageEntrypoint = // The dev server fails to serve script assets when there's a hydration
             // error, so we need to skip waiting for the entrypoint.
             process.env.NODE_ENV === 'development' && hydrateErr ? {
@@ -287,7 +294,7 @@ function _initNext() {
             }
         } catch (error) {
             // This catches errors like throwing in the top level of a module
-            initialErr = error;
+            initialErr = (0, _isError).default(error) ? error : new Error(error + '');
         }
         if (process.env.NODE_ENV === 'development') {
             const { getNodeError  } = require('@next/react-dev-overlay/lib/client');
@@ -370,7 +377,8 @@ function _render() {
         }
         try {
             yield doRender(renderingProps);
-        } catch (renderErr) {
+        } catch (err) {
+            const renderErr = err instanceof Error ? err : new Error(err + '');
             // bubble up cancelation errors
             if (renderErr.cancelled) {
                 throw renderErr;
@@ -516,7 +524,7 @@ function clearMarks() {
         'beforeRender',
         'afterHydrate',
         'afterRender',
-        'routeChange', 
+        'routeChange'
     ].forEach((mark)=>performance.clearMarks(mark)
     );
 }
@@ -531,7 +539,7 @@ function AppContainer({ children  }) {
         value: (0, _router1).makePublicRouterInstance(router)
     }, /*#__PURE__*/ _react.default.createElement(_headManagerContext.HeadManagerContext.Provider, {
         value: headManager
-    }, children))));
+    }, /*#__PURE__*/ _react.default.createElement(_styledJsx.StyleRegistry, null, children)))));
 }
 const wrapApp = (App)=>(wrappedAppProps)=>{
         const appProps = _objectSpread({
@@ -640,9 +648,6 @@ function doRender(input) {
             looseToArray(document.querySelectorAll('link[data-n-p]')).forEach((el)=>{
                 el.parentNode.removeChild(el);
             });
-            // Force browser to recompute layout, which should prevent a flash of
-            // unstyled content:
-            getComputedStyle(document.body, 'height');
         }
         if (input.scroll) {
             window.scrollTo(input.scroll.x, input.scroll.y);
@@ -674,7 +679,7 @@ function Root({ callbacks , children  }) {
     _react.default.useLayoutEffect(()=>callbacks.forEach((callback)=>callback()
         )
     , [
-        callbacks, 
+        callbacks
     ]);
     if (process.env.__NEXT_TEST_MODE) {
         // eslint-disable-next-line react-hooks/rules-of-hooks

@@ -1,6 +1,7 @@
 /// <reference types="node" />
 import { IncomingMessage, ServerResponse } from 'http';
 import { UrlObject } from 'url';
+import { webpack } from 'next/dist/compiled/webpack/webpack';
 import { __ApiPreviewProps } from '../api-utils';
 import { NextConfigComplete } from '../config-shared';
 import { CustomRoutes } from '../../lib/load-custom-routes';
@@ -15,7 +16,7 @@ export default class HotReloader {
     private webpackHotMiddleware;
     private config;
     private stats;
-    private serverStats;
+    serverStats: webpack.Stats | null;
     private clientError;
     private serverError;
     private serverPrevDocumentHash;
@@ -25,7 +26,7 @@ export default class HotReloader {
     private watcher;
     private rewrites;
     private fallbackWatcher;
-    isWebpack5: any;
+    private hotReloaderSpan;
     constructor(dir: string, { config, pagesDir, buildId, previewProps, rewrites, }: {
         config: NextConfigComplete;
         pagesDir: string;
@@ -43,5 +44,5 @@ export default class HotReloader {
     stop(): Promise<void>;
     getCompilationErrors(page: string): Promise<any[]>;
     send(action?: string | any, ...args: any[]): void;
-    ensurePage(page: string): Promise<any>;
+    ensurePage(page: string, clientOnly?: boolean): Promise<any>;
 }

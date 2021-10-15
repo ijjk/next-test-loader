@@ -21,6 +21,7 @@ exports.default = void 0;
 var _react = _interopRequireDefault(require("react"));
 var _router = _interopRequireDefault(require("../shared/lib/router/router"));
 var _routerContext = require("../shared/lib/router-context");
+var _isError = _interopRequireDefault(require("../lib/is-error"));
 var _withRouter = _interopRequireDefault(require("./with-router"));
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
@@ -104,7 +105,7 @@ routerEvents.forEach((event)=>{
                     _singletonRouter[eventField](...args);
                 } catch (err) {
                     console.error(`Error when running the Router event: ${eventField}`);
-                    console.error(`${err.message}\n${err.stack}`);
+                    console.error((0, _isError).default(err) ? `${err.message}\n${err.stack}` : err + '');
                 }
             }
         });
@@ -130,23 +131,23 @@ function createRouter(...args) {
     return singletonRouter.router;
 }
 function makePublicRouterInstance(router) {
-    const _router1 = router;
+    const scopedRouter = router;
     const instance = {
     };
     for (const property of urlPropertyFields){
-        if (typeof _router1[property] === 'object') {
-            instance[property] = Object.assign(Array.isArray(_router1[property]) ? [] : {
-            }, _router1[property]) // makes sure query is not stateful
+        if (typeof scopedRouter[property] === 'object') {
+            instance[property] = Object.assign(Array.isArray(scopedRouter[property]) ? [] : {
+            }, scopedRouter[property]) // makes sure query is not stateful
             ;
             continue;
         }
-        instance[property] = _router1[property];
+        instance[property] = scopedRouter[property];
     }
     // Events is a static property on the router, the router doesn't have to be initialized to use it
     instance.events = _router.default.events;
     coreMethodFields.forEach((field)=>{
         instance[field] = (...args)=>{
-            return _router1[field](...args);
+            return scopedRouter[field](...args);
         };
     });
     return instance;

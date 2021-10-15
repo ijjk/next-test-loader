@@ -13,9 +13,9 @@ function _interopRequireDefault(obj) {
 }
 var MessageSeverity;
 exports.MessageSeverity = MessageSeverity;
-(function(MessageSeverity1) {
-    MessageSeverity1[MessageSeverity1["Warning"] = 1] = "Warning";
-    MessageSeverity1[MessageSeverity1["Error"] = 2] = "Error";
+(function(MessageSeverity) {
+    MessageSeverity[MessageSeverity["Warning"] = 1] = "Warning";
+    MessageSeverity[MessageSeverity["Error"] = 2] = "Error";
 })(MessageSeverity || (exports.MessageSeverity = MessageSeverity = {
 }));
 function pluginCount(messages) {

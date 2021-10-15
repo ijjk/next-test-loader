@@ -36,7 +36,11 @@ const imageConfigDefault = {
     loader: 'default',
     domains: [],
     disableStaticImages: false,
-    minimumCacheTTL: 60
+    minimumCacheTTL: 60,
+    formats: [
+        'image/avif',
+        'image/webp'
+    ]
 };
 exports.imageConfigDefault = imageConfigDefault;
 

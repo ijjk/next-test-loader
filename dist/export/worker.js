@@ -17,10 +17,11 @@ var _constants = require("../lib/constants");
 require("../server/node-polyfill-fetch");
 var _require = require("../server/require");
 var _normalizeLocalePath = require("../shared/lib/i18n/normalize-locale-path");
-var _trace = require("../telemetry/trace");
+var _trace = require("../trace");
 var _amp = require("../shared/lib/amp");
-var _utils = require("../server/utils");
 var _config = require("../server/config");
+var _renderResult = _interopRequireDefault(require("../server/render-result"));
+var _isError = _interopRequireDefault(require("../lib/is-error"));
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
         default: obj
@@ -39,7 +40,7 @@ async function exportPage({ parentSpanId , path , pathMap , distDir , outDir , p
             ampValidations: []
         };
         try {
-            var ref;
+            var ref3;
             const { query: originalQuery = {
             }  } = pathMap;
             const { page  } = pathMap;
@@ -110,10 +111,10 @@ async function exportPage({ parentSpanId , path , pathMap , distDir , outDir , p
             const res = {
                 ...headerMocks
             };
-            if (path === '/500' && page === '/_error') {
+            if (updatedPath === '/500' && page === '/_error') {
                 res.statusCode = 500;
             }
-            if (renderOpts.trailingSlash && !((ref = req.url) === null || ref === void 0 ? void 0 : ref.endsWith('/'))) {
+            if (renderOpts.trailingSlash && !((ref3 = req.url) === null || ref3 === void 0 ? void 0 : ref3.endsWith('/'))) {
                 req.url += '/';
             }
             envConfig.setConfig({
@@ -162,7 +163,7 @@ async function exportPage({ parentSpanId , path , pathMap , distDir , outDir , p
                         ...query
                     }
                 });
-                const { Component: mod , getServerSideProps , pageConfig ,  } = await (0, _loadComponents).loadComponents(distDir, page, serverless);
+                const { Component , ComponentMod , getServerSideProps , getStaticProps , pageConfig ,  } = await (0, _loadComponents).loadComponents(distDir, page, serverless);
                 const ampState = {
                     ampFirst: (pageConfig === null || pageConfig === void 0 ? void 0 : pageConfig.amp) === true,
                     hasQuery: Boolean(query.amp),
@@ -174,24 +175,22 @@ async function exportPage({ parentSpanId , path , pathMap , distDir , outDir , p
                     throw new Error(`Error for page ${page}: ${_constants.SERVER_PROPS_EXPORT_ERROR}`);
                 }
                 // if it was auto-exported the HTML is loaded here
-                if (typeof mod === 'string') {
-                    renderResult = (0, _utils).resultFromChunks([
-                        mod
-                    ]);
+                if (typeof Component === 'string') {
+                    renderResult = _renderResult.default.fromStatic(Component);
                     queryWithAutoExportWarn();
                 } else {
                     // for non-dynamic SSG pages we should have already
                     // prerendered the file
-                    if (renderedDuringBuild(mod.getStaticProps)) return {
+                    if (renderedDuringBuild(getStaticProps)) return {
                         ...results,
                         duration: Date.now() - start
                     };
-                    if (mod.getStaticProps && !htmlFilepath.endsWith('.html')) {
+                    if (getStaticProps && !htmlFilepath.endsWith('.html')) {
                         // make sure it ends with .html if the name contains a dot
                         htmlFilename += '.html';
                         htmlFilepath += '.html';
                     }
-                    renderMethod = mod.renderReqToHTML;
+                    renderMethod = ComponentMod.renderReqToHTML;
                     const result = await renderMethod(req, res, 'export', {
                         ampPath: renderAmpPath,
                         /// @ts-ignore
@@ -215,12 +214,12 @@ async function exportPage({ parentSpanId , path , pathMap , distDir , outDir , p
                     throw new Error(`Failed to render serverless page`);
                 }
             } else {
-                var ref1, ref2;
+                var ref, ref1;
                 const components = await (0, _loadComponents).loadComponents(distDir, page, serverless);
                 const ampState = {
-                    ampFirst: ((ref1 = components.pageConfig) === null || ref1 === void 0 ? void 0 : ref1.amp) === true,
+                    ampFirst: ((ref = components.pageConfig) === null || ref === void 0 ? void 0 : ref.amp) === true,
                     hasQuery: Boolean(query.amp),
-                    hybrid: ((ref2 = components.pageConfig) === null || ref2 === void 0 ? void 0 : ref2.amp) === 'hybrid'
+                    hybrid: ((ref1 = components.pageConfig) === null || ref1 === void 0 ? void 0 : ref1.amp) === 'hybrid'
                 };
                 inAmpMode = (0, _amp).isInAmpMode(ampState);
                 hybridAmp = ampState.hybrid;
@@ -242,9 +241,7 @@ async function exportPage({ parentSpanId , path , pathMap , distDir , outDir , p
                     htmlFilename += '.html';
                 }
                 if (typeof components.Component === 'string') {
-                    renderResult = (0, _utils).resultFromChunks([
-                        components.Component
-                    ]);
+                    renderResult = _renderResult.default.fromStatic(components.Component);
                     queryWithAutoExportWarn();
                 } else {
                     /**
@@ -295,8 +292,7 @@ async function exportPage({ parentSpanId , path , pathMap , distDir , outDir , p
                     });
                 }
             };
-            const htmlChunks = renderResult ? await (0, _utils).resultToChunks(renderResult) : [];
-            const html = htmlChunks.join('');
+            const html = renderResult ? renderResult.toUnchunkedString() : '';
             if (inAmpMode && !curRenderOpts.ampSkipValidation) {
                 if (!results.ssgNotFound) {
                     await validateAmp(html, path, curRenderOpts.ampValidatorPath);
@@ -325,8 +321,7 @@ async function exportPage({ parentSpanId , path , pathMap , distDir , outDir , p
                             amp: '1'
                         }, curRenderOpts);
                     }
-                    const ampChunks = await (0, _utils).resultToChunks(ampRenderResult);
-                    const ampHtml = ampChunks.join('');
+                    const ampHtml = ampRenderResult ? ampRenderResult.toUnchunkedString() : '';
                     if (!curRenderOpts.ampSkipValidation) {
                         await validateAmp(ampHtml, page + '?amp=1');
                     }
@@ -352,7 +347,7 @@ async function exportPage({ parentSpanId , path , pathMap , distDir , outDir , p
                 await _fs.promises.writeFile(htmlFilepath, html, 'utf8');
             }
         } catch (error) {
-            console.error(`\nError occurred prerendering page "${path}". Read more: https://nextjs.org/docs/messages/prerender-error\n` + error.stack);
+            console.error(`\nError occurred prerendering page "${path}". Read more: https://nextjs.org/docs/messages/prerender-error\n` + ((0, _isError).default(error) ? error.stack : error));
             results.error = true;
         }
         return {
