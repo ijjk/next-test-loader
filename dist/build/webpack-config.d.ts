@@ -83,6 +83,7 @@ export declare const NODE_BASE_ESM_RESOLVE_OPTIONS: {
     preferAbsolute: boolean;
     restrictions: never[];
 };
+export declare const nextImageLoaderRegex: RegExp;
 export default function getBaseWebpackConfig(dir: string, { buildId, config, dev, isServer, pagesDir, target, reactProductionProfiling, entrypoints, rewrites, isDevFallback, runWebpackSpan, }: {
     buildId: string;
     config: NextConfigComplete;

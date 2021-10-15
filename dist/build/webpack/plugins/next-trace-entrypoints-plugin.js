@@ -5,7 +5,7 @@ Object.defineProperty(exports, "__esModule", {
 var _path = _interopRequireDefault(require("path"));
 var _profilingPlugin = require("./profiling-plugin");
 var _isError = _interopRequireDefault(require("../../../lib/is-error"));
-var _nodeFileTrace = require("next/dist/compiled/@vercel/nft");
+var _nft = require("next/dist/compiled/@vercel/nft");
 var _constants = require("../../../shared/lib/constants");
 var _webpack = require("next/dist/compiled/webpack/webpack");
 var _webpackConfig = require("../../webpack-config");
@@ -25,11 +25,12 @@ function getModuleFromDependency(compilation, dep) {
     return compilation.moduleGraph.getModule(dep);
 }
 class TraceEntryPointsPlugin {
-    constructor({ appDir , excludeFiles , esmExternals  }){
+    constructor({ appDir , excludeFiles , esmExternals , staticImageImports  }){
         this.appDir = appDir;
         this.entryTraces = new Map();
         this.esmExternals = esmExternals;
         this.excludeFiles = excludeFiles || [];
+        this.staticImageImports = staticImageImports;
     }
     // Here we output all traced assets and webpack chunks to a
     // ${page}.js.nft.json file
@@ -181,7 +182,7 @@ class TraceEntryPointsPlugin {
                 await finishModulesSpan.traceChild('node-file-trace', {
                     traceEntryCount: entriesToTrace.length + ''
                 }).traceAsyncFn(async ()=>{
-                    const result = await (0, _nodeFileTrace).nodeFileTrace(entriesToTrace, {
+                    const result = await (0, _nft).nodeFileTrace(entriesToTrace, {
                         base: root,
                         processCwd: this.appDir,
                         readFile,
@@ -306,6 +307,9 @@ class TraceEntryPointsPlugin {
                     extensions: undefined
                 };
                 const doResolve = async (request, parent, job, isEsmRequested)=>{
+                    if (this.staticImageImports && _webpackConfig.nextImageLoaderRegex.test(request)) {
+                        throw new Error(`not resolving ${request} as this is handled by next-image-loader`);
+                    }
                     // When in esm externals mode, and using import, we resolve with
                     // ESM resolving options.
                     const esmExternals = this.esmExternals;

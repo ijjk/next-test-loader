@@ -4,7 +4,7 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.attachReactRefresh = attachReactRefresh;
 exports.default = getBaseWebpackConfig;
-exports.NODE_BASE_ESM_RESOLVE_OPTIONS = exports.NODE_RESOLVE_OPTIONS = exports.NODE_ESM_RESOLVE_OPTIONS = exports.NODE_BASE_RESOLVE_OPTIONS = void 0;
+exports.NODE_BASE_ESM_RESOLVE_OPTIONS = exports.NODE_RESOLVE_OPTIONS = exports.NODE_ESM_RESOLVE_OPTIONS = exports.nextImageLoaderRegex = exports.NODE_BASE_RESOLVE_OPTIONS = void 0;
 var _reactRefreshWebpackPlugin = _interopRequireDefault(require("@next/react-refresh-utils/ReactRefreshWebpackPlugin"));
 var _chalk = _interopRequireDefault(require("chalk"));
 var _crypto = _interopRequireDefault(require("crypto"));
@@ -212,6 +212,8 @@ const NODE_BASE_ESM_RESOLVE_OPTIONS = {
 };
 exports.NODE_BASE_ESM_RESOLVE_OPTIONS = NODE_BASE_ESM_RESOLVE_OPTIONS;
 let TSCONFIG_WARNED = false;
+const nextImageLoaderRegex = /\.(png|jpg|jpeg|gif|webp|avif|ico|bmp|svg)$/i;
+exports.nextImageLoaderRegex = nextImageLoaderRegex;
 async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isServer =false , pagesDir , target ='server' , reactProductionProfiling =false , entrypoints , rewrites , isDevFallback =false , runWebpackSpan  }) {
     var ref10, ref1, ref2, ref3, ref4, ref5, ref6, ref7;
     const hasRewrites = rewrites.beforeFiles.length > 0 || rewrites.afterFiles.length > 0 || rewrites.fallback.length > 0;
@@ -855,7 +857,7 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
                 },
                 ...!config.images.disableStaticImages ? [
                     {
-                        test: /\.(png|jpg|jpeg|gif|webp|avif|ico|bmp|svg)$/i,
+                        test: nextImageLoaderRegex,
                         loader: 'next-image-loader',
                         issuer: {
                             not: _css.regexLikeCss
@@ -970,7 +972,8 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
             !isServer && new _nextDropClientPagePlugin.DropClientPage(),
             config.experimental.outputFileTracing && !isLikeServerless && isServer && !dev && new _nextTraceEntrypointsPlugin.TraceEntryPointsPlugin({
                 appDir: dir,
-                esmExternals: config.experimental.esmExternals
+                esmExternals: config.experimental.esmExternals,
+                staticImageImports: !config.images.disableStaticImages
             }),
             // Moment.js is an extremely popular library that bundles large locale files
             // by default due to how Webpack interprets its code. This is a practical
