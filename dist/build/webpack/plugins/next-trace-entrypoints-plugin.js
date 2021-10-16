@@ -25,9 +25,10 @@ function getModuleFromDependency(compilation, dep) {
     return compilation.moduleGraph.getModule(dep);
 }
 class TraceEntryPointsPlugin {
-    constructor({ appDir , excludeFiles , esmExternals , staticImageImports  }){
+    constructor({ appDir , excludeFiles , esmExternals , staticImageImports , externalDir  }){
         this.appDir = appDir;
         this.entryTraces = new Map();
+        this.externalDir = externalDir;
         this.esmExternals = esmExternals;
         this.excludeFiles = excludeFiles || [];
         this.staticImageImports = staticImageImports;
@@ -205,33 +206,51 @@ class TraceEntryPointsPlugin {
                 });
                 // this uses the reasons tree to collect files specific to a certain
                 // parent allowing us to not have to trace each parent separately
-                function collectTracedFilesFromReasons(parent, files = new Set()) {
-                    fileList.forEach((file)=>{
-                        if (files.has(file)) return;
-                        // @ts-ignore
-                        const reason = reasons.get(file);
-                        if (((reason === null || reason === void 0 ? void 0 : reason.parents.has(parent)) || (reason === null || reason === void 0 ? void 0 : reason.parents.size) === 0) && (reason === null || reason === void 0 ? void 0 : reason.type) !== 'initial') {
-                            files.add(file);
-                            collectTracedFilesFromReasons(file, files);
-                        }
-                    });
-                    return files;
-                }
-                finishModulesSpan.traceChild('collect-trace-files').traceAsyncFn(()=>{
-                    entryPaths.forEach((entry)=>{
-                        const entryName = entryNameMap.get(entry);
-                        const tracedDeps = collectTracedFilesFromReasons(_path.default.relative(root, entry));
-                        const curExtraEntries = additionalEntries.get(entryName);
-                        if (curExtraEntries) {
-                            for (const extraEntry of curExtraEntries.keys()){
-                                collectTracedFilesFromReasons(_path.default.relative(root, extraEntry), tracedDeps);
+                const parentFilesMap = new Map();
+                function propagateToParents(parents, file, seen = new Set()) {
+                    for (const parent of parents || []){
+                        if (!seen.has(parent)) {
+                            seen.add(parent);
+                            let parentFiles = parentFilesMap.get(parent);
+                            if (!parentFiles) {
+                                parentFiles = new Set();
+                                parentFilesMap.set(parent, parentFiles);
+                            }
+                            parentFiles.add(file);
+                            const parentReason = reasons.get(parent);
+                            if (parentReason === null || parentReason === void 0 ? void 0 : parentReason.parents) {
+                                propagateToParents(parentReason.parents, file, seen);
                             }
                         }
+                    }
+                }
+                await finishModulesSpan.traceChild('collect-traced-files').traceAsyncFn(()=>{
+                    for (const file of fileList){
+                        const reason = reasons.get(file);
+                        if (!reason || reason.type === 'initial' || !reason.parents) {
+                            continue;
+                        }
+                        propagateToParents(reason.parents, file);
+                    }
+                    entryPaths.forEach((entry)=>{
+                        var ref;
+                        const entryName = entryNameMap.get(entry);
+                        const normalizedEntry = _path.default.relative(root, entry);
+                        const curExtraEntries = additionalEntries.get(entryName);
                         const finalDeps = new Set();
-                        tracedDeps.forEach((dep)=>{
+                        (ref = parentFilesMap.get(normalizedEntry)) === null || ref === void 0 ? void 0 : ref.forEach((dep)=>{
                             finalDeps.add(_path.default.join(root, dep));
-                            tracedDeps.delete(dep);
                         });
+                        if (curExtraEntries) {
+                            for (const extraEntry of curExtraEntries.keys()){
+                                var ref;
+                                const normalizedExtraEntry = _path.default.relative(root, extraEntry);
+                                finalDeps.add(extraEntry);
+                                (ref = parentFilesMap.get(normalizedExtraEntry)) === null || ref === void 0 ? void 0 : ref.forEach((dep)=>{
+                                    finalDeps.add(_path.default.join(root, dep));
+                                });
+                            }
+                        }
                         this.entryTraces.set(entryName, finalDeps);
                     });
                 });

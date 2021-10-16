@@ -1,8 +1,7 @@
 "use strict";
-var _eventSourcePolyfill = _interopRequireDefault(require("./event-source-polyfill"));
-var _eventsource = require("./error-overlay/eventsource");
-var _onDemandEntriesUtils = require("./on-demand-entries-utils");
 var _fouc = require("./fouc");
+var _onDemandEntriesClient = _interopRequireDefault(require("./on-demand-entries-client"));
+var _websocket = require("./error-overlay/websocket");
 function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) {
     try {
         var info = gen[key](arg);
@@ -36,9 +35,6 @@ function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
         default: obj
     };
-}
-if (!window.EventSource) {
-    window.EventSource = _eventSourcePolyfill.default;
 }
 const data = JSON.parse(document.getElementById('__NEXT_DATA__').textContent);
 let { assetPrefix , page  } = data;
@@ -86,7 +82,7 @@ function _tryApplyUpdates() {
 function tryApplyUpdates() {
     return _tryApplyUpdates.apply(this, arguments);
 }
-(0, _eventsource).addMessageListener((event)=>{
+(0, _websocket).addMessageListener((event)=>{
     if (event.data === '\uD83D\uDC93') {
         return;
     }
@@ -105,8 +101,10 @@ function tryApplyUpdates() {
         console.warn('Invalid HMR message: ' + event.data + '\n' + ex);
     }
 });
-(0, _onDemandEntriesUtils).setupPing(assetPrefix, ()=>page
-);
+(0, _websocket).connectHMR({
+    path: `${assetPrefix}/_next/webpack-hmr`
+});
 (0, _fouc).displayContent();
+(0, _onDemandEntriesClient).default();
 
 //# sourceMappingURL=amp-dev.js.map

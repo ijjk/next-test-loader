@@ -37,11 +37,9 @@ class WebpackHotMiddleware {
             this.latestStats = statsResult;
             this.publishStats('built', this.latestStats);
         };
-        this.middleware = (req, res, next)=>{
-            var ref;
-            if (this.closed) return next();
-            if (!((ref = req.url) === null || ref === void 0 ? void 0 : ref.startsWith('/_next/webpack-hmr'))) return next();
-            this.eventStream.handler(req, res);
+        this.onHMR = (client)=>{
+            if (this.closed) return;
+            this.eventStream.handler(client);
             if (this.latestStats) {
                 // Explicitly not passing in `log` fn as we don't want to log again on
                 // the server
@@ -87,13 +85,7 @@ class WebpackHotMiddleware {
 exports.WebpackHotMiddleware = WebpackHotMiddleware;
 class EventStream {
     constructor(){
-        this.heartbeatTick = ()=>{
-            this.everyClient((client)=>{
-                client.write('data: \ud83d\udc93\n\n');
-            });
-        };
         this.clients = new Set();
-        this.interval = setInterval(this.heartbeatTick, 2500).unref();
     }
     everyClient(fn) {
         for (const client of this.clients){
@@ -101,39 +93,20 @@ class EventStream {
         }
     }
     close() {
-        clearInterval(this.interval);
         this.everyClient((client)=>{
-            if (!client.finished) client.end();
+            client.close();
         });
         this.clients.clear();
     }
-    handler(req, res) {
-        const headers = {
-            'Access-Control-Allow-Origin': '*',
-            'Content-Type': 'text/event-stream;charset=utf-8',
-            'Cache-Control': 'no-cache, no-transform',
-            // While behind nginx, event stream should not be buffered:
-            // http://nginx.org/docs/http/ngx_http_proxy_module.html#proxy_buffering
-            'X-Accel-Buffering': 'no'
-        };
-        const isHttp1 = !(parseInt(req.httpVersion) >= 2);
-        if (isHttp1) {
-            req.socket.setKeepAlive(true);
-            Object.assign(headers, {
-                Connection: 'keep-alive'
-            });
-        }
-        res.writeHead(200, headers);
-        res.write('\n');
-        this.clients.add(res);
-        req.on('close', ()=>{
-            if (!res.finished) res.end();
-            this.clients.delete(res);
+    handler(client) {
+        this.clients.add(client);
+        client.addEventListener('close', ()=>{
+            this.clients.delete(client);
         });
     }
     publish(payload) {
         this.everyClient((client)=>{
-            client.write('data: ' + JSON.stringify(payload) + '\n\n');
+            client.send(JSON.stringify(payload));
         });
     }
 }

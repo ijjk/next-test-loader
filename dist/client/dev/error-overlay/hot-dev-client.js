@@ -5,7 +5,7 @@ Object.defineProperty(exports, "__esModule", {
 exports.default = connect;
 var _client = require("@next/react-dev-overlay/lib/client");
 var _stripAnsi = _interopRequireDefault(require("next/dist/compiled/strip-ansi"));
-var _eventsource = require("./eventsource");
+var _websocket = require("./websocket");
 var _formatWebpackMessages = _interopRequireDefault(require("./format-webpack-messages"));
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
@@ -23,11 +23,8 @@ let hadRuntimeError = false;
 let customHmrEventHandler;
 function connect() {
     (0, _client).register();
-    (0, _eventsource).addMessageListener((event)=>{
-        // This is the heartbeat event
-        if (event.data === '\uD83D\uDC93') {
-            return;
-        }
+    (0, _websocket).addMessageListener((event)=>{
+        if (event.data.indexOf('action') === -1) return;
         try {
             processMessage(event);
         } catch (ex) {

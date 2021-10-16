@@ -1,5 +1,5 @@
 /// <reference types="node" />
-import { IncomingMessage, ServerResponse } from 'http';
+import { IncomingMessage, ServerResponse, Server as HTTPServer } from 'http';
 import { UrlWithParsedQuery } from 'url';
 import { CustomRoutes } from '../../lib/load-custom-routes';
 import { __ApiPreviewProps } from '../api-utils';
@@ -15,12 +15,14 @@ export default class DevServer extends Server {
     private hotReloader?;
     private isCustomServer;
     protected sortedRoutes?: string[];
+    private addedUpgradeListener;
     protected staticPathsWorker: import('jest-worker').Worker & {
         loadStaticPaths: typeof import('./static-paths-worker').loadStaticPaths;
     };
     constructor(options: ServerConstructor & {
         conf: NextConfig;
         isNextDevCommand?: boolean;
+        httpServer?: HTTPServer;
     });
     protected readBuildId(): string;
     addExportPathMapRoutes(): Promise<void>;
@@ -30,6 +32,7 @@ export default class DevServer extends Server {
     protected close(): Promise<void>;
     protected hasPage(pathname: string): Promise<boolean>;
     protected _beforeCatchAllRender(req: IncomingMessage, res: ServerResponse, params: Params, parsedUrl: UrlWithParsedQuery): Promise<boolean>;
+    private setupWebSocketHandler;
     run(req: IncomingMessage, res: ServerResponse, parsedUrl: UrlWithParsedQuery): Promise<void>;
     private logErrorWithOriginalStack;
     protected getCustomRoutes(): CustomRoutes;

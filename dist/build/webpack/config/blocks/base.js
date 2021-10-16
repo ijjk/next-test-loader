@@ -13,7 +13,7 @@ const base = (0, _lodashCurry).default(function base(ctx, config) {
     config.mode = ctx.isDevelopment ? 'development' : 'production';
     config.name = ctx.isServer ? 'server' : 'client';
     // @ts-ignore TODO webpack 5 typings
-    config.target = ctx.isServer ? 'node12.17' : [
+    config.target = ctx.isServer ? 'node12.22' : [
         'web',
         'es5'
     ];

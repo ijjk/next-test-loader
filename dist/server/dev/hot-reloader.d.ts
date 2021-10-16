@@ -13,7 +13,7 @@ export default class HotReloader {
     private buildId;
     private middlewares;
     private pagesDir;
-    private webpackHotMiddleware;
+    private webpackHotMiddleware?;
     private config;
     private stats;
     serverStats: webpack.Stats | null;
@@ -21,7 +21,7 @@ export default class HotReloader {
     private serverError;
     private serverPrevDocumentHash;
     private prevChunkNames?;
-    private onDemandEntries;
+    private onDemandEntries?;
     private previewProps;
     private watcher;
     private rewrites;
@@ -37,6 +37,7 @@ export default class HotReloader {
     run(req: IncomingMessage, res: ServerResponse, parsedUrl: UrlObject): Promise<{
         finished?: true;
     }>;
+    onHMR(req: IncomingMessage, _res: ServerResponse, head: Buffer): void;
     private clean;
     private getWebpackConfig;
     buildFallbackError(): Promise<void>;

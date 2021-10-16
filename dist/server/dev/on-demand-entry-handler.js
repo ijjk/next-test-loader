@@ -6,7 +6,6 @@ exports.default = onDemandEntryHandler;
 exports.entries = exports.BUILDING = exports.ADDED = exports.BUILT = void 0;
 var _events = require("events");
 var _path = require("path");
-var _url = require("url");
 var _normalizePagePath = require("../normalize-page-path");
 var _require = require("../require");
 var _findPageFile = require("../lib/find-page-file");
@@ -179,26 +178,21 @@ function onDemandEntryHandler(watcher, multiCompiler, { pagesDir , pageExtension
             }
             return promise;
         },
-        middleware (req, res, next) {
-            var ref;
-            if (!((ref = req.url) === null || ref === void 0 ? void 0 : ref.startsWith('/_next/webpack-hmr'))) return next();
-            const { query  } = (0, _url).parse(req.url, true);
-            const page = query.page;
-            if (!page) return next();
-            const runPing = ()=>{
-                const data = handlePing(query.page);
-                if (!data) return;
-                res.write('data: ' + JSON.stringify(data) + '\n\n');
-            };
-            const pingInterval = setInterval(()=>runPing()
-            , pingIntervalTime);
-            // Run a ping now to make sure page is instantly flagged as active
-            setTimeout(()=>runPing()
-            , 0);
-            req.on('close', ()=>{
-                clearInterval(pingInterval);
+        onHMR (client) {
+            client.addEventListener('message', ({ data  })=>{
+                data = typeof data !== 'string' ? data.toString() : data;
+                try {
+                    const parsedData = JSON.parse(data);
+                    if (parsedData.event === 'ping') {
+                        const result = handlePing(parsedData.page);
+                        client.send(JSON.stringify({
+                            ...result,
+                            event: 'pong'
+                        }));
+                    }
+                } catch (_) {
+                }
             });
-            next();
         }
     };
 }

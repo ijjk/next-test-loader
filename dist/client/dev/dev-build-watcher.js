@@ -3,7 +3,7 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 exports.default = initializeBuildWatcher;
-var _eventsource = require("./error-overlay/eventsource");
+var _websocket = require("./error-overlay/websocket");
 function initializeBuildWatcher(toggleCallback) {
     const shadowHost = document.createElement('div');
     shadowHost.id = '__next-build-watcher';
@@ -39,7 +39,7 @@ function initializeBuildWatcher(toggleCallback) {
     let isBuilding = false;
     let timeoutId = null;
     // Handle events
-    (0, _eventsource).addMessageListener((event)=>{
+    (0, _websocket).addMessageListener((event)=>{
         // This is the heartbeat event
         if (event.data === '\uD83D\uDC93') {
             return;

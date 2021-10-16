@@ -25,6 +25,7 @@ var _utils = require("../../build/utils");
 var _utils1 = require("../../shared/lib/utils");
 var _trace = require("../../trace");
 var _isError = _interopRequireDefault(require("../../lib/is-error"));
+var _ws = _interopRequireDefault(require("next/dist/compiled/ws"));
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
         default: obj
@@ -53,6 +54,9 @@ function _interopRequireWildcard(obj) {
         return newObj;
     }
 }
+const wsServer = new _ws.default.Server({
+    noServer: true
+});
 async function renderScriptError(res, error, { verbose =true  } = {
 }) {
     // Asks CDNs and others to not to cache the errored page
@@ -138,7 +142,6 @@ class HotReloader {
         this.dir = dir;
         this.middlewares = [];
         this.pagesDir = pagesDir;
-        this.webpackHotMiddleware = null;
         this.stats = null;
         this.serverStats = null;
         this.serverPrevDocumentHash = null;
@@ -213,6 +216,13 @@ class HotReloader {
         return {
             finished
         };
+    }
+    onHMR(req, _res, head) {
+        wsServer.handleUpgrade(req, req.socket, head, (client)=>{
+            var ref, ref1;
+            (ref = this.webpackHotMiddleware) === null || ref === void 0 ? void 0 : ref.onHMR(client);
+            (ref1 = this.onDemandEntries) === null || ref1 === void 0 ? void 0 : ref1.onHMR(client);
+        });
     }
     async clean(span) {
         return span.traceChild('clean').traceAsyncFn(()=>(0, _recursiveDelete).recursiveDelete((0, _path).join(this.dir, this.config.distDir), /^cache/)
@@ -453,9 +463,6 @@ class HotReloader {
             ...this.config.onDemandEntries
         });
         this.middlewares = [
-            // must come before hotMiddleware
-            this.onDemandEntries.middleware,
-            this.webpackHotMiddleware.middleware,
             (0, _middleware).getOverlayMiddleware({
                 rootDirectory: this.dir,
                 stats: ()=>this.stats
@@ -477,7 +484,7 @@ class HotReloader {
         }
     }
     async getCompilationErrors(page) {
-        var ref, ref1;
+        var ref, ref5;
         const normalizedPage = (0, _normalizePagePath).normalizePathSep(page);
         if (this.clientError || this.serverError) {
             return [
@@ -492,7 +499,7 @@ class HotReloader {
             }
             // If none were found we still have to show the other errors
             return this.stats.compilation.errors;
-        } else if ((ref1 = this.serverStats) === null || ref1 === void 0 ? void 0 : ref1.hasErrors()) {
+        } else if ((ref5 = this.serverStats) === null || ref5 === void 0 ? void 0 : ref5.hasErrors()) {
             const { compilation  } = this.serverStats;
             const failedPages = erroredPages(compilation);
             // If there is an error related to the requesting page we display it instead of the first error
@@ -511,6 +518,7 @@ class HotReloader {
         });
     }
     async ensurePage(page, clientOnly = false) {
+        var ref;
         // Make sure we don't re-build or dispose prebuilt pages
         if (page !== '/_error' && _constants1.BLOCKED_PAGES.indexOf(page) !== -1) {
             return;
@@ -519,7 +527,7 @@ class HotReloader {
         if (error) {
             return Promise.reject(error);
         }
-        return this.onDemandEntries.ensurePage(page, clientOnly);
+        return (ref = this.onDemandEntries) === null || ref === void 0 ? void 0 : ref.ensurePage(page, clientOnly);
     }
 }
 exports.default = HotReloader;

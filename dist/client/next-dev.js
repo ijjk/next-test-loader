@@ -1,11 +1,10 @@
 "use strict";
 var _ = require("./");
-var _eventSourcePolyfill = _interopRequireDefault(require("./dev/event-source-polyfill"));
 var _onDemandEntriesClient = _interopRequireDefault(require("./dev/on-demand-entries-client"));
 var _webpackHotMiddlewareClient = _interopRequireDefault(require("./dev/webpack-hot-middleware-client"));
 var _devBuildWatcher = _interopRequireDefault(require("./dev/dev-build-watcher"));
 var _fouc = require("./dev/fouc");
-var _eventsource = require("./dev/error-overlay/eventsource");
+var _websocket = require("./dev/error-overlay/websocket");
 var _querystring = require("../shared/lib/router/utils/querystring");
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
@@ -18,13 +17,12 @@ function _interopRequireDefault(obj) {
 // The runtimeChunk can't hot reload itself currently to correct it when adding pages using on-demand-entries
 // eslint-disable-next-line no-unused-expressions
 import('./dev/noop');;
-// Support EventSource on Internet Explorer 11
-if (!window.EventSource) {
-    window.EventSource = _eventSourcePolyfill.default;
-}
 const { __NEXT_DATA__: { assetPrefix  } ,  } = window;
 const prefix = assetPrefix || '';
 const webpackHMR = (0, _webpackHotMiddlewareClient).default();
+(0, _websocket).connectHMR({
+    path: `${prefix}/_next/webpack-hmr`
+});
 window.next = {
     version: _.version,
     // router is initialized later so it has to be live-binded
@@ -38,9 +36,7 @@ window.next = {
 (0, _).initNext({
     webpackHMR
 }).then(({ renderCtx  })=>{
-    (0, _onDemandEntriesClient).default({
-        assetPrefix: prefix
-    });
+    (0, _onDemandEntriesClient).default();
     let buildIndicatorHandler = ()=>{
     };
     function devPagesManifestListener(event) {
@@ -67,8 +63,7 @@ window.next = {
             }
         }
     }
-    devPagesManifestListener.unfiltered = true;
-    (0, _eventsource).addMessageListener(devPagesManifestListener);
+    (0, _websocket).addMessageListener(devPagesManifestListener);
     if (process.env.__NEXT_BUILD_INDICATOR) {
         (0, _devBuildWatcher).default((handler)=>{
             buildIndicatorHandler = handler;

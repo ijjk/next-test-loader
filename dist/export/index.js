@@ -380,7 +380,7 @@ async function exportApp(dir, options, span, configuration) {
                     if (attempts >= 3) {
                         throw new Error(`Static page generation for ${path} is still timing out after 3 attempts. See more info here https://nextjs.org/docs/messages/static-page-generation-timeout`);
                     }
-                    Log.warn(`Restarted static page genertion for ${path} because it took more than ${timeout} seconds`);
+                    Log.warn(`Restarted static page generation for ${path} because it took more than ${timeout} seconds`);
                     if (!infoPrinted) {
                         Log.warn('See more info here https://nextjs.org/docs/messages/static-page-generation-timeout');
                         infoPrinted = true;

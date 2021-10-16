@@ -7,9 +7,11 @@ export declare class TraceEntryPointsPlugin implements webpack.Plugin {
     private excludeFiles;
     private esmExternals?;
     private staticImageImports?;
-    constructor({ appDir, excludeFiles, esmExternals, staticImageImports, }: {
+    private externalDir?;
+    constructor({ appDir, excludeFiles, esmExternals, staticImageImports, externalDir, }: {
         appDir: string;
         excludeFiles?: string[];
+        externalDir?: boolean;
         staticImageImports: boolean;
         esmExternals?: NextConfigComplete['experimental']['esmExternals'];
     });

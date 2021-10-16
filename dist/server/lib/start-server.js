@@ -11,11 +11,16 @@ function _interopRequireDefault(obj) {
     };
 }
 async function start(serverOptions, port, hostname) {
+    let requestHandler;
+    const srv = _http.default.createServer((req, res)=>{
+        return requestHandler(req, res);
+    });
     const app = (0, _next).default({
         ...serverOptions,
-        customServer: false
+        customServer: false,
+        httpServer: srv
     });
-    const srv = _http.default.createServer(app.getRequestHandler());
+    requestHandler = app.getRequestHandler();
     await new Promise((resolve, reject)=>{
         // This code catches EADDRINUSE error if the port is already in use
         srv.on('error', reject);

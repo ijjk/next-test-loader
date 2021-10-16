@@ -1,6 +1,5 @@
-/// <reference types="node" />
 import { webpack } from 'next/dist/compiled/webpack/webpack';
-import http from 'http';
+import type ws from 'ws';
 export declare class WebpackHotMiddleware {
     eventStream: EventStream;
     latestStats: webpack.Stats | null;
@@ -12,19 +11,17 @@ export declare class WebpackHotMiddleware {
     onClientInvalid: () => void;
     onServerDone: (statsResult: webpack.Stats) => void;
     onClientDone: (statsResult: webpack.Stats) => void;
-    middleware: (req: http.IncomingMessage, res: http.ServerResponse, next: () => void) => void;
+    onHMR: (client: ws) => void;
     publishStats: (action: string, statsResult: webpack.Stats) => void;
     publish: (payload: any) => void;
     close: () => void;
 }
 declare class EventStream {
-    clients: Set<http.ServerResponse>;
-    interval: NodeJS.Timeout;
+    clients: Set<ws>;
     constructor();
-    heartbeatTick: () => void;
-    everyClient(fn: (client: http.ServerResponse) => void): void;
+    everyClient(fn: (client: ws) => void): void;
     close(): void;
-    handler(req: http.IncomingMessage, res: http.ServerResponse): void;
+    handler(client: ws): void;
     publish(payload: any): void;
 }
 export {};

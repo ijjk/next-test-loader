@@ -1,5 +1,5 @@
-import { IncomingMessage, ServerResponse } from 'http';
 import { webpack } from 'next/dist/compiled/webpack/webpack';
+import type ws from 'ws';
 export declare const ADDED: unique symbol;
 export declare const BUILDING: unique symbol;
 export declare const BUILT: unique symbol;
@@ -19,5 +19,5 @@ export default function onDemandEntryHandler(watcher: any, multiCompiler: webpac
     pagesBufferLength: number;
 }): {
     ensurePage(page: string, clientOnly: boolean): Promise<void | [void, void]>;
-    middleware(req: IncomingMessage, res: ServerResponse, next: Function): any;
+    onHMR(client: ws): void;
 };

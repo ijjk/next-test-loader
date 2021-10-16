@@ -78,6 +78,7 @@ class DevServer extends _nextServer.default {
             ...options,
             dev: true
         });
+        this.addedUpgradeListener = false;
         this.renderOpts.dev = true;
         this.renderOpts.ErrorDebug = ReactDevOverlay;
         this.devReady = new Promise((resolve)=>{
@@ -97,6 +98,11 @@ class DevServer extends _nextServer.default {
         };
         if (_fs.default.existsSync((0, _path).join(this.dir, 'static'))) {
             console.warn(`The static directory has been deprecated in favor of the public directory. https://nextjs.org/docs/messages/static-dir-deprecated`);
+        }
+        // setup upgrade listener eagerly when we can otherwise
+        // it will be done on the first request via req.socket.server
+        if (options.httpServer) {
+            this.setupWebSocketHandler(options.httpServer);
         }
         this.isCustomServer = !options.isNextDevCommand;
         this.pagesDir = (0, _findPagesDir).findPagesDir(this.dir);
@@ -328,9 +334,30 @@ class DevServer extends _nextServer.default {
         }
         return false;
     }
+    setupWebSocketHandler(server, _req) {
+        if (!this.addedUpgradeListener) {
+            var ref;
+            this.addedUpgradeListener = true;
+            server = server || ((ref = _req === null || _req === void 0 ? void 0 : _req.socket) === null || ref === void 0 ? void 0 : ref.server);
+            if (!server) {
+                // this is very unlikely to happen but show an error in case
+                // it does somehow
+                Log.error(`Invalid IncomingMessage received, make sure http.createServer is being used to handle requests.`);
+            } else {
+                server.on('upgrade', (req, socket, head)=>{
+                    var ref;
+                    if ((ref = req.url) === null || ref === void 0 ? void 0 : ref.startsWith(`${this.nextConfig.basePath || ''}/_next/webpack-hmr`)) {
+                        var ref;
+                        (ref = this.hotReloader) === null || ref === void 0 ? void 0 : ref.onHMR(req, socket, head);
+                    }
+                });
+            }
+        }
+    }
     async run(req, res, parsedUrl) {
         var ref;
         await this.devReady;
+        this.setupWebSocketHandler(undefined, req);
         const { basePath  } = this.nextConfig;
         let originalPathname = null;
         if (basePath && ((ref = parsedUrl.pathname) === null || ref === void 0 ? void 0 : ref.startsWith(basePath))) {

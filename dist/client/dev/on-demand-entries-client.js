@@ -4,7 +4,7 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.default = void 0;
 var _router = _interopRequireDefault(require("next/router"));
-var _onDemandEntriesUtils = require("./on-demand-entries-utils");
+var _websocket = require("./error-overlay/websocket");
 function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) {
     try {
         var info = gen[key](arg);
@@ -39,29 +39,44 @@ function _interopRequireDefault(obj) {
         default: obj
     };
 }
-var _default = _asyncToGenerator((function*({ assetPrefix  }) {
-    _router.default.ready(()=>{
-        _router.default.events.on('routeChangeComplete', _onDemandEntriesUtils.setupPing.bind(this, assetPrefix, ()=>_router.default.pathname
-        ));
-    });
-    (0, _onDemandEntriesUtils).setupPing(assetPrefix, ()=>_router.default.query.__NEXT_PAGE || _router.default.pathname
-    , _onDemandEntriesUtils.currentPage);
-    // prevent HMR connection from being closed when running tests
-    if (!process.env.__NEXT_TEST_MODE) {
-        document.addEventListener('visibilitychange', (_event)=>{
-            const state = document.visibilityState;
-            if (state === 'visible') {
-                (0, _onDemandEntriesUtils).setupPing(assetPrefix, ()=>_router.default.pathname
-                , true);
-            } else {
-                (0, _onDemandEntriesUtils).closePing();
+var _default = _asyncToGenerator(function*() {
+    setInterval(()=>{
+        (0, _websocket).sendMessage(JSON.stringify({
+            event: 'ping',
+            page: _router.default.pathname
+        }));
+    }, 2500);
+    (0, _websocket).addMessageListener((event)=>{
+        if (event.data.indexOf('{') === -1) return;
+        try {
+            const payload = JSON.parse(event.data);
+            // don't attempt fetching the page if we're already showing
+            // the dev overlay as this can cause the error to be triggered
+            // repeatedly
+            if (payload.event === 'pong' && payload.invalid && !self.__NEXT_DATA__.err) {
+                // Payload can be invalid even if the page does exist.
+                // So, we check if it can be created.
+                fetch(location.href, {
+                    credentials: 'same-origin'
+                }).then((pageRes)=>{
+                    if (pageRes.status === 200) {
+                        // Page exists now, reload
+                        location.reload();
+                    } else {
+                        // Page doesn't exist
+                        if (self.__NEXT_DATA__.page === _router.default.pathname && _router.default.pathname !== '/_error') {
+                            // We are still on the page,
+                            // reload to show 404 error page
+                            location.reload();
+                        }
+                    }
+                });
             }
-        });
-        window.addEventListener('beforeunload', ()=>{
-            (0, _onDemandEntriesUtils).closePing();
-        });
-    }
-}).bind(void 0)).bind(void 0);
+        } catch (err) {
+            console.error('on-demand-entries failed to parse response', err);
+        }
+    });
+});
 exports.default = _default;
 
 //# sourceMappingURL=on-demand-entries-client.js.map

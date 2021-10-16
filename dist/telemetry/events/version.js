@@ -50,7 +50,7 @@ function getNextConfig(phase, dir) {
 }
 function eventCliSession(phase, dir, event) {
     // This should be an invariant, if it fails our build tooling is broken.
-    if (typeof "11.1.3-canary.70" !== 'string') {
+    if (typeof "11.1.3-canary.76" !== 'string') {
         return [];
     }
     const userConfiguration = getNextConfig(phase, dir);
@@ -58,7 +58,7 @@ function eventCliSession(phase, dir, event) {
     };
     var ref;
     const payload = {
-        nextVersion: "11.1.3-canary.70",
+        nextVersion: "11.1.3-canary.76",
         nodeVersion: process.version,
         cliCommand: event.cliCommand,
         isSrcDir: event.isSrcDir,
