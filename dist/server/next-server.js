@@ -74,7 +74,7 @@ function _interopRequireWildcard(obj) {
 const getCustomRouteMatcher = (0, _pathMatch).default(true);
 class Server {
     constructor({ dir ='.' , quiet =false , conf , dev =false , minimalMode =false , customServer =true  }){
-        var ref13, ref1, ref2;
+        var ref, ref1, ref2;
         this.customErrorNo404Warn = (0, _utils1).execOnce(()=>{
             console.warn(_chalk.default.bold.yellow(`Warning: `) + _chalk.default.yellow(`You have added a custom /_error page without a custom /404 page. This prevents the 404 page from being auto statically optimized.\nSee here for info: https://nextjs.org/docs/messages/custom-error-no-custom-404`));
         });
@@ -99,7 +99,7 @@ class Server {
             generateEtags,
             previewProps: this.getPreviewProps(),
             customServer: customServer === true ? true : undefined,
-            ampOptimizerConfig: (ref13 = this.nextConfig.experimental.amp) === null || ref13 === void 0 ? void 0 : ref13.optimizer,
+            ampOptimizerConfig: (ref = this.nextConfig.experimental.amp) === null || ref === void 0 ? void 0 : ref.optimizer,
             basePath: this.nextConfig.basePath,
             images: JSON.stringify(this.nextConfig.images),
             optimizeFonts: !!this.nextConfig.optimizeFonts && !dev,
@@ -161,7 +161,7 @@ class Server {
         console.error(err);
     }
     async handleRequest(req, res, parsedUrl) {
-        var ref26, ref3, ref4, ref5, ref6, ref7;
+        var ref23, ref1, ref2, ref3, ref4, ref5;
         const urlParts = (req.url || '').split('?');
         const urlNoQuery = urlParts[0];
         if (urlNoQuery === null || urlNoQuery === void 0 ? void 0 : urlNoQuery.match(/(\\|\/\/)/)) {
@@ -190,16 +190,16 @@ class Server {
         const url = (0, _parseNextUrl).parseNextUrl({
             headers: req.headers,
             nextConfig: this.nextConfig,
-            url: (ref26 = req.url) === null || ref26 === void 0 ? void 0 : ref26.replace(/^\/+/, '/')
+            url: (ref23 = req.url) === null || ref23 === void 0 ? void 0 : ref23.replace(/^\/+/, '/')
         });
         if (url.basePath) {
             req._nextHadBasePath = true;
             req.url = req.url.replace(basePath, '') || '/';
         }
         if (this.minimalMode && req.headers['x-matched-path'] && typeof req.headers['x-matched-path'] === 'string') {
-            var ref, ref24;
+            var ref, ref21;
             const reqUrlIsDataUrl = (ref = req.url) === null || ref === void 0 ? void 0 : ref.includes('/_next/data');
-            const matchedPathIsDataUrl = (ref24 = req.headers['x-matched-path']) === null || ref24 === void 0 ? void 0 : ref24.includes('/_next/data');
+            const matchedPathIsDataUrl = (ref21 = req.headers['x-matched-path']) === null || ref21 === void 0 ? void 0 : ref21.includes('/_next/data');
             const isDataUrl = reqUrlIsDataUrl || matchedPathIsDataUrl;
             let parsedPath = (0, _url).parse(isDataUrl ? req.url : req.headers['x-matched-path'], true);
             const { pathname , query  } = parsedPath;
@@ -262,11 +262,11 @@ class Server {
             }
             parsedUrl.pathname = `${basePath || ''}${matchedPathname === '/' && basePath ? '' : matchedPathname}`;
         }
-        req.__nextHadTrailingSlash = (ref3 = url.locale) === null || ref3 === void 0 ? void 0 : ref3.trailingSlash;
-        if ((ref4 = url.locale) === null || ref4 === void 0 ? void 0 : ref4.domain) {
+        req.__nextHadTrailingSlash = (ref1 = url.locale) === null || ref1 === void 0 ? void 0 : ref1.trailingSlash;
+        if ((ref2 = url.locale) === null || ref2 === void 0 ? void 0 : ref2.domain) {
             req.__nextIsLocaleDomain = true;
         }
-        if ((ref5 = url.locale) === null || ref5 === void 0 ? void 0 : ref5.path.detectedLocale) {
+        if ((ref3 = url.locale) === null || ref3 === void 0 ? void 0 : ref3.path.detectedLocale) {
             req.url = (0, _url).format(url);
             req.__nextStrippedLocale = true;
             if (url.pathname === '/api' || url.pathname.startsWith('/api/')) {
@@ -279,10 +279,10 @@ class Server {
                 parsedUrl.query.__nextLocale = url.locale.locale;
             }
         }
-        if (url === null || url === void 0 ? void 0 : (ref6 = url.locale) === null || ref6 === void 0 ? void 0 : ref6.defaultLocale) {
+        if (url === null || url === void 0 ? void 0 : (ref4 = url.locale) === null || ref4 === void 0 ? void 0 : ref4.defaultLocale) {
             parsedUrl.query.__nextDefaultLocale = url.locale.defaultLocale;
         }
-        if ((ref7 = url.locale) === null || ref7 === void 0 ? void 0 : ref7.redirect) {
+        if ((ref5 = url.locale) === null || ref5 === void 0 ? void 0 : ref5.redirect) {
             res.setHeader('Location', url.locale.redirect);
             res.statusCode = _constants.TEMPORARY_REDIRECT_STATUS;
             res.end();
@@ -983,7 +983,7 @@ class Server {
         };
     }
     async renderToResponseWithComponents({ req , res , pathname , renderOpts: opts  }, { components , query  }) {
-        var ref, ref26;
+        var ref, ref30;
         const is404Page = pathname === '/404';
         const is500Page = pathname === '/500';
         const isLikeServerless = typeof components.ComponentMod === 'object' && typeof components.ComponentMod.renderReqToHTML === 'function';
@@ -1015,10 +1015,10 @@ class Server {
             delete query.amp;
         }
         if (opts.supportsDynamicHTML === true) {
-            var ref;
+            var ref44;
             // Disable dynamic HTML in cases that we know it won't be generated,
             // so that we can continue generating a cache key when possible.
-            opts.supportsDynamicHTML = !isSSG && !isLikeServerless && !query.amp && !this.minimalMode && typeof ((ref = components.Document) === null || ref === void 0 ? void 0 : ref.getInitialProps) !== 'function';
+            opts.supportsDynamicHTML = !isSSG && !isLikeServerless && !query.amp && !this.minimalMode && typeof ((ref44 = components.Document) === null || ref44 === void 0 ? void 0 : ref44.getInitialProps) !== 'function';
         }
         const locale = query.__nextLocale;
         const defaultLocale = isSSG ? (ref = this.nextConfig.i18n) === null || ref === void 0 ? void 0 : ref.defaultLocale : query.__nextDefaultLocale;
@@ -1036,7 +1036,7 @@ class Server {
         let urlPathname = (0, _url).parse(req.url || '').pathname || '/';
         let resolvedUrlPathname = req._nextRewroteUrl ? req._nextRewroteUrl : urlPathname;
         urlPathname = (0, _normalizeTrailingSlash).removePathTrailingSlash(urlPathname);
-        resolvedUrlPathname = (0, _normalizeLocalePath).normalizeLocalePath((0, _normalizeTrailingSlash).removePathTrailingSlash(resolvedUrlPathname), (ref26 = this.nextConfig.i18n) === null || ref26 === void 0 ? void 0 : ref26.locales).pathname;
+        resolvedUrlPathname = (0, _normalizeLocalePath).normalizeLocalePath((0, _normalizeTrailingSlash).removePathTrailingSlash(resolvedUrlPathname), (ref30 = this.nextConfig.i18n) === null || ref30 === void 0 ? void 0 : ref30.locales).pathname;
         const stripNextDataPath = (path)=>{
             if (path.includes(this.buildId)) {
                 const splitPath = path.substring(path.indexOf(this.buildId) + this.buildId.length);

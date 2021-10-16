@@ -44,35 +44,17 @@ function _interopRequireWildcard(obj) {
 });
 const defaultCommand = 'dev';
 const commands = {
-    build: ()=>Promise.resolve().then(function() {
-            return _interopRequireWildcard(require('../cli/next-build'));
-        }).then((i)=>i.nextBuild
-        )
+    build: ()=>Promise.resolve(require('../cli/next-build').nextBuild)
     ,
-    start: ()=>Promise.resolve().then(function() {
-            return _interopRequireWildcard(require('../cli/next-start'));
-        }).then((i)=>i.nextStart
-        )
+    start: ()=>Promise.resolve(require('../cli/next-start').nextStart)
     ,
-    export: ()=>Promise.resolve().then(function() {
-            return _interopRequireWildcard(require('../cli/next-export'));
-        }).then((i)=>i.nextExport
-        )
+    export: ()=>Promise.resolve(require('../cli/next-export').nextExport)
     ,
-    dev: ()=>Promise.resolve().then(function() {
-            return _interopRequireWildcard(require('../cli/next-dev'));
-        }).then((i)=>i.nextDev
-        )
+    dev: ()=>Promise.resolve(require('../cli/next-dev').nextDev)
     ,
-    lint: ()=>Promise.resolve().then(function() {
-            return _interopRequireWildcard(require('../cli/next-lint'));
-        }).then((i)=>i.nextLint
-        )
+    lint: ()=>Promise.resolve(require('../cli/next-lint').nextLint)
     ,
-    telemetry: ()=>Promise.resolve().then(function() {
-            return _interopRequireWildcard(require('../cli/next-telemetry'));
-        }).then((i)=>i.nextTelemetry
-        )
+    telemetry: ()=>Promise.resolve(require('../cli/next-telemetry').nextTelemetry)
 };
 const args = (0, _indexJs).default({
     // Types
@@ -87,7 +69,7 @@ const args = (0, _indexJs).default({
 });
 // Version is inlined into the file using taskr build pipeline
 if (args['--version']) {
-    console.log(`Next.js v${"11.1.3-canary.76"}`);
+    console.log(`Next.js v${"11.1.3-canary.77"}`);
     process.exit(0);
 }
 // Check if we are running `next <subcommand>` or `next`
@@ -143,13 +125,15 @@ commands[command]().then((exec)=>exec(forwardedArgs)
     }
 });
 if (command === 'dev') {
-    const { CONFIG_FILE  } = require('../shared/lib/constants');
+    const { CONFIG_FILES  } = require('../shared/lib/constants');
     const { watchFile  } = require('fs');
-    watchFile(`${process.cwd()}/${CONFIG_FILE}`, (cur, prev)=>{
-        if (cur.size > 0 || prev.size > 0) {
-            console.log(`\n> Found a change in ${CONFIG_FILE}. Restart the server to see the changes in effect.`);
-        }
-    });
+    for (const CONFIG_FILE of CONFIG_FILES){
+        watchFile(`${process.cwd()}/${CONFIG_FILE}`, (cur, prev)=>{
+            if (cur.size > 0 || prev.size > 0) {
+                console.log(`\n> Found a change in ${CONFIG_FILE}. Restart the server to see the changes in effect.`);
+            }
+        });
+    }
 }
 
 //# sourceMappingURL=next.map

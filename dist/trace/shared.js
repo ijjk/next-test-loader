@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-exports.traceGlobals = exports.TARGET = exports.setGlobal = void 0;
+exports.setGlobal = exports.traceGlobals = exports.TARGET = void 0;
 var TARGET;
 exports.TARGET = TARGET;
 (function(TARGET) {

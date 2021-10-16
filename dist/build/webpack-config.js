@@ -4,7 +4,7 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.attachReactRefresh = attachReactRefresh;
 exports.default = getBaseWebpackConfig;
-exports.NODE_BASE_ESM_RESOLVE_OPTIONS = exports.NODE_RESOLVE_OPTIONS = exports.NODE_ESM_RESOLVE_OPTIONS = exports.nextImageLoaderRegex = exports.NODE_BASE_RESOLVE_OPTIONS = void 0;
+exports.nextImageLoaderRegex = exports.NODE_BASE_ESM_RESOLVE_OPTIONS = exports.NODE_ESM_RESOLVE_OPTIONS = exports.NODE_BASE_RESOLVE_OPTIONS = exports.NODE_RESOLVE_OPTIONS = void 0;
 var _reactRefreshWebpackPlugin = _interopRequireDefault(require("@next/react-refresh-utils/ReactRefreshWebpackPlugin"));
 var _chalk = _interopRequireDefault(require("chalk"));
 var _crypto = _interopRequireDefault(require("crypto"));
@@ -215,14 +215,14 @@ let TSCONFIG_WARNED = false;
 const nextImageLoaderRegex = /\.(png|jpg|jpeg|gif|webp|avif|ico|bmp|svg)$/i;
 exports.nextImageLoaderRegex = nextImageLoaderRegex;
 async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isServer =false , pagesDir , target ='server' , reactProductionProfiling =false , entrypoints , rewrites , isDevFallback =false , runWebpackSpan  }) {
-    var ref10, ref1, ref2, ref3, ref4, ref5, ref6, ref7;
+    var ref31, ref1, ref2, ref3, ref4, ref5, ref6, ref7;
     const hasRewrites = rewrites.beforeFiles.length > 0 || rewrites.afterFiles.length > 0 || rewrites.fallback.length > 0;
     const hasReactRefresh = dev && !isServer;
     const reactDomVersion = await (0, _getPackageVersion).getPackageVersion({
         cwd: dir,
         name: 'react-dom'
     });
-    const hasReact18 = Boolean(reactDomVersion) && (_semver.default.gte(reactDomVersion, '18.0.0') || ((ref10 = _semver.default.coerce(reactDomVersion)) === null || ref10 === void 0 ? void 0 : ref10.version) === '18.0.0');
+    const hasReact18 = Boolean(reactDomVersion) && (_semver.default.gte(reactDomVersion, '18.0.0') || ((ref31 = _semver.default.coerce(reactDomVersion)) === null || ref31 === void 0 ? void 0 : ref31.version) === '18.0.0');
     const hasReactPrerelease = Boolean(reactDomVersion) && _semver.default.prerelease(reactDomVersion) != null;
     const hasReactRoot = config.experimental.reactRoot || hasReact18;
     // Only inform during one of the builds
@@ -318,9 +318,7 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
             TSCONFIG_WARNED = true;
             Log.info(`Using tsconfig file: ${config.typescript.tsconfigPath}`);
         }
-        const ts = await Promise.resolve().then(function() {
-            return _interopRequireWildcard(require(typeScriptPath));
-        });
+        const ts = await Promise.resolve(require(typeScriptPath));
         const tsConfig = await (0, _getTypeScriptConfiguration).getTypeScriptConfiguration(ts, tsConfigPath, true);
         jsConfig = {
             compilerOptions: tsConfig.options
@@ -403,6 +401,7 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
             ...nodePathList
         ],
         alias: {
+            // noop
             next: _constants.NEXT_PROJECT_ROOT,
             ...customAppAliases,
             ...customErrorAlias,
@@ -1022,7 +1021,7 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
             new _wellknownErrorsPlugin.WellKnownErrorsPlugin(),
             !isServer && new _copyFilePlugin.CopyFilePlugin({
                 filePath: require.resolve('./polyfills/polyfill-nomodule'),
-                cacheKey: "11.1.3-canary.76",
+                cacheKey: "11.1.3-canary.77",
                 name: `static/chunks/polyfills${dev ? '' : '-[hash]'}.js`,
                 minimize: false,
                 info: {
@@ -1036,12 +1035,12 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
     };
     // Support tsconfig and jsconfig baseUrl
     if (resolvedBaseUrl) {
-        var ref, ref8;
-        (ref = webpackConfig.resolve) === null || ref === void 0 ? void 0 : (ref8 = ref.modules) === null || ref8 === void 0 ? void 0 : ref8.push(resolvedBaseUrl);
+        var ref, ref29;
+        (ref = webpackConfig.resolve) === null || ref === void 0 ? void 0 : (ref29 = ref.modules) === null || ref29 === void 0 ? void 0 : ref29.push(resolvedBaseUrl);
     }
     if ((jsConfig === null || jsConfig === void 0 ? void 0 : (ref5 = jsConfig.compilerOptions) === null || ref5 === void 0 ? void 0 : ref5.paths) && resolvedBaseUrl) {
-        var ref, ref13;
-        (ref = webpackConfig.resolve) === null || ref === void 0 ? void 0 : (ref13 = ref.plugins) === null || ref13 === void 0 ? void 0 : ref13.unshift(new _jsconfigPathsPlugin.JsConfigPathsPlugin(jsConfig.compilerOptions.paths, resolvedBaseUrl));
+        var ref, ref58;
+        (ref = webpackConfig.resolve) === null || ref === void 0 ? void 0 : (ref58 = ref.plugins) === null || ref58 === void 0 ? void 0 : ref58.unshift(new _jsconfigPathsPlugin.JsConfigPathsPlugin(jsConfig.compilerOptions.paths, resolvedBaseUrl));
     }
     const webpack5Config = webpackConfig;
     webpack5Config.experiments = {
@@ -1137,7 +1136,7 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
         // Includes:
         //  - Next.js version
         //  - next.config.js keys that affect compilation
-        version: `${"11.1.3-canary.76"}|${configVars}`,
+        version: `${"11.1.3-canary.77"}|${configVars}`,
         cacheDirectory: _path.default.join(distDir, 'cache', 'webpack')
     };
     // Adds `next.config.js` as a buildDependency when custom webpack config is provided
@@ -1321,28 +1320,28 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
         }
         return false;
     }
-    var ref17;
-    const hasUserCssConfig = (ref17 = (ref7 = webpackConfig.module) === null || ref7 === void 0 ? void 0 : ref7.rules.some((rule)=>canMatchCss(rule.test) || canMatchCss(rule.include)
-    )) !== null && ref17 !== void 0 ? ref17 : false;
+    var ref87;
+    const hasUserCssConfig = (ref87 = (ref7 = webpackConfig.module) === null || ref7 === void 0 ? void 0 : ref7.rules.some((rule)=>canMatchCss(rule.test) || canMatchCss(rule.include)
+    )) !== null && ref87 !== void 0 ? ref87 : false;
     if (hasUserCssConfig) {
-        var ref32, ref18, ref19, ref20;
+        var ref129, ref88, ref89, ref90;
         // only show warning for one build
         if (isServer) {
             console.warn(_chalk.default.yellow.bold('Warning: ') + _chalk.default.bold('Built-in CSS support is being disabled due to custom CSS configuration being detected.\n') + 'See here for more info: https://nextjs.org/docs/messages/built-in-css-disabled\n');
         }
-        if ((ref32 = webpackConfig.module) === null || ref32 === void 0 ? void 0 : ref32.rules.length) {
+        if ((ref129 = webpackConfig.module) === null || ref129 === void 0 ? void 0 : ref129.rules.length) {
             // Remove default CSS Loader
             webpackConfig.module.rules = webpackConfig.module.rules.filter((r)=>{
-                var ref, ref30;
-                return !(typeof ((ref = r.oneOf) === null || ref === void 0 ? void 0 : (ref30 = ref[0]) === null || ref30 === void 0 ? void 0 : ref30.options) === 'object' && r.oneOf[0].options.__next_css_remove === true);
+                var ref, ref127;
+                return !(typeof ((ref = r.oneOf) === null || ref === void 0 ? void 0 : (ref127 = ref[0]) === null || ref127 === void 0 ? void 0 : ref127.options) === 'object' && r.oneOf[0].options.__next_css_remove === true);
             });
         }
-        if ((ref18 = webpackConfig.plugins) === null || ref18 === void 0 ? void 0 : ref18.length) {
+        if ((ref88 = webpackConfig.plugins) === null || ref88 === void 0 ? void 0 : ref88.length) {
             // Disable CSS Extraction Plugin
             webpackConfig.plugins = webpackConfig.plugins.filter((p)=>p.__next_css_remove !== true
             );
         }
-        if ((ref19 = webpackConfig.optimization) === null || ref19 === void 0 ? void 0 : (ref20 = ref19.minimizer) === null || ref20 === void 0 ? void 0 : ref20.length) {
+        if ((ref89 = webpackConfig.optimization) === null || ref89 === void 0 ? void 0 : (ref90 = ref89.minimizer) === null || ref90 === void 0 ? void 0 : ref90.length) {
             // Disable CSS Minifier
             webpackConfig.optimization.minimizer = webpackConfig.optimization.minimizer.filter((e)=>e.__next_css_remove !== true
             );

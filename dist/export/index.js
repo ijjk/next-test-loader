@@ -137,7 +137,7 @@ async function exportApp(dir, options, span, configuration) {
             distDir
         });
         if (telemetry) {
-            telemetry.record((0, _events).eventCliSession(_constants1.PHASE_EXPORT, distDir, {
+            telemetry.record((0, _events).eventCliSession(distDir, nextConfig, {
                 webpackVersion: null,
                 cliCommand: 'export',
                 isSrcDir: null,
@@ -236,7 +236,7 @@ async function exportApp(dir, options, span, configuration) {
         // Get the exportPathMap from the config file
         if (typeof nextConfig.exportPathMap !== 'function') {
             if (!options.silent) {
-                Log.info(`No "exportPathMap" found in "${_constants1.CONFIG_FILE}". Generating map from "./pages"`);
+                Log.info(`No "exportPathMap" found in "${nextConfig.configFile}". Generating map from "./pages"`);
             }
             nextConfig.exportPathMap = async (defaultMap)=>{
                 return defaultMap;

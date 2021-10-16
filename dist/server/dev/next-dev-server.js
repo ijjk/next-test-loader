@@ -10,6 +10,7 @@ var _jestWorker = require("jest-worker");
 var _amphtmlValidator = _interopRequireDefault(require("next/dist/compiled/amphtml-validator"));
 var _findUp = _interopRequireDefault(require("next/dist/compiled/find-up"));
 var _path = require("path");
+var _react = _interopRequireDefault(require("react"));
 var _watchpack = _interopRequireDefault(require("watchpack"));
 var _output = require("../../build/output");
 var _constants = require("../../lib/constants");
@@ -73,7 +74,7 @@ const ReactDevOverlay = (props)=>{
 };
 class DevServer extends _nextServer.default {
     constructor(options){
-        var ref9, ref1;
+        var ref, ref1;
         super({
             ...options,
             dev: true
@@ -85,7 +86,7 @@ class DevServer extends _nextServer.default {
             this.setDevReady = resolve;
         });
         var ref2;
-        this.renderOpts.ampSkipValidation = (ref2 = (ref9 = this.nextConfig.experimental) === null || ref9 === void 0 ? void 0 : (ref1 = ref9.amp) === null || ref1 === void 0 ? void 0 : ref1.skipValidation) !== null && ref2 !== void 0 ? ref2 : false;
+        this.renderOpts.ampSkipValidation = (ref2 = (ref = this.nextConfig.experimental) === null || ref === void 0 ? void 0 : (ref1 = ref.amp) === null || ref1 === void 0 ? void 0 : ref1.skipValidation) !== null && ref2 !== void 0 ? ref2 : false;
         this.renderOpts.ampValidator = (html, pathname)=>{
             const validatorPath = this.nextConfig.experimental && this.nextConfig.experimental.amp && this.nextConfig.experimental.amp.validator;
             return _amphtmlValidator.default.getInstance(validatorPath).then((validator)=>{
@@ -268,7 +269,7 @@ class DevServer extends _nextServer.default {
         const telemetry = new _storage.Telemetry({
             distDir: this.distDir
         });
-        telemetry.record((0, _events).eventCliSession(_constants1.PHASE_DEVELOPMENT_SERVER, this.distDir, {
+        telemetry.record((0, _events).eventCliSession(this.distDir, this.nextConfig, {
             webpackVersion: 5,
             cliCommand: 'dev',
             isSrcDir: (0, _path).relative(this.dir, this.pagesDir).startsWith('src'),
@@ -347,8 +348,8 @@ class DevServer extends _nextServer.default {
                 server.on('upgrade', (req, socket, head)=>{
                     var ref;
                     if ((ref = req.url) === null || ref === void 0 ? void 0 : ref.startsWith(`${this.nextConfig.basePath || ''}/_next/webpack-hmr`)) {
-                        var ref;
-                        (ref = this.hotReloader) === null || ref === void 0 ? void 0 : ref.onHMR(req, socket, head);
+                        var ref1;
+                        (ref1 = this.hotReloader) === null || ref1 === void 0 ? void 0 : ref1.onHMR(req, socket, head);
                     }
                 });
             }
@@ -405,10 +406,10 @@ class DevServer extends _nextServer.default {
                 const frames = (0, _parseStack).parseStack(err.stack);
                 const frame = frames[0];
                 if (frame.lineNumber && (frame === null || frame === void 0 ? void 0 : frame.file)) {
-                    var ref, ref3, ref4, ref5;
-                    const compilation = (ref = this.hotReloader) === null || ref === void 0 ? void 0 : (ref3 = ref.serverStats) === null || ref3 === void 0 ? void 0 : ref3.compilation;
+                    var ref, ref1, ref2, ref3;
+                    const compilation = (ref = this.hotReloader) === null || ref === void 0 ? void 0 : (ref1 = ref.serverStats) === null || ref1 === void 0 ? void 0 : ref1.compilation;
                     const moduleId = frame.file.replace(/^(webpack-internal:\/\/\/|file:\/\/)/, '');
-                    const source = await (0, _middleware).getSourceById(!!((ref4 = frame.file) === null || ref4 === void 0 ? void 0 : ref4.startsWith(_path.sep)) || !!((ref5 = frame.file) === null || ref5 === void 0 ? void 0 : ref5.startsWith('file:')), moduleId, compilation);
+                    const source = await (0, _middleware).getSourceById(!!((ref2 = frame.file) === null || ref2 === void 0 ? void 0 : ref2.startsWith(_path.sep)) || !!((ref3 = frame.file) === null || ref3 === void 0 ? void 0 : ref3.startsWith('file:')), moduleId, compilation);
                     const originalFrame = await (0, _middleware).createOriginalStackFrame({
                         line: frame.lineNumber,
                         column: frame.column,

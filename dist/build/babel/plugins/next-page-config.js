@@ -51,8 +51,8 @@ function nextPageConfig({ types: t  }) {
                                     // import hello from 'world'
                                     // export { hello as config }
                                     } else if (_core.types.isIdentifier(specifier.local)) {
-                                        var ref;
-                                        if (_core.types.isImportSpecifier((ref = exportPath.scope.getBinding(specifier.local.name)) === null || ref === void 0 ? void 0 : ref.path.node)) {
+                                        var ref5;
+                                        if (_core.types.isImportSpecifier((ref5 = exportPath.scope.getBinding(specifier.local.name)) === null || ref5 === void 0 ? void 0 : ref5.path.node)) {
                                             throw new Error(errorMessage(exportState, `Expected object but got import`));
                                         }
                                     }

@@ -3,7 +3,7 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 exports.default = onDemandEntryHandler;
-exports.entries = exports.BUILDING = exports.ADDED = exports.BUILT = void 0;
+exports.entries = exports.BUILT = exports.BUILDING = exports.ADDED = void 0;
 var _events = require("events");
 var _path = require("path");
 var _normalizePagePath = require("../normalize-page-path");

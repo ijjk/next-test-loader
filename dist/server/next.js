@@ -39,9 +39,7 @@ function _interopRequireWildcard(obj) {
 }
 let ServerImpl;
 const getServerImpl = async ()=>{
-    if (ServerImpl === undefined) ServerImpl = (await Promise.resolve().then(function() {
-        return _interopRequireWildcard(require('./next-server'));
-    })).default;
+    if (ServerImpl === undefined) ServerImpl = (await Promise.resolve(require('./next-server'))).default;
     return ServerImpl;
 };
 class NextServer {

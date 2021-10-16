@@ -361,7 +361,7 @@ function processRoutes(routes, config, type) {
         const isExternal = !((ref = r.destination) === null || ref === void 0 ? void 0 : ref.startsWith('/'));
         const destBasePath = srcBasePath && !isExternal ? srcBasePath : '';
         if (config.i18n && r.locale !== false) {
-            var ref;
+            var ref1;
             if (!isExternal) {
                 defaultLocales.forEach((item)=>{
                     let destination;
@@ -377,7 +377,7 @@ function processRoutes(routes, config, type) {
             }
             r.source = `/:nextInternalLocale(${config.i18n.locales.map((locale)=>(0, _escapeStringRegexp).default(locale)
             ).join('|')})${r.source === '/' && !config.trailingSlash ? '' : r.source}`;
-            if (r.destination && ((ref = r.destination) === null || ref === void 0 ? void 0 : ref.startsWith('/'))) {
+            if (r.destination && ((ref1 = r.destination) === null || ref1 === void 0 ? void 0 : ref1.startsWith('/'))) {
                 r.destination = `/:nextInternalLocale${r.destination === '/' && !config.trailingSlash ? '' : r.destination}`;
             }
         }

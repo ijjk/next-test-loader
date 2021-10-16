@@ -5,7 +5,7 @@ Object.defineProperty(exports, "__esModule", {
 exports.initNext = initNext;
 exports.render = render;
 exports.renderError = renderError;
-exports.emitter = exports.version = exports.router = void 0;
+exports.emitter = exports.router = exports.version = void 0;
 require("@next/polyfill-module");
 var _react = _interopRequireDefault(require("react"));
 var _reactDom = _interopRequireDefault(require("react-dom"));
@@ -114,7 +114,7 @@ function _objectSpread(target) {
 }
 const data = JSON.parse(document.getElementById('__NEXT_DATA__').textContent);
 window.__NEXT_DATA__ = data;
-const version = "11.1.3-canary.76";
+const version = "11.1.3-canary.77";
 exports.version = version;
 const looseToArray = (input)=>[].slice.call(input)
 ;
@@ -424,9 +424,7 @@ function renderError(renderErrorProps) {
     console.error(err);
     console.error(`A client-side exception has occurred, see here for more info: https://nextjs.org/docs/messages/client-side-exception-occurred`);
     return pageLoader.loadPage('/_error').then(({ page: ErrorComponent , styleSheets  })=>{
-        return (lastAppProps === null || lastAppProps === void 0 ? void 0 : lastAppProps.Component) === ErrorComponent ? Promise.resolve().then(function() {
-            return _interopRequireWildcard(require('../pages/_error'));
-        }).then((m)=>({
+        return (lastAppProps === null || lastAppProps === void 0 ? void 0 : lastAppProps.Component) === ErrorComponent ? import('../pages/_error').then((m)=>({
                 ErrorComponent: m.default,
                 styleSheets: []
             })

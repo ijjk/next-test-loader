@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-exports.pathToRegexp = exports.customRouteMatcherOptions = exports.default = exports.matcherOptions = void 0;
+exports.default = exports.customRouteMatcherOptions = exports.matcherOptions = exports.pathToRegexp = void 0;
 var pathToRegexp = _interopRequireWildcard(require("next/dist/compiled/path-to-regexp"));
 function _interopRequireWildcard(obj) {
     if (obj && obj.__esModule) {

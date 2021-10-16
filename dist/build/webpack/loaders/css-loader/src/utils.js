@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-exports.getImportCode = exports.shouldUseURLPlugin = exports.isDataUrl = exports.sort = exports.getModuleCode = exports.shouldUseImportPlugin = exports.getFilter = exports.shouldUseModulesPlugins = exports.getModulesPlugins = exports.getModulesOptions = exports.getExportCode = exports.requestify = exports.shouldUseIcssPlugin = exports.normalizeUrl = exports.normalizeOptions = exports.normalizeSourceMap = exports.isUrlRequestable = exports.resolveRequests = exports.getPreRequester = void 0;
+exports.sort = exports.isUrlRequestable = exports.resolveRequests = exports.getExportCode = exports.getModuleCode = exports.getImportCode = exports.getPreRequester = exports.normalizeSourceMap = exports.getModulesPlugins = exports.getModulesOptions = exports.getFilter = exports.requestify = exports.normalizeUrl = exports.shouldUseIcssPlugin = exports.shouldUseURLPlugin = exports.shouldUseImportPlugin = exports.shouldUseModulesPlugins = exports.normalizeOptions = exports.isDataUrl = void 0;
 var _url = require("url");
 var _path = _interopRequireDefault(require("path"));
 var _loaderUtils = require("next/dist/compiled/loader-utils");

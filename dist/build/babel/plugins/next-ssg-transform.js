@@ -3,7 +3,7 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 exports.default = nextTransformSsg;
-exports.EXPORT_NAME_GET_STATIC_PROPS = exports.EXPORT_NAME_GET_SERVER_PROPS = exports.EXPORT_NAME_GET_STATIC_PATHS = void 0;
+exports.EXPORT_NAME_GET_SERVER_PROPS = exports.EXPORT_NAME_GET_STATIC_PATHS = exports.EXPORT_NAME_GET_STATIC_PROPS = void 0;
 var _constants = require("../../../lib/constants");
 var _constants1 = require("../../../shared/lib/constants");
 const EXPORT_NAME_GET_STATIC_PROPS = 'getStaticProps';
@@ -272,11 +272,11 @@ function nextTransformSsg({ types: t  }) {
                                     const beforeCount = count;
                                     const elements = pattern.get('elements');
                                     elements.forEach((e)=>{
-                                        var ref, ref5;
+                                        var ref, ref6;
                                         let local;
                                         if (((ref = e.node) === null || ref === void 0 ? void 0 : ref.type) === 'Identifier') {
                                             local = e;
-                                        } else if (((ref5 = e.node) === null || ref5 === void 0 ? void 0 : ref5.type) === 'RestElement') {
+                                        } else if (((ref6 = e.node) === null || ref6 === void 0 ? void 0 : ref6.type) === 'RestElement') {
                                             local = e.get('argument');
                                         } else {
                                             return;

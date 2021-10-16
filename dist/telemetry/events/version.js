@@ -3,10 +3,7 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 exports.eventCliSession = eventCliSession;
-var _findUp = _interopRequireDefault(require("next/dist/compiled/find-up"));
 var _path = _interopRequireDefault(require("path"));
-var _constants = require("../../shared/lib/constants");
-var _config = require("../../server/config");
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
         default: obj
@@ -31,54 +28,35 @@ function hasBabelConfig(dir) {
         return false;
     }
 }
-function getNextConfig(phase, dir) {
-    try {
-        const configurationPath = _findUp.default.sync(_constants.CONFIG_FILE, {
-            cwd: dir
-        });
-        if (configurationPath) {
-            // This should've already been loaded, and thus should be cached / won't
-            // be re-evaluated.
-            const configurationModule = require(configurationPath);
-            // Re-normalize the configuration.
-            return (0, _config).normalizeConfig(phase, configurationModule.default || configurationModule);
-        }
-    } catch  {
-    // ignored
-    }
-    return null;
-}
-function eventCliSession(phase, dir, event) {
+function eventCliSession(dir, nextConfig, event) {
     // This should be an invariant, if it fails our build tooling is broken.
-    if (typeof "11.1.3-canary.76" !== 'string') {
+    if (typeof "11.1.3-canary.77" !== 'string') {
         return [];
     }
-    const userConfiguration = getNextConfig(phase, dir);
-    const { images , i18n  } = userConfiguration || {
+    const { images , i18n  } = nextConfig || {
     };
-    var ref;
     const payload = {
-        nextVersion: "11.1.3-canary.76",
+        nextVersion: "11.1.3-canary.77",
         nodeVersion: process.version,
         cliCommand: event.cliCommand,
         isSrcDir: event.isSrcDir,
         hasNowJson: event.hasNowJson,
         isCustomServer: event.isCustomServer,
-        hasNextConfig: !!userConfiguration,
-        buildTarget: (ref = userConfiguration === null || userConfiguration === void 0 ? void 0 : userConfiguration.target) !== null && ref !== void 0 ? ref : 'default',
-        hasWebpackConfig: typeof (userConfiguration === null || userConfiguration === void 0 ? void 0 : userConfiguration.webpack) === 'function',
+        hasNextConfig: nextConfig.configOrigin !== 'default',
+        buildTarget: nextConfig.target === 'server' ? 'default' : nextConfig.target,
+        hasWebpackConfig: typeof (nextConfig === null || nextConfig === void 0 ? void 0 : nextConfig.webpack) === 'function',
         hasBabelConfig: hasBabelConfig(dir),
         imageEnabled: !!images,
-        basePathEnabled: !!(userConfiguration === null || userConfiguration === void 0 ? void 0 : userConfiguration.basePath),
+        basePathEnabled: !!(nextConfig === null || nextConfig === void 0 ? void 0 : nextConfig.basePath),
         i18nEnabled: !!i18n,
         locales: (i18n === null || i18n === void 0 ? void 0 : i18n.locales) ? i18n.locales.join(',') : null,
         localeDomainsCount: (i18n === null || i18n === void 0 ? void 0 : i18n.domains) ? i18n.domains.length : null,
         localeDetectionEnabled: !i18n ? null : i18n.localeDetection !== false,
         imageDomainsCount: (images === null || images === void 0 ? void 0 : images.domains) ? images.domains.length : null,
-        imageSizes: (images === null || images === void 0 ? void 0 : images.sizes) ? images.sizes.join(',') : null,
+        imageSizes: (images === null || images === void 0 ? void 0 : images.imageSizes) ? images.imageSizes.join(',') : null,
         imageLoader: images === null || images === void 0 ? void 0 : images.loader,
-        trailingSlashEnabled: !!(userConfiguration === null || userConfiguration === void 0 ? void 0 : userConfiguration.trailingSlash),
-        reactStrictMode: !!(userConfiguration === null || userConfiguration === void 0 ? void 0 : userConfiguration.reactStrictMode),
+        trailingSlashEnabled: !!(nextConfig === null || nextConfig === void 0 ? void 0 : nextConfig.trailingSlash),
+        reactStrictMode: !!(nextConfig === null || nextConfig === void 0 ? void 0 : nextConfig.reactStrictMode),
         webpackVersion: event.webpackVersion || null
     };
     return [

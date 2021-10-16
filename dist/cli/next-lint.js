@@ -23,10 +23,10 @@ function _interopRequireDefault(obj) {
         default: obj
     };
 }
-var ref8, ref1, ref2, ref3;
+var ref11, ref1, ref2, ref3;
 const eslintOptions = (args, defaultCacheLocation)=>({
         overrideConfigFile: args['--config'] || null,
-        extensions: (ref8 = args['--ext']) !== null && ref8 !== void 0 ? ref8 : [
+        extensions: (ref11 = args['--ext']) !== null && ref11 !== void 0 ? ref11 : [
             '.js',
             '.jsx',
             '.ts',
@@ -166,10 +166,10 @@ const nextLint = async (argv)=>{
         (0, _utils).printAndExit(`> No such directory exists as the project root: ${baseDir}`);
     }
     const nextConfig = await (0, _config).default(_constants1.PHASE_PRODUCTION_BUILD, baseDir);
-    var ref4;
-    const files = (ref4 = args['--file']) !== null && ref4 !== void 0 ? ref4 : [];
-    var ref5;
-    const dirs = (ref5 = args['--dir']) !== null && ref5 !== void 0 ? ref5 : (ref = nextConfig.eslint) === null || ref === void 0 ? void 0 : ref.dirs;
+    var ref7;
+    const files = (ref7 = args['--file']) !== null && ref7 !== void 0 ? ref7 : [];
+    var ref8;
+    const dirs = (ref8 = args['--dir']) !== null && ref8 !== void 0 ? ref8 : (ref = nextConfig.eslint) === null || ref === void 0 ? void 0 : ref.dirs;
     const filesToLint = [
         ...dirs !== null && dirs !== void 0 ? dirs : [],
         ...files
@@ -181,8 +181,8 @@ const nextLint = async (argv)=>{
         return res;
     }, []);
     const reportErrorsOnly = Boolean(args['--quiet']);
-    var ref13;
-    const maxWarnings = (ref13 = args['--max-warnings']) !== null && ref13 !== void 0 ? ref13 : -1;
+    var ref27;
+    const maxWarnings = (ref27 = args['--max-warnings']) !== null && ref27 !== void 0 ? ref27 : -1;
     const formatter = args['--format'] || null;
     const strict = Boolean(args['--strict']);
     const distDir = (0, _path).join(baseDir, nextConfig.distDir);

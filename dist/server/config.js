@@ -84,9 +84,9 @@ function assignDefaults(userConfig) {
         delete userConfig.exportTrailingSlash;
     }
     if (typeof ((ref = userConfig.experimental) === null || ref === void 0 ? void 0 : ref.reactMode) !== 'undefined') {
-        var ref;
+        var ref5;
         console.warn(_chalk.default.yellow.bold('Warning: ') + 'The experimental "reactMode" option has been replaced with "reactRoot". Please update your next.config.js.');
-        if (typeof ((ref = userConfig.experimental) === null || ref === void 0 ? void 0 : ref.reactRoot) === 'undefined') {
+        if (typeof ((ref5 = userConfig.experimental) === null || ref5 === void 0 ? void 0 : ref5.reactRoot) === 'undefined') {
             userConfig.experimental.reactRoot = [
                 'concurrent',
                 'blocking'
@@ -167,14 +167,14 @@ function assignDefaults(userConfig) {
             throw new Error(`Specified basePath has to start with a /, found "${result.basePath}"`);
         }
         if (result.basePath !== '/') {
-            var ref;
+            var ref5;
             if (result.basePath.endsWith('/')) {
                 throw new Error(`Specified basePath should not end with /, found "${result.basePath}"`);
             }
             if (result.assetPrefix === '') {
                 result.assetPrefix = result.basePath;
             }
-            if (((ref = result.amp) === null || ref === void 0 ? void 0 : ref.canonicalBase) === '') {
+            if (((ref5 = result.amp) === null || ref5 === void 0 ? void 0 : ref5.canonicalBase) === '') {
                 result.amp.canonicalBase = result.basePath;
             }
         }
@@ -185,14 +185,14 @@ function assignDefaults(userConfig) {
             throw new Error(`Specified images should be an object received ${typeof images}.\nSee more info here: https://nextjs.org/docs/messages/invalid-images-config`);
         }
         if (images.domains) {
-            var ref;
+            var ref5;
             if (!Array.isArray(images.domains)) {
                 throw new Error(`Specified images.domains should be an Array received ${typeof images.domains}.\nSee more info here: https://nextjs.org/docs/messages/invalid-images-config`);
             }
             // static images are automatically prefixed with assetPrefix
             // so we need to ensure _next/image allows downloading from
             // this resource
-            if ((ref = config.assetPrefix) === null || ref === void 0 ? void 0 : ref.startsWith('http')) {
+            if ((ref5 = config.assetPrefix) === null || ref5 === void 0 ? void 0 : ref5.startsWith('http')) {
                 images.domains.push(new URL(config.assetPrefix).hostname);
             }
             if (images.domains.length > 50) {
@@ -375,7 +375,7 @@ async function loadConfig(phase, dir, customConfig) {
             ...customConfig
         });
     }
-    const path = await (0, _findUp).default(_constants.CONFIG_FILE, {
+    const path = await (0, _findUp).default(_constants.CONFIG_FILES, {
         cwd: dir
     });
     // If config file was found
@@ -383,7 +383,7 @@ async function loadConfig(phase, dir, customConfig) {
         var ref;
         let userConfigModule;
         try {
-            userConfigModule = require(path);
+            userConfigModule = await import(path);
         } catch (err) {
             console.error(_chalk.default.red('Error:') + ' failed to load next.config.js, see more info here https://nextjs.org/docs/messages/next-config-error');
             throw err;
@@ -406,12 +406,12 @@ async function loadConfig(phase, dir, customConfig) {
             userConfig.target = process.env.NEXT_PRIVATE_TARGET || 'server';
         }
         return assignDefaults({
-            configOrigin: _constants.CONFIG_FILE,
+            configOrigin: (0, _path).relative(dir, path),
             configFile: path,
             ...userConfig
         });
     } else {
-        const configBaseName = (0, _path).basename(_constants.CONFIG_FILE, (0, _path).extname(_constants.CONFIG_FILE));
+        const configBaseName = (0, _path).basename(_constants.CONFIG_FILES[0], (0, _path).extname(_constants.CONFIG_FILES[0]));
         const nonJsPath = _findUp.default.sync([
             `${configBaseName}.jsx`,
             `${configBaseName}.ts`,
@@ -421,7 +421,7 @@ async function loadConfig(phase, dir, customConfig) {
             cwd: dir
         });
         if (nonJsPath === null || nonJsPath === void 0 ? void 0 : nonJsPath.length) {
-            throw new Error(`Configuring Next.js via '${(0, _path).basename(nonJsPath)}' is not supported. Please replace the file with 'next.config.js'.`);
+            throw new Error(`Configuring Next.js via '${(0, _path).basename(nonJsPath)}' is not supported. Please replace the file with 'next.config.js' or 'next.config.mjs'.`);
         }
     }
     const completeConfig = _configShared.defaultConfig;

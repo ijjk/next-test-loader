@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-exports.requestIdleCallback = exports.cancelIdleCallback = void 0;
+exports.cancelIdleCallback = exports.requestIdleCallback = void 0;
 const requestIdleCallback = typeof self !== 'undefined' && self.requestIdleCallback && self.requestIdleCallback.bind(window) || function(cb) {
     let start = Date.now();
     return setTimeout(function() {

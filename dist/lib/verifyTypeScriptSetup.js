@@ -73,9 +73,7 @@ async function verifyTypeScriptSetup(dir, pagesDir, typeCheckPreflight, config, 
             await (0, _missingDependencyError).missingDepsError(dir, deps.missing);
         }
         // Load TypeScript after we're sure it exists:
-        const ts = await Promise.resolve().then(function() {
-            return _interopRequireWildcard(require(deps.resolved.get('typescript')));
-        });
+        const ts = await Promise.resolve(require(deps.resolved.get('typescript')));
         if (_semver.default.lt(ts.version, '4.3.2')) {
             log.warn(`Minimum recommended TypeScript version is v4.3.2, older versions can potentially be incompatible with Next.js. Detected: ${ts.version}`);
         }

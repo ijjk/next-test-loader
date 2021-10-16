@@ -107,7 +107,7 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
         const publicDir = _path.default.join(dir, 'public');
         const pagesDir = (0, _findPagesDir).findPagesDir(dir);
         const hasPublicDir = await (0, _fileExists).fileExists(publicDir);
-        telemetry.record((0, _events).eventCliSession(_constants1.PHASE_PRODUCTION_BUILD, dir, {
+        telemetry.record((0, _events).eventCliSession(dir, config, {
             webpackVersion: 5,
             cliCommand: 'build',
             isSrcDir: _path.default.relative(dir, pagesDir).startsWith('src'),
@@ -478,8 +478,8 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
             const errorPageHasCustomGetInitialProps = nonStaticErrorPageSpan.traceAsyncFn(async ()=>hasCustomErrorPage && await staticWorkers.hasCustomGetInitialProps('/_error', distDir, isLikeServerless, runtimeEnvConfig, false)
             );
             const errorPageStaticResult = nonStaticErrorPageSpan.traceAsyncFn(async ()=>{
-                var ref, ref10;
-                return hasCustomErrorPage && staticWorkers.isPageStatic('/_error', distDir, isLikeServerless, runtimeEnvConfig, config.httpAgentOptions, (ref = config.i18n) === null || ref === void 0 ? void 0 : ref.locales, (ref10 = config.i18n) === null || ref10 === void 0 ? void 0 : ref10.defaultLocale);
+                var ref, ref14;
+                return hasCustomErrorPage && staticWorkers.isPageStatic('/_error', distDir, isLikeServerless, runtimeEnvConfig, config.httpAgentOptions, (ref = config.i18n) === null || ref === void 0 ? void 0 : ref.locales, (ref14 = config.i18n) === null || ref14 === void 0 ? void 0 : ref14.defaultLocale);
             });
             // we don't output _app in serverless mode so use _app export
             // from _error instead
@@ -507,8 +507,8 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
                         try {
                             let isPageStaticSpan = checkPageSpan.traceChild('is-page-static');
                             let workerResult = await isPageStaticSpan.traceAsyncFn(()=>{
-                                var ref, ref14;
-                                return staticWorkers.isPageStatic(page, distDir, isLikeServerless, runtimeEnvConfig, config.httpAgentOptions, (ref = config.i18n) === null || ref === void 0 ? void 0 : ref.locales, (ref14 = config.i18n) === null || ref14 === void 0 ? void 0 : ref14.defaultLocale, isPageStaticSpan.id);
+                                var ref, ref22;
+                                return staticWorkers.isPageStatic(page, distDir, isLikeServerless, runtimeEnvConfig, config.httpAgentOptions, (ref = config.i18n) === null || ref === void 0 ? void 0 : ref.locales, (ref22 = config.i18n) === null || ref22 === void 0 ? void 0 : ref22.defaultLocale, isPageStaticSpan.id);
                             });
                             if (config.experimental.outputFileTracing) {
                                 pageTraceIncludes.set(page, workerResult.traceIncludes || []);
@@ -1008,7 +1008,7 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
             });
         }
         const analysisEnd = process.hrtime(analysisBegin);
-        var ref18;
+        var ref30;
         telemetry.record((0, _events).eventBuildOptimize(pagePaths, {
             durationInSeconds: analysisEnd[0],
             staticPageCount: staticPages.size,
@@ -1016,7 +1016,7 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
             serverPropsPageCount: serverPropsPages.size,
             ssrPageCount: pagePaths.length - (staticPages.size + ssgPages.size + serverPropsPages.size),
             hasStatic404: useStatic404,
-            hasReportWebVitals: (ref18 = namedExports === null || namedExports === void 0 ? void 0 : namedExports.includes('reportWebVitals')) !== null && ref18 !== void 0 ? ref18 : false,
+            hasReportWebVitals: (ref30 = namedExports === null || namedExports === void 0 ? void 0 : namedExports.includes('reportWebVitals')) !== null && ref30 !== void 0 ? ref30 : false,
             rewritesCount: combinedRewrites.length,
             headersCount: headers.length,
             redirectsCount: redirects.length - 1,

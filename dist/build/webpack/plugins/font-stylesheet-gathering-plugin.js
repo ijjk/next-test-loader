@@ -67,7 +67,7 @@ class FontStylesheetGatheringPlugin {
                         return result;
                     });
                     const jsxNodeHandler = (node)=>{
-                        var ref, ref5;
+                        var ref, ref6;
                         if (node.arguments.length !== 2) {
                             // A font link tag has only two arguments rel=stylesheet and href='...'
                             return;
@@ -95,7 +95,7 @@ class FontStylesheetGatheringPlugin {
                             return false;
                         }
                         this.gatheredStylesheets.push(props.href);
-                        const buildInfo = parser === null || parser === void 0 ? void 0 : (ref = parser.state) === null || ref === void 0 ? void 0 : (ref5 = ref.module) === null || ref5 === void 0 ? void 0 : ref5.buildInfo;
+                        const buildInfo = parser === null || parser === void 0 ? void 0 : (ref = parser.state) === null || ref === void 0 ? void 0 : (ref6 = ref.module) === null || ref6 === void 0 ? void 0 : ref6.buildInfo;
                         if (buildInfo) {
                             buildInfo.valueDependencies.set(_constants.FONT_MANIFEST, this.gatheredStylesheets);
                         }
@@ -132,8 +132,8 @@ class FontStylesheetGatheringPlugin {
                 let fontStylesheets = this.gatheredStylesheets;
                 const fontUrls = new Set();
                 modules.forEach((module)=>{
-                    var ref, ref9;
-                    const fontDependencies = module === null || module === void 0 ? void 0 : (ref = module.buildInfo) === null || ref === void 0 ? void 0 : (ref9 = ref.valueDependencies) === null || ref9 === void 0 ? void 0 : ref9.get(_constants.FONT_MANIFEST);
+                    var ref, ref1;
+                    const fontDependencies = module === null || module === void 0 ? void 0 : (ref = module.buildInfo) === null || ref === void 0 ? void 0 : (ref1 = ref.valueDependencies) === null || ref1 === void 0 ? void 0 : ref1.get(_constants.FONT_MANIFEST);
                     if (fontDependencies) {
                         fontDependencies.forEach((v)=>fontUrls.add(v)
                         );

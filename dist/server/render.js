@@ -859,7 +859,7 @@ function renderToStream(element, generateStaticHTML) {
             enumerable: true
         });
         let resolved = false;
-        const doResolve = ()=>{
+        const doResolve = (startWriting)=>{
             if (!resolved) {
                 resolved = true;
                 resolve((res, next)=>{
@@ -893,11 +893,11 @@ function renderToStream(element, generateStaticHTML) {
             },
             onCompleteShell () {
                 if (!generateStaticHTML) {
-                    doResolve();
+                    doResolve(startWriting);
                 }
             },
             onCompleteAll () {
-                doResolve();
+                doResolve(startWriting);
             }
         });
     });

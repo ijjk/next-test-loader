@@ -484,7 +484,7 @@ class HotReloader {
         }
     }
     async getCompilationErrors(page) {
-        var ref, ref5;
+        var ref, ref6;
         const normalizedPage = (0, _normalizePagePath).normalizePathSep(page);
         if (this.clientError || this.serverError) {
             return [
@@ -499,7 +499,7 @@ class HotReloader {
             }
             // If none were found we still have to show the other errors
             return this.stats.compilation.errors;
-        } else if ((ref5 = this.serverStats) === null || ref5 === void 0 ? void 0 : ref5.hasErrors()) {
+        } else if ((ref6 = this.serverStats) === null || ref6 === void 0 ? void 0 : ref6.hasErrors()) {
             const { compilation  } = this.serverStats;
             const failedPages = erroredPages(compilation);
             // If there is an error related to the requesting page we display it instead of the first error

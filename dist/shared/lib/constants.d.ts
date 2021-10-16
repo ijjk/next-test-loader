@@ -15,7 +15,7 @@ export declare const REACT_LOADABLE_MANIFEST = "react-loadable-manifest.json";
 export declare const FONT_MANIFEST = "font-manifest.json";
 export declare const SERVER_DIRECTORY = "server";
 export declare const SERVERLESS_DIRECTORY = "serverless";
-export declare const CONFIG_FILE = "next.config.js";
+export declare const CONFIG_FILES: string[];
 export declare const BUILD_ID_FILE = "BUILD_ID";
 export declare const BLOCKED_PAGES: string[];
 export declare const CLIENT_PUBLIC_FILES_PATH = "public";

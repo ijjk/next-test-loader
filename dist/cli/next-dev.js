@@ -87,9 +87,7 @@ const nextDev = (argv)=>{
         (0, _utils).printAndExit(`> No such directory exists as the project root: ${dir}`);
     }
     async function preflight() {
-        const { getPackageVersion  } = await Promise.resolve().then(function() {
-            return _interopRequireWildcard(require('../lib/get-package-version'));
-        });
+        const { getPackageVersion  } = await Promise.resolve(require('../lib/get-package-version'));
         const [sassVersion, nodeSassVersion] = await Promise.all([
             getPackageVersion({
                 cwd: dir,

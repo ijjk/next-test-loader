@@ -243,10 +243,10 @@ class TraceEntryPointsPlugin {
                         });
                         if (curExtraEntries) {
                             for (const extraEntry of curExtraEntries.keys()){
-                                var ref;
+                                var ref1;
                                 const normalizedExtraEntry = _path.default.relative(root, extraEntry);
                                 finalDeps.add(extraEntry);
-                                (ref = parentFilesMap.get(normalizedExtraEntry)) === null || ref === void 0 ? void 0 : ref.forEach((dep)=>{
+                                (ref1 = parentFilesMap.get(normalizedExtraEntry)) === null || ref1 === void 0 ? void 0 : ref1.forEach((dep)=>{
                                     finalDeps.add(_path.default.join(root, dep));
                                 });
                             }
@@ -294,18 +294,24 @@ class TraceEntryPointsPlugin {
                                     return reject(new Error('module not found'));
                                 }
                                 try {
+                                    // we need to collect all parent package.json's used
+                                    // as webpack's resolve doesn't expose this and parent
+                                    // package.json could be needed for resolving e.g. stylis
+                                    // stylis/package.json -> stylis/dist/umd/package.json
                                     if (result.includes('node_modules')) {
-                                        let requestPath = result;
+                                        let requestPath = result.replace(/\\/g, '/');
                                         if (!_path.default.isAbsolute(request) && request.includes('/') && (resContext === null || resContext === void 0 ? void 0 : resContext.descriptionFileRoot)) {
                                             var ref;
-                                            requestPath = resContext.descriptionFileRoot + request.substr(((ref = getPkgName(request)) === null || ref === void 0 ? void 0 : ref.length) || 0) + _path.default.sep + 'package.json';
+                                            requestPath = (resContext.descriptionFileRoot + request.substr(((ref = getPkgName(request)) === null || ref === void 0 ? void 0 : ref.length) || 0) + _path.default.sep + 'package.json').replace(/\\/g, '/');
                                         }
-                                        // the descriptionFileRoot is not set to the last used
-                                        // package.json so we use nft's resolving for this
-                                        // see test/integration/build-trace-extra-entries/app/node_modules/nested-structure for example
-                                        const packageJsonResult = await job.getPjsonBoundary(requestPath);
-                                        if (packageJsonResult) {
-                                            await job.emitFile(packageJsonResult + _path.default.sep + 'package.json', 'resolve', parent);
+                                        const rootSeparatorIndex = requestPath.indexOf('/');
+                                        let separatorIndex;
+                                        while((separatorIndex = requestPath.lastIndexOf('/')) > rootSeparatorIndex){
+                                            requestPath = requestPath.substr(0, separatorIndex);
+                                            const curPackageJsonPath = `${requestPath}/package.json`;
+                                            if (await job.isFile(curPackageJsonPath)) {
+                                                await job.emitFile(curPackageJsonPath, 'resolve', parent);
+                                            }
                                         }
                                     }
                                 } catch (_err) {

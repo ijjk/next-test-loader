@@ -10,7 +10,7 @@ exports.isResSent = isResSent;
 exports.normalizeRepeatedSlashes = normalizeRepeatedSlashes;
 exports.loadGetInitialProps = loadGetInitialProps;
 exports.formatWithValidation = formatWithValidation;
-exports.ST = exports.SP = exports.HtmlContext = exports.urlObjectKeys = void 0;
+exports.HtmlContext = exports.ST = exports.SP = exports.urlObjectKeys = void 0;
 var _formatUrl = require("./router/utils/format-url");
 var _react = require("react");
 function execOnce(fn) {

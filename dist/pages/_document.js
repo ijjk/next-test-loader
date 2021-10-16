@@ -358,10 +358,10 @@ class Head extends _react.Component {
                 var ref;
                 const isReactHelmet = child === null || child === void 0 ? void 0 : (ref = child.props) === null || ref === void 0 ? void 0 : ref['data-react-helmet'];
                 if (!isReactHelmet) {
-                    var ref;
+                    var ref6;
                     if ((child === null || child === void 0 ? void 0 : child.type) === 'title') {
                         console.warn("Warning: <title> should not be used in _document.js's <Head>. https://nextjs.org/docs/messages/no-document-title");
-                    } else if ((child === null || child === void 0 ? void 0 : child.type) === 'meta' && (child === null || child === void 0 ? void 0 : (ref = child.props) === null || ref === void 0 ? void 0 : ref.name) === 'viewport') {
+                    } else if ((child === null || child === void 0 ? void 0 : child.type) === 'meta' && (child === null || child === void 0 ? void 0 : (ref6 = child.props) === null || ref6 === void 0 ? void 0 : ref6.name) === 'viewport') {
                         console.warn("Warning: viewport meta tags should not be used in _document.js's <Head>. https://nextjs.org/docs/messages/no-document-viewport-meta");
                     }
                 }

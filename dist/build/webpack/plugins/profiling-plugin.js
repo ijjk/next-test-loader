@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-exports.spans = exports.webpackInvalidSpans = void 0;
+exports.webpackInvalidSpans = exports.spans = void 0;
 var _webpack = require("next/dist/compiled/webpack/webpack");
 const pluginName = 'ProfilingPlugin';
 const spans = new WeakMap();
