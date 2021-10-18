@@ -28,6 +28,7 @@ function getGlobalCssLoader(ctx, postCssPlugins, preProcessors = []) {
             importLoaders: 1 + preProcessors.length,
             // Next.js controls CSS Modules eligibility:
             modules: false,
+            // noop
             url: _fileResolve.cssFileResolve,
             import: (url, _, resourcePath)=>(0, _fileResolve).cssFileResolve(url, resourcePath)
         }

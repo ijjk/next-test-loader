@@ -4,6 +4,7 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.images = void 0;
 var _lodashCurry = _interopRequireDefault(require("next/dist/compiled/lodash.curry"));
+var _webpackConfig = require("../../../../webpack-config");
 var _helpers = require("../../helpers");
 var _utils = require("../../utils");
 var _messages = require("./messages");
@@ -17,7 +18,7 @@ const images = (0, _lodashCurry).default(async function images(_ctx, config) {
         (0, _helpers).loader({
             oneOf: [
                 {
-                    test: /\.(png|jpg|jpeg|gif|webp|avif|ico|bmp|svg)$/i,
+                    test: _webpackConfig.nextImageLoaderRegex,
                     use: {
                         loader: 'error-loader',
                         options: {

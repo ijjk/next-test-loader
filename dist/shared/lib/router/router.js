@@ -715,10 +715,6 @@ class Router {
             }
             Router.events.emit('beforeHistoryChange', as, routeProps);
             this.changeState(method, url, as, options);
-            if (process.env.NODE_ENV !== 'production') {
-                const appComp = this.components['/_app'].Component;
-                window.next.isPrerendered = appComp.getInitialProps === appComp.origGetInitialProps && !routeInfo.Component.getInitialProps;
-            }
             if (options._h && pathname === '/_error' && ((ref = self.__NEXT_DATA__.props) === null || ref === void 0 ? void 0 : (ref1 = ref.pageProps) === null || ref1 === void 0 ? void 0 : ref1.statusCode) === 500 && (props === null || props === void 0 ? void 0 : props.pageProps)) {
                 // ensure statusCode is still correct for static 500 page
                 // when updating query information

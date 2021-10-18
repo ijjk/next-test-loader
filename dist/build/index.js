@@ -952,13 +952,11 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
                                 // TODO: do we want to show all locale variants in build output
                                 for (const locale of i18n.locales){
                                     const localePage = `/${locale}${page1 === '/' ? '' : page1}`;
-                                    if (!ssgNotFoundPaths.includes(localePage)) {
-                                        finalPrerenderRoutes[localePage] = {
-                                            initialRevalidateSeconds: exportConfig.initialPageRevalidationMap[localePage],
-                                            srcRoute: null,
-                                            dataRoute: _path.default.posix.join('/_next/data', buildId, `${file}.json`)
-                                        };
-                                    }
+                                    finalPrerenderRoutes[localePage] = {
+                                        initialRevalidateSeconds: exportConfig.initialPageRevalidationMap[localePage],
+                                        srcRoute: null,
+                                        dataRoute: _path.default.posix.join('/_next/data', buildId, `${file}.json`)
+                                    };
                                 }
                             } else {
                                 finalPrerenderRoutes[page1] = {

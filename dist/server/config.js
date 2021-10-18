@@ -383,7 +383,8 @@ async function loadConfig(phase, dir, customConfig) {
         var ref;
         let userConfigModule;
         try {
-            userConfigModule = await import(path);
+            // we must use file for absolute dynamic imports on Windows
+            userConfigModule = await import(`file://${path}`);
         } catch (err) {
             console.error(_chalk.default.red('Error:') + ' failed to load next.config.js, see more info here https://nextjs.org/docs/messages/next-config-error');
             throw err;

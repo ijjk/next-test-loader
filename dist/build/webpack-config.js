@@ -115,7 +115,7 @@ function getOptimizedAliases(isServer) {
         'object.assign/polyfill': _path.default.join(shimAssign, 'polyfill.js'),
         'object.assign/shim': _path.default.join(shimAssign, 'shim.js'),
         // Replace: full URL polyfill with platform-based polyfill
-        url: require.resolve('native-url')
+        url: require.resolve('next/dist/compiled/native-url')
     });
 }
 function attachReactRefresh(webpackConfig, targetLoader) {
@@ -401,7 +401,6 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
             ...nodePathList
         ],
         alias: {
-            // noop
             next: _constants.NEXT_PROJECT_ROOT,
             ...customAppAliases,
             ...customErrorAlias,
@@ -1021,7 +1020,7 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
             new _wellknownErrorsPlugin.WellKnownErrorsPlugin(),
             !isServer && new _copyFilePlugin.CopyFilePlugin({
                 filePath: require.resolve('./polyfills/polyfill-nomodule'),
-                cacheKey: "11.1.3-canary.77",
+                cacheKey: "11.1.3-canary.81",
                 name: `static/chunks/polyfills${dev ? '' : '-[hash]'}.js`,
                 minimize: false,
                 info: {
@@ -1136,7 +1135,7 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
         // Includes:
         //  - Next.js version
         //  - next.config.js keys that affect compilation
-        version: `${"11.1.3-canary.77"}|${configVars}`,
+        version: `${"11.1.3-canary.81"}|${configVars}`,
         cacheDirectory: _path.default.join(distDir, 'cache', 'webpack')
     };
     // Adds `next.config.js` as a buildDependency when custom webpack config is provided
