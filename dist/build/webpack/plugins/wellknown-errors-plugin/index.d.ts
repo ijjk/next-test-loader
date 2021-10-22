@@ -1,4 +1,4 @@
-import { webpack } from 'next/dist/compiled/webpack/webpack';
+import type webpack5 from 'webpack5';
 export declare class WellKnownErrorsPlugin {
-    apply(compiler: webpack.Compiler): void;
+    apply(compiler: webpack5.Compiler): void;
 }

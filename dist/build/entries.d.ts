@@ -2,6 +2,9 @@ import { __ApiPreviewProps } from '../server/api-utils';
 import { LoadedEnvFiles } from '@next/env';
 import { NextConfigComplete } from '../server/config-shared';
 import type webpack5 from 'webpack5';
+declare type ObjectValue<T> = T extends {
+    [key: string]: infer V;
+} ? V : never;
 declare type PagesMapping = {
     [page: string]: string;
 };
@@ -11,5 +14,9 @@ declare type Entrypoints = {
     server: webpack5.EntryObject;
 };
 export declare function createEntrypoints(pages: PagesMapping, target: 'server' | 'serverless' | 'experimental-serverless-trace', buildId: string, previewMode: __ApiPreviewProps, config: NextConfigComplete, loadedEnvFiles: LoadedEnvFiles): Entrypoints;
-export declare function finalizeEntrypoint(name: string, value: any, isServer: boolean): any;
+export declare function finalizeEntrypoint({ name, value, isServer, }: {
+    isServer: boolean;
+    name: string;
+    value: ObjectValue<webpack5.EntryObject>;
+}): ObjectValue<webpack5.EntryObject>;
 export {};

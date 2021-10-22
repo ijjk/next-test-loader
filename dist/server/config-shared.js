@@ -69,13 +69,14 @@ const defaultConfig = {
     httpAgentOptions: {
         keepAlive: true
     },
+    staticPageGenerationTimeout: 60,
     experimental: {
         swcLoader: false,
         swcMinify: false,
         cpus: Math.max(1, (Number(process.env.CIRCLE_NODE_TOTAL) || (_os.default.cpus() || {
             length: 1
         }).length) - 1),
-        sharedPool: false,
+        sharedPool: true,
         plugins: false,
         profiling: false,
         isrFlushToDisk: true,
@@ -90,7 +91,6 @@ const defaultConfig = {
         gzipSize: true,
         craCompat: false,
         esmExternals: true,
-        staticPageGenerationTimeout: 60,
         // default to 50MB limit
         isrMemoryCacheSize: 50 * 1024 * 1024,
         outputFileTracing: false,

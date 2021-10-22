@@ -80,6 +80,14 @@ function createEntrypoints(pages, target, buildId, previewMode, config, loadedEn
         const clientBundlePath = _path.posix.join('pages', bundleFile);
         const serverBundlePath = _path.posix.join('pages', bundleFile);
         const isLikeServerless = (0, _config).isTargetLikeServerless(target);
+        if (page.match(_constants.MIDDLEWARE_ROUTE)) {
+            const loaderOpts = {
+                absolutePagePath: pages[page],
+                page
+            };
+            client[clientBundlePath] = `next-middleware-loader?${(0, _querystring).stringify(loaderOpts)}!`;
+            return;
+        }
         if (isApiRoute && isLikeServerless) {
             const serverlessLoaderOptions = {
                 page,
@@ -122,44 +130,40 @@ function createEntrypoints(pages, target, buildId, previewMode, config, loadedEn
         server
     };
 }
-function finalizeEntrypoint(name, value, isServer) {
+function finalizeEntrypoint({ name , value , isServer  }) {
+    const entry = typeof value !== 'object' || Array.isArray(value) ? {
+        import: value
+    } : value;
     if (isServer) {
         const isApi = name.startsWith('pages/api/');
-        const runtime = isApi ? 'webpack-api-runtime' : 'webpack-runtime';
-        const layer = isApi ? 'api' : undefined;
-        const publicPath = isApi ? '' : undefined;
-        if (typeof value === 'object' && !Array.isArray(value)) {
-            return {
-                publicPath,
-                runtime,
-                layer,
-                ...value
-            };
-        } else {
-            return {
-                import: value,
-                publicPath,
-                runtime,
-                layer
-            };
-        }
-    } else {
-        if (name !== 'polyfills' && name !== 'main' && name !== 'amp' && name !== 'react-refresh') {
-            const dependOn = name.startsWith('pages/') && name !== 'pages/_app' ? 'pages/_app' : 'main';
-            if (typeof value === 'object' && !Array.isArray(value)) {
-                return {
-                    dependOn,
-                    ...value
-                };
-            } else {
-                return {
-                    import: value,
-                    dependOn
-                };
-            }
-        }
+        return {
+            publicPath: isApi ? '' : undefined,
+            runtime: isApi ? 'webpack-api-runtime' : 'webpack-runtime',
+            layer: isApi ? 'api' : undefined,
+            ...entry
+        };
     }
-    return value;
+    if (name.match(_constants.MIDDLEWARE_ROUTE)) {
+        return {
+            filename: 'server/[name].js',
+            layer: 'middleware',
+            library: {
+                name: [
+                    '_ENTRIES',
+                    `middleware_[name]`
+                ],
+                type: 'assign'
+            },
+            ...entry
+        };
+    }
+    if (name !== 'polyfills' && name !== 'main' && name !== 'amp' && name !== 'react-refresh') {
+        return {
+            dependOn: name.startsWith('pages/') && name !== 'pages/_app' ? 'pages/_app' : 'main',
+            ...entry
+        };
+    }
+    return entry;
 }
 
 //# sourceMappingURL=entries.js.map

@@ -6,6 +6,7 @@ exports.default = build;
 var _env = require("@next/env");
 var _chalk = _interopRequireDefault(require("chalk"));
 var _crypto = _interopRequireDefault(require("crypto"));
+var _micromatch = require("next/dist/compiled/micromatch");
 var _fs = require("fs");
 var _worker = require("../lib/worker");
 var _devalue = _interopRequireDefault(require("next/dist/compiled/devalue"));
@@ -73,6 +74,7 @@ function _interopRequireWildcard(obj) {
         return newObj;
     }
 }
+const RESERVED_PAGE = /^\/(_app|_error|_document|api(\/|$))/;
 async function build(dir, conf = null, reactProductionProfiling = false, debugOutput = false, runLint = true) {
     const nextBuildSpan = (0, _trace).trace('next-build');
     const buildResult = await nextBuildSpan.traceAsyncFn(async ()=>{
@@ -167,9 +169,14 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
         const entrypoints = nextBuildSpan.traceChild('create-entrypoints').traceFn(()=>(0, _entries).createEntrypoints(mappedPages, target, buildId, previewProps, config, loadedEnvFiles)
         );
         const pageKeys = Object.keys(mappedPages);
+        const hasMiddleware = pageKeys.some((page)=>_constants.MIDDLEWARE_ROUTE.test(page)
+        );
         const conflictingPublicFiles = [];
         const hasCustomErrorPage = mappedPages['/_error'].startsWith('private-next-pages');
         const hasPages404 = Boolean(mappedPages['/404'] && mappedPages['/404'].startsWith('private-next-pages'));
+        if (hasMiddleware) {
+            console.warn(_chalk.default.bold.yellow(`Warning: `) + _chalk.default.yellow(`using beta Middleware (not covered by semver) - https://nextjs.org/docs/messages/beta-middleware`));
+        }
         if (hasPublicDir) {
             const hasPublicUnderScoreNextDir = await (0, _fileExists).fileExists(_path.default.join(publicDir, '_next'));
             if (hasPublicUnderScoreNextDir) {
@@ -230,15 +237,10 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
                 ),
                 headers: headers.map((r)=>buildCustomRoute(r, 'header')
                 ),
-                dynamicRoutes: (0, _utils).getSortedRoutes(pageKeys).filter(_utils.isDynamicRoute).map((page)=>{
-                    const routeRegex = (0, _utils).getRouteRegex(page);
-                    return {
-                        page,
-                        regex: (0, _loadCustomRoutes).normalizeRouteRegex(routeRegex.re.source),
-                        routeKeys: routeRegex.routeKeys,
-                        namedRegex: routeRegex.namedRegex
-                    };
-                }),
+                dynamicRoutes: (0, _utils).getSortedRoutes(pageKeys).filter((page)=>(0, _utils).isDynamicRoute(page) && !page.match(_constants.MIDDLEWARE_ROUTE)
+                ).map(pageToRoute),
+                staticRoutes: (0, _utils).getSortedRoutes(pageKeys).filter((page)=>!(0, _utils).isDynamicRoute(page) && !page.match(_constants.MIDDLEWARE_ROUTE) && !page.match(RESERVED_PAGE)
+                ).map(pageToRoute),
                 dataRoutes: [],
                 i18n: config.i18n || undefined
             })
@@ -376,13 +378,13 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
         if (buildSpinner) {
             buildSpinner.stopAndPersist();
         }
-        result = nextBuildSpan.traceChild('format-webpack-messages').traceFn(()=>(0, _formatWebpackMessages).default(result)
+        result = nextBuildSpan.traceChild('format-webpack-messages').traceFn(()=>(0, _formatWebpackMessages).default(result, true)
         );
         if (result.errors.length > 0) {
-            // Only keep the first error. Others are often indicative
+            // Only keep the first few errors. Others are often indicative
             // of the same problem, but confuse the reader with noise.
-            if (result.errors.length > 1) {
-                result.errors.length = 1;
+            if (result.errors.length > 5) {
+                result.errors.length = 5;
             }
             const error = result.errors.join('\n\n');
             console.error(_chalk.default.red('Failed to compile.\n'));
@@ -395,9 +397,13 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
             console.error(error);
             console.error();
             if (error.indexOf('private-next-pages') > -1 || error.indexOf('__next_polyfill__') > -1) {
-                throw new Error('> webpack config.resolve.alias was incorrectly overridden. https://nextjs.org/docs/messages/invalid-resolve-alias');
+                const err = new Error('webpack config.resolve.alias was incorrectly overridden. https://nextjs.org/docs/messages/invalid-resolve-alias');
+                err.code = 'INVALID_RESOLVE_ALIAS';
+                throw err;
             }
-            throw new Error('> Build failed because of webpack errors');
+            const err = new Error('Build failed because of webpack errors');
+            err.code = 'WEBPACK_ERRORS';
+            throw err;
         } else {
             telemetry.record((0, _events).eventBuildCompleted(pagePaths, {
                 durationInSeconds: webpackBuildEnd[0]
@@ -428,7 +434,7 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
         const pageInfos = new Map();
         const pagesManifest = JSON.parse(await _fs.promises.readFile(manifestPath, 'utf8'));
         const buildManifest = JSON.parse(await _fs.promises.readFile(buildManifestPath, 'utf8'));
-        const timeout = config.experimental.staticPageGenerationTimeout || 0;
+        const timeout = config.staticPageGenerationTimeout || 0;
         const sharedPool = config.experimental.sharedPool || false;
         const staticWorker = sharedPool ? require.resolve('./worker') : require.resolve('./utils');
         let infoPrinted = false;
@@ -470,16 +476,17 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
         const staticCheckSpan = nextBuildSpan.traceChild('static-check');
         const { customAppGetInitialProps , namedExports , isNextImageImported , hasSsrAmpPages , hasNonStaticErrorPage ,  } = await staticCheckSpan.traceAsyncFn(async ()=>{
             process.env.NEXT_PHASE = _constants1.PHASE_PRODUCTION_BUILD;
+            const { configFileName , publicRuntimeConfig , serverRuntimeConfig  } = config;
             const runtimeEnvConfig = {
-                publicRuntimeConfig: config.publicRuntimeConfig,
-                serverRuntimeConfig: config.serverRuntimeConfig
+                publicRuntimeConfig,
+                serverRuntimeConfig
             };
             const nonStaticErrorPageSpan = staticCheckSpan.traceChild('check-static-error-page');
             const errorPageHasCustomGetInitialProps = nonStaticErrorPageSpan.traceAsyncFn(async ()=>hasCustomErrorPage && await staticWorkers.hasCustomGetInitialProps('/_error', distDir, isLikeServerless, runtimeEnvConfig, false)
             );
             const errorPageStaticResult = nonStaticErrorPageSpan.traceAsyncFn(async ()=>{
                 var ref, ref14;
-                return hasCustomErrorPage && staticWorkers.isPageStatic('/_error', distDir, isLikeServerless, runtimeEnvConfig, config.httpAgentOptions, (ref = config.i18n) === null || ref === void 0 ? void 0 : ref.locales, (ref14 = config.i18n) === null || ref14 === void 0 ? void 0 : ref14.defaultLocale);
+                return hasCustomErrorPage && staticWorkers.isPageStatic('/_error', distDir, isLikeServerless, configFileName, runtimeEnvConfig, config.httpAgentOptions, (ref = config.i18n) === null || ref === void 0 ? void 0 : ref.locales, (ref14 = config.i18n) === null || ref14 === void 0 ? void 0 : ref14.defaultLocale);
             });
             // we don't output _app in serverless mode so use _app export
             // from _error instead
@@ -502,13 +509,12 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
                     let isStatic = false;
                     let isHybridAmp = false;
                     let ssgPageRoutes = null;
-                    const nonReservedPage = !page.match(/^\/(_app|_error|_document|api(\/|$))/);
-                    if (nonReservedPage) {
+                    if (!page.match(_constants.MIDDLEWARE_ROUTE) && !page.match(RESERVED_PAGE)) {
                         try {
                             let isPageStaticSpan = checkPageSpan.traceChild('is-page-static');
                             let workerResult = await isPageStaticSpan.traceAsyncFn(()=>{
                                 var ref, ref22;
-                                return staticWorkers.isPageStatic(page, distDir, isLikeServerless, runtimeEnvConfig, config.httpAgentOptions, (ref = config.i18n) === null || ref === void 0 ? void 0 : ref.locales, (ref22 = config.i18n) === null || ref22 === void 0 ? void 0 : ref22.defaultLocale, isPageStaticSpan.id);
+                                return staticWorkers.isPageStatic(page, distDir, isLikeServerless, configFileName, runtimeEnvConfig, config.httpAgentOptions, (ref = config.i18n) === null || ref === void 0 ? void 0 : ref.locales, (ref22 = config.i18n) === null || ref22 === void 0 ? void 0 : ref22.defaultLocale, isPageStaticSpan.id);
                             });
                             if (config.experimental.outputFileTracing) {
                                 pageTraceIncludes.set(page, workerResult.traceIncludes || []);
@@ -594,52 +600,138 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
             requiredServerFiles.ignore.push(_path.default.relative(dir, _path.default.join(_path.default.dirname(require.resolve('next/dist/compiled/@ampproject/toolbox-optimizer')), '**/*')));
         }
         if (config.experimental.outputFileTracing) {
-            const globOrig = require('next/dist/compiled/glob');
-            const glob = (pattern)=>{
-                return new Promise((resolve, reject)=>{
-                    globOrig(pattern, {
-                        cwd: dir
-                    }, (err, files)=>{
-                        if (err) {
-                            return reject(err);
-                        }
-                        resolve(files);
+            const { nodeFileTrace  } = require('next/dist/compiled/@vercel/nft');
+            const includeExcludeSpan = nextBuildSpan.traceChild('apply-include-excludes');
+            await includeExcludeSpan.traceAsyncFn(async ()=>{
+                const globOrig = require('next/dist/compiled/glob');
+                const glob = (pattern)=>{
+                    return new Promise((resolve, reject)=>{
+                        globOrig(pattern, {
+                            cwd: dir
+                        }, (err, files)=>{
+                            if (err) {
+                                return reject(err);
+                            }
+                            resolve(files);
+                        });
                     });
+                };
+                for (let page of pageKeys){
+                    await includeExcludeSpan.traceChild('include-exclude', {
+                        page
+                    }).traceAsyncFn(async ()=>{
+                        const includeGlobs = pageTraceIncludes.get(page);
+                        const excludeGlobs = pageTraceExcludes.get(page);
+                        page = (0, _normalizePagePath).normalizePagePath(page);
+                        if (!(includeGlobs === null || includeGlobs === void 0 ? void 0 : includeGlobs.length) && !(excludeGlobs === null || excludeGlobs === void 0 ? void 0 : excludeGlobs.length)) {
+                            return;
+                        }
+                        const traceFile = _path.default.join(distDir, 'server/pages', `${page}.js.nft.json`);
+                        const pageDir = _path.default.dirname(traceFile);
+                        const traceContent = JSON.parse(await _fs.promises.readFile(traceFile, 'utf8'));
+                        let includes = [];
+                        if (includeGlobs === null || includeGlobs === void 0 ? void 0 : includeGlobs.length) {
+                            for (const includeGlob of includeGlobs){
+                                const results = await glob(includeGlob);
+                                includes.push(...results.map((file)=>{
+                                    return(_path.default.relative(pageDir, _path.default.join(dir, file)));
+                                }));
+                            }
+                        }
+                        const combined = new Set([
+                            ...traceContent.files,
+                            ...includes
+                        ]);
+                        if (excludeGlobs === null || excludeGlobs === void 0 ? void 0 : excludeGlobs.length) {
+                            const resolvedGlobs = excludeGlobs.map((exclude)=>_path.default.join(dir, exclude)
+                            );
+                            combined.forEach((file)=>{
+                                if ((0, _micromatch).isMatch(_path.default.join(pageDir, file), resolvedGlobs)) {
+                                    combined.delete(file);
+                                }
+                            });
+                        }
+                        await _fs.promises.writeFile(traceFile, JSON.stringify({
+                            version: traceContent.version,
+                            files: [
+                                ...combined
+                            ]
+                        }));
+                    });
+                }
+            });
+            // TODO: move this inside of webpack so it can be cached
+            // between builds. Should only need to be re-run on lockfile change
+            await nextBuildSpan.traceChild('trace-next-server').traceAsyncFn(async ()=>{
+                let cacheKey;
+                // consider all lockFiles in tree in case user accidentally
+                // has both package-lock.json and yarn.lock
+                const lockFiles = (await Promise.all([
+                    'package-lock.json',
+                    'yarn.lock',
+                    'pnpm-lock.yaml'
+                ].map((file)=>(0, _findUp).default(file, {
+                        cwd: dir
+                    })
+                ))).filter(Boolean)// TypeScript doesn't like this filter
+                ;
+                const nextServerTraceOutput = _path.default.join(distDir, 'next-server.js.nft.json');
+                const cachedTracePath = _path.default.join(distDir, 'cache/next-server.js.nft.json');
+                if (lockFiles.length > 0) {
+                    const cacheHash = require('crypto').createHash('sha256');
+                    cacheHash.update(require('next/package').version);
+                    await Promise.all(lockFiles.map(async (lockFile)=>{
+                        cacheHash.update(await _fs.promises.readFile(lockFile));
+                    }));
+                    cacheKey = cacheHash.digest('hex');
+                    try {
+                        const existingTrace = JSON.parse(await _fs.promises.readFile(cachedTracePath, 'utf8'));
+                        if (existingTrace.cacheKey === cacheKey) {
+                            await _fs.promises.copyFile(cachedTracePath, nextServerTraceOutput);
+                            return;
+                        }
+                    } catch (_) {
+                    }
+                }
+                const root = _path.default.parse(dir).root;
+                const serverResult = await nodeFileTrace([
+                    require.resolve('next/dist/server/next-server')
+                ], {
+                    base: root,
+                    processCwd: dir,
+                    ignore: [
+                        '**/next/dist/pages/**/*',
+                        '**/next/dist/server/image-optimizer.js',
+                        '**/next/dist/compiled/@ampproject/toolbox-optimizer/**/*',
+                        '**/next/dist/server/lib/squoosh/**/*.wasm',
+                        '**/next/dist/compiled/webpack/(bundle4|bundle5).js',
+                        '**/node_modules/react/**/*.development.js',
+                        '**/node_modules/react-dom/**/*.development.js',
+                        '**/node_modules/use-subscription/**/*.development.js',
+                        '**/node_modules/sharp/**/*',
+                        '**/node_modules/webpack5/**/*', 
+                    ]
                 });
-            };
-            for (const page of pageKeys){
-                const includeGlobs = pageTraceIncludes.get(page);
-                const excludeGlobs = pageTraceExcludes.get(page);
-                if (!(includeGlobs === null || includeGlobs === void 0 ? void 0 : includeGlobs.length) && !(excludeGlobs === null || excludeGlobs === void 0 ? void 0 : excludeGlobs.length)) {
-                    continue;
-                }
-                const traceFile = _path.default.join(distDir, 'server/pages', `${page}.js.nft.json`);
-                const traceContent = JSON.parse(await _fs.promises.readFile(traceFile, 'utf8'));
-                let includes = [];
-                let excludes = [];
-                if (includeGlobs === null || includeGlobs === void 0 ? void 0 : includeGlobs.length) {
-                    for (const includeGlob of includeGlobs){
-                        includes.push(...await glob(includeGlob));
+                const tracedFiles = new Set();
+                serverResult.fileList.forEach((file)=>{
+                    const reason = serverResult.reasons.get(file);
+                    if ((reason === null || reason === void 0 ? void 0 : reason.type) === 'initial') {
+                        return;
                     }
-                }
-                if (excludeGlobs === null || excludeGlobs === void 0 ? void 0 : excludeGlobs.length) {
-                    for (const excludeGlob of excludeGlobs){
-                        excludes.push(...await glob(excludeGlob));
-                    }
-                }
-                const combined = new Set([
-                    ...traceContent.files,
-                    ...includes
-                ]);
-                excludes.forEach((file)=>combined.delete(file)
-                );
-                await _fs.promises.writeFile(traceFile, JSON.stringify({
-                    version: traceContent.version,
+                    tracedFiles.add(_path.default.relative(distDir, _path.default.join(root, file)));
+                });
+                await _fs.promises.writeFile(nextServerTraceOutput, JSON.stringify({
+                    version: 1,
+                    cacheKey,
                     files: [
-                        ...combined
+                        ...tracedFiles
                     ]
                 }));
-            }
+                await _fs.promises.unlink(cachedTracePath).catch(()=>{
+                });
+                await _fs.promises.copyFile(nextServerTraceOutput, cachedTracePath).catch(()=>{
+                });
+            });
         }
         if (serverPropsPages.size > 0 || ssgPages.size > 0) {
             // We update the routes manifest after the build with the
@@ -674,10 +766,12 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
         // Only export the static 404 when there is no /_error present
         const useStatic404 = !customAppGetInitialProps && (!hasNonStaticErrorPage || hasPages404);
         if (invalidPages.size > 0) {
-            throw new Error(`Build optimization failed: found page${invalidPages.size === 1 ? '' : 's'} without a React Component as default export in \n${[
+            const err = new Error(`Build optimization failed: found page${invalidPages.size === 1 ? '' : 's'} without a React Component as default export in \n${[
                 ...invalidPages
             ].map((pg)=>`pages${pg}`
             ).join('\n')}\n\nSee https://nextjs.org/docs/messages/page-without-valid-component for more info.\n`);
+            err.code = 'BUILD_OPTIMIZATION_FAILED';
+            throw err;
         }
         await (0, _writeBuildId).writeBuildId(distDir, buildId);
         if (config.experimental.optimizeCss) {
@@ -690,6 +784,7 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
             invocationCount: config.experimental.optimizeCss ? 1 : 0
         };
         telemetry.record({
+            // noop
             eventName: _events.EVENT_BUILD_FEATURE_USAGE,
             payload: optimizeCss
         });
@@ -1023,6 +1118,8 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
             rewritesWithHasCount: combinedRewrites.filter((r)=>!!r.has
             ).length,
             redirectsWithHasCount: redirects.filter((r)=>!!r.has
+            ).length,
+            middlewareCount: pageKeys.filter((page)=>_constants.MIDDLEWARE_ROUTE.test(page)
             ).length
         }));
         const telemetryPlugin = (ref5 = clientConfig.plugins) === null || ref5 === void 0 ? void 0 : ref5.find(isTelemetryPlugin);
@@ -1069,6 +1166,8 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
             };
             await _fs.promises.writeFile(_path.default.join(distDir, _constants1.PRERENDER_MANIFEST), JSON.stringify(prerenderManifest), 'utf8');
         }
+        const middlewareManifest = JSON.parse(await _fs.promises.readFile(_path.default.join(distDir, _constants1.SERVER_DIRECTORY, _constants1.MIDDLEWARE_MANIFEST), 'utf8'));
+        await _fs.promises.writeFile(_path.default.join(distDir, _constants1.CLIENT_STATIC_FILES_PATH, buildId, '_middlewareManifest.js'), `self.__MIDDLEWARE_MANIFEST=${(0, _devalue).default(middlewareManifest.sortedMiddleware)};self.__MIDDLEWARE_MANIFEST_CB&&self.__MIDDLEWARE_MANIFEST_CB()`);
         const images = {
             ...config.images
         };
@@ -1140,6 +1239,15 @@ function generateClientSsgManifest(prerenderManifest, { buildId , distDir , loca
 }
 function isTelemetryPlugin(plugin) {
     return plugin instanceof _telemetryPlugin.TelemetryPlugin;
+}
+function pageToRoute(page) {
+    const routeRegex = (0, _utils).getRouteRegex(page);
+    return {
+        page,
+        regex: (0, _loadCustomRoutes).normalizeRouteRegex(routeRegex.re.source),
+        routeKeys: routeRegex.routeKeys,
+        namedRegex: routeRegex.namedRegex
+    };
 }
 
 //# sourceMappingURL=index.js.map

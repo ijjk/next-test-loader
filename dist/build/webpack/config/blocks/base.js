@@ -17,10 +17,6 @@ const base = (0, _lodashCurry).default(function base(ctx, config) {
         'web',
         'es5'
     ];
-    // Stop compilation early in a production build when an error is encountered.
-    // This behavior isn't desirable in development due to how the HMR system
-    // works, but is a good default for production.
-    config.bail = ctx.isProduction;
     // https://webpack.js.org/configuration/devtool/#development
     if (ctx.isDevelopment) {
         if (process.env.__NEXT_TEST_MODE && !process.env.__NEXT_TEST_WITH_DEVTOOL) {

@@ -365,7 +365,7 @@ async function exportApp(dir, options, span, configuration) {
                 })
             );
         }
-        const timeout = (configuration === null || configuration === void 0 ? void 0 : configuration.experimental.staticPageGenerationTimeout) || 0;
+        const timeout = (configuration === null || configuration === void 0 ? void 0 : configuration.staticPageGenerationTimeout) || 0;
         let infoPrinted = false;
         let exportPage;
         let endWorker;

@@ -43,6 +43,26 @@ class PageLoader {
             }
         }
     }
+    getMiddlewareList() {
+        if (process.env.NODE_ENV === 'production') {
+            return (0, _routeLoader).getMiddlewareManifest();
+        } else {
+            if (window.__DEV_MIDDLEWARE_MANIFEST) {
+                return window.__DEV_MIDDLEWARE_MANIFEST;
+            } else {
+                if (!this.promisedMiddlewareManifest) {
+                    this.promisedMiddlewareManifest = fetch(`${this.assetPrefix}/_next/static/${this.buildId}/_devMiddlewareManifest.json`).then((res)=>res.json()
+                    ).then((manifest)=>{
+                        window.__DEV_MIDDLEWARE_MANIFEST = manifest;
+                        return manifest;
+                    }).catch((err)=>{
+                        console.log(`Failed to fetch _devMiddlewareManifest`, err);
+                    });
+                }
+                return this.promisedMiddlewareManifest;
+            }
+        }
+    }
     /**
    * @param {string} href the route href (file-system path)
    * @param {string} asPath the URL as shown in browser (virtual path); used for dynamic routes

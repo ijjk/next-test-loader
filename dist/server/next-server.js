@@ -43,6 +43,9 @@ var _utils3 = require("../build/webpack/loaders/next-serverless-loader/utils");
 var _responseCache = _interopRequireDefault(require("./response-cache"));
 var _parseNextUrl = require("../shared/lib/router/utils/parse-next-url");
 var _isError = _interopRequireDefault(require("../lib/is-error"));
+var _parseUrl = require("../shared/lib/router/utils/parse-url");
+var _constants1 = require("../lib/constants");
+var _sandbox = require("./web/sandbox");
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
         default: obj
@@ -75,6 +78,9 @@ const getCustomRouteMatcher = (0, _pathMatch).default(true);
 class Server {
     constructor({ dir ='.' , quiet =false , conf , dev =false , minimalMode =false , customServer =true  }){
         var ref, ref1, ref2;
+        this.middlewareBetaWarning = (0, _utils1).execOnce(()=>{
+            console.warn(_chalk.default.bold.yellow(`Warning: `) + _chalk.default.yellow(`using beta Middleware (not covered by semver) - https://nextjs.org/docs/messages/beta-middleware`));
+        });
         this.customErrorNo404Warn = (0, _utils1).execOnce(()=>{
             console.warn(_chalk.default.bold.yellow(`Warning: `) + _chalk.default.yellow(`You have added a custom /_error page without a custom /404 page. This prevents the 404 page from being auto statically optimized.\nSee here for info: https://nextjs.org/docs/messages/custom-error-no-custom-404`));
         });
@@ -126,8 +132,12 @@ class Server {
         });
         this.serverBuildDir = (0, _path).join(this.distDir, this._isLikeServerless ? _constants.SERVERLESS_DIRECTORY : _constants.SERVER_DIRECTORY);
         const pagesManifestPath = (0, _path).join(this.serverBuildDir, _constants.PAGES_MANIFEST);
+        const middlewareManifestPath = (0, _path).join((0, _path).join(this.distDir, _constants.SERVER_DIRECTORY), _constants.MIDDLEWARE_MANIFEST);
         if (!dev) {
             this.pagesManifest = require(pagesManifestPath);
+            if (!this.minimalMode) {
+                this.middlewareManifest = require(middlewareManifestPath);
+            }
         }
         this.customRoutes = this.getCustomRoutes();
         this.router = new _router.default(this.generateRoutes());
@@ -185,6 +195,7 @@ class Server {
         if (typeof parsedUrl.query === 'string') {
             parsedUrl.query = (0, _querystring).parse(parsedUrl.query);
         }
+        req.__NEXT_INIT_URL = req.url;
         req.__NEXT_INIT_QUERY = Object.assign({
         }, parsedUrl.query);
         const url = (0, _parseNextUrl).parseNextUrl({
@@ -343,6 +354,92 @@ class Server {
     }
     getPreviewProps() {
         return this.getPrerenderManifest().preview;
+    }
+    getMiddleware() {
+        var ref;
+        return Object.keys(((ref = this.middlewareManifest) === null || ref === void 0 ? void 0 : ref.middleware) || {
+        }).map((page)=>({
+                match: (0, _utils).getRouteMatcher((0, _utils).getMiddlewareRegex(page)),
+                page
+            })
+        );
+    }
+    async hasMiddleware(pathname) {
+        try {
+            return (0, _require).getMiddlewareInfo({
+                dev: this.renderOpts.dev,
+                distDir: this.distDir,
+                page: pathname,
+                serverless: this._isLikeServerless
+            }).paths.length > 0;
+        } catch (_) {
+        }
+        return false;
+    }
+    async ensureMiddleware(_pathname) {
+    }
+    async runMiddleware(params) {
+        this.middlewareBetaWarning();
+        const page = {
+        };
+        if (await this.hasPage(params.parsedUrl.pathname)) {
+            page.name = params.parsedUrl.pathname;
+        } else if (this.dynamicRoutes) {
+            for (const dynamicRoute of this.dynamicRoutes){
+                const matchParams = dynamicRoute.match(params.parsedUrl.pathname);
+                if (matchParams) {
+                    page.name = dynamicRoute.page;
+                    page.params = matchParams;
+                    break;
+                }
+            }
+        }
+        let result = null;
+        for (const middleware of this.middleware || []){
+            if (middleware.match(params.parsedUrl.pathname)) {
+                if (!await this.hasMiddleware(middleware.page)) {
+                    console.warn(`The Edge Function for ${middleware.page} was not found`);
+                    continue;
+                }
+                await this.ensureMiddleware(middleware.page);
+                const middlewareInfo = (0, _require).getMiddlewareInfo({
+                    dev: this.renderOpts.dev,
+                    distDir: this.distDir,
+                    page: middleware.page,
+                    serverless: this._isLikeServerless
+                });
+                result = await (0, _sandbox).run({
+                    name: middlewareInfo.name,
+                    paths: middlewareInfo.paths,
+                    request: {
+                        headers: params.request.headers,
+                        method: params.request.method || 'GET',
+                        nextConfig: {
+                            basePath: this.nextConfig.basePath,
+                            i18n: this.nextConfig.i18n,
+                            trailingSlash: this.nextConfig.trailingSlash
+                        },
+                        url: params.request.__NEXT_INIT_URL,
+                        page: page
+                    }
+                });
+                if (!this.renderOpts.dev) {
+                    result.promise.catch((error)=>{
+                        console.error(`Uncaught: middleware error after responding`, error);
+                    });
+                    result.waitUntil.catch((error)=>{
+                        console.error(`Uncaught: middleware waitUntil errored`, error);
+                    });
+                }
+                if (!result.response.headers.has('x-middleware-next')) {
+                    break;
+                }
+            }
+        }
+        if (!result) {
+            this.render404(params.request, params.response, params.parsed);
+        }
+        return result;
     }
     generateRoutes() {
         var ref;
@@ -535,6 +632,40 @@ class Server {
                 }
             });
         };
+        const proxyRequest = async (req, res, parsedUrl)=>{
+            const { query  } = parsedUrl;
+            delete parsedUrl.query;
+            parsedUrl.search = stringifyQuery(req, query);
+            const target = (0, _url).format(parsedUrl);
+            const proxy = new _httpProxy.default({
+                target,
+                changeOrigin: true,
+                ignorePath: true,
+                xfwd: true,
+                proxyTimeout: 30000
+            });
+            await new Promise((proxyResolve, proxyReject)=>{
+                let finished = false;
+                proxy.on('proxyReq', (proxyReq)=>{
+                    proxyReq.on('close', ()=>{
+                        if (!finished) {
+                            finished = true;
+                            proxyResolve(true);
+                        }
+                    });
+                });
+                proxy.on('error', (err)=>{
+                    if (!finished) {
+                        finished = true;
+                        proxyReject(err);
+                    }
+                });
+                proxy.web(req, res);
+            });
+            return {
+                finished: true
+            };
+        };
         const redirects = this.minimalMode ? [] : this.customRoutes.redirects.map((redirect)=>{
             const redirectRoute = getCustomRoute(redirect, 'redirect');
             return {
@@ -579,38 +710,7 @@ class Server {
                     const { newUrl , parsedDestination  } = (0, _prepareDestination).default(rewriteRoute.destination, params, parsedUrl.query, true);
                     // external rewrite, proxy it
                     if (parsedDestination.protocol) {
-                        const { query  } = parsedDestination;
-                        delete parsedDestination.query;
-                        parsedDestination.search = stringifyQuery(req, query);
-                        const target = (0, _url).format(parsedDestination);
-                        const proxy = new _httpProxy.default({
-                            target,
-                            changeOrigin: true,
-                            ignorePath: true,
-                            xfwd: true,
-                            proxyTimeout: 30000
-                        });
-                        await new Promise((proxyResolve, proxyReject)=>{
-                            let finished = false;
-                            proxy.on('proxyReq', (proxyReq)=>{
-                                proxyReq.on('close', ()=>{
-                                    if (!finished) {
-                                        finished = true;
-                                        proxyResolve(true);
-                                    }
-                                });
-                            });
-                            proxy.on('error', (err)=>{
-                                if (!finished) {
-                                    finished = true;
-                                    proxyReject(err);
-                                }
-                            });
-                            proxy.web(req, res);
-                        });
-                        return {
-                            finished: true
-                        };
+                        return proxyRequest(req, res, parsedDestination);
                     }
                     req._nextRewroteUrl = newUrl;
                     req._nextDidRewrite = req._nextRewroteUrl !== req.url;
@@ -638,6 +738,121 @@ class Server {
                 );
             }
         }
+        let catchAllMiddleware;
+        if (!this.minimalMode) {
+            catchAllMiddleware = {
+                match: (0, _router).route('/:path*'),
+                type: 'route',
+                name: 'middleware catchall',
+                fn: async (req, res, _params, parsed)=>{
+                    var ref;
+                    const fullUrl = req.__NEXT_INIT_URL;
+                    const parsedUrl = (0, _parseNextUrl).parseNextUrl({
+                        url: fullUrl,
+                        headers: req.headers,
+                        nextConfig: {
+                            basePath: this.nextConfig.basePath,
+                            i18n: this.nextConfig.i18n,
+                            trailingSlash: this.nextConfig.trailingSlash
+                        }
+                    });
+                    if (!((ref = this.middleware) === null || ref === void 0 ? void 0 : ref.some((m)=>m.match(parsedUrl.pathname)
+                    ))) {
+                        return {
+                            finished: false
+                        };
+                    }
+                    let result = null;
+                    try {
+                        result = await this.runMiddleware({
+                            request: req,
+                            response: res,
+                            parsedUrl: parsedUrl,
+                            parsed: parsed
+                        });
+                    } catch (err) {
+                        if ((0, _isError).default(err) && err.code === 'ENOENT') {
+                            await this.render404(req, res, parsed);
+                            return {
+                                finished: true
+                            };
+                        }
+                        const error = (0, _isError).default(err) ? err : new Error(err + '');
+                        console.error(error);
+                        res.statusCode = 500;
+                        this.renderError(error, req, res, parsed.pathname || '');
+                        return {
+                            finished: true
+                        };
+                    }
+                    if (result === null) {
+                        return {
+                            finished: true
+                        };
+                    }
+                    if (!result.response.headers.has('x-middleware-rewrite') && !result.response.headers.has('x-middleware-next') && !result.response.headers.has('Location')) {
+                        result.response.headers.set('x-middleware-refresh', '1');
+                    }
+                    result.response.headers.delete('x-middleware-next');
+                    for (const [key, value] of result.response.headers.entries()){
+                        if (key !== 'content-encoding') {
+                            res.setHeader(key, value);
+                        }
+                    }
+                    const preflight = req.method === 'HEAD' && req.headers['x-middleware-preflight'];
+                    if (preflight) {
+                        res.writeHead(200);
+                        res.end();
+                        return {
+                            finished: true
+                        };
+                    }
+                    res.statusCode = result.response.status;
+                    res.statusMessage = result.response.statusText;
+                    const location = result.response.headers.get('Location');
+                    if (location) {
+                        res.statusCode = result.response.status;
+                        if (res.statusCode === 308) {
+                            res.setHeader('Refresh', `0;url=${location}`);
+                        }
+                        res.end();
+                        return {
+                            finished: true
+                        };
+                    }
+                    if (result.response.headers.has('x-middleware-rewrite')) {
+                        const rewrite = result.response.headers.get('x-middleware-rewrite');
+                        const rewriteParsed = (0, _parseUrl).parseUrl(rewrite);
+                        if (rewriteParsed.protocol) {
+                            return proxyRequest(req, res, rewriteParsed);
+                        }
+                        req._nextRewroteUrl = rewrite;
+                        req._nextDidRewrite = req._nextRewroteUrl !== req.url;
+                        return {
+                            finished: false,
+                            pathname: rewriteParsed.pathname,
+                            query: {
+                                ...parsedUrl.query,
+                                ...rewriteParsed.query
+                            }
+                        };
+                    }
+                    if (result.response.headers.has('x-middleware-refresh')) {
+                        res.writeHead(result.response.status);
+                        for await (const chunk of result.response.body || []){
+                            res.write(chunk);
+                        }
+                        res.end();
+                        return {
+                            finished: true
+                        };
+                    }
+                    return {
+                        finished: false
+                    };
+                }
+            };
+        }
         const catchAllRoute = {
             match: (0, _router).route('/:path*'),
             type: 'route',
@@ -658,6 +873,12 @@ class Server {
                     }
                 }
                 const bubbleNoFallback = !!query._nextBubbleNoFallback;
+                if (pathname.match(_constants1.MIDDLEWARE_ROUTE)) {
+                    await this.render404(req, res, parsedUrl);
+                    return {
+                        finished: true
+                    };
+                }
                 if (pathname === '/api' || pathname.startsWith('/api/')) {
                     delete query._nextBubbleNoFallback;
                     const handled = await this.handleApiRequest(req, res, pathname, query);
@@ -685,6 +906,9 @@ class Server {
         const { useFileSystemPublicRoutes  } = this.nextConfig;
         if (useFileSystemPublicRoutes) {
             this.dynamicRoutes = this.getDynamicRoutes();
+            if (!this.minimalMode) {
+                this.middleware = this.getMiddleware();
+            }
         }
         return {
             headers,
@@ -696,6 +920,7 @@ class Server {
             },
             redirects,
             catchAllRoute,
+            catchAllMiddleware,
             useFileSystemPublicRoutes,
             dynamicRoutes: this.dynamicRoutes,
             basePath: this.nextConfig.basePath,

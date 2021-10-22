@@ -20,7 +20,8 @@ function getSWCOptions({ isTypeScript , isServer , development , isPageFile , pa
                 pragmaFrag: 'React.Fragment',
                 throwIfNamespace: true,
                 development: development,
-                useBuiltins: true
+                useBuiltins: true,
+                refresh: development && !isServer
             }
         }
     };

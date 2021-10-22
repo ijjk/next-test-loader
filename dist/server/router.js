@@ -28,7 +28,7 @@ class Router {
         beforeFiles: [],
         afterFiles: [],
         fallback: []
-    } , redirects =[] , catchAllRoute , dynamicRoutes =[] , pageChecker , useFileSystemPublicRoutes , locales =[]  }){
+    } , redirects =[] , catchAllRoute , catchAllMiddleware , dynamicRoutes =[] , pageChecker , useFileSystemPublicRoutes , locales =[]  }){
         this.basePath = basePath;
         this.headers = headers;
         this.fsRoutes = fsRoutes;
@@ -36,6 +36,7 @@ class Router {
         this.redirects = redirects;
         this.pageChecker = pageChecker;
         this.catchAllRoute = catchAllRoute;
+        this.catchAllMiddleware = catchAllMiddleware;
         this.dynamicRoutes = dynamicRoutes;
         this.useFileSystemPublicRoutes = useFileSystemPublicRoutes;
         this.locales = locales;
@@ -103,6 +104,9 @@ class Router {
             ...this.headers,
             ...this.redirects,
             ...this.rewrites.beforeFiles,
+            ...this.useFileSystemPublicRoutes && this.catchAllMiddleware ? [
+                this.catchAllMiddleware
+            ] : [],
             ...this.fsRoutes,
             // We only check the catch-all route if public page routes hasn't been
             // disabled
@@ -161,7 +165,8 @@ class Router {
             const requireBasePath = testRoute.requireBasePath !== false;
             const isCustomRoute = customRouteTypes.has(testRoute.type);
             const isPublicFolderCatchall = testRoute.name === 'public folder catchall';
-            const keepBasePath = isCustomRoute || isPublicFolderCatchall;
+            const isMiddlewareCatchall = testRoute.name === 'middleware catchall';
+            const keepBasePath = isCustomRoute || isPublicFolderCatchall || isMiddlewareCatchall;
             const keepLocale = isCustomRoute;
             const currentPathnameNoBasePath = replaceBasePath(this.basePath, currentPathname);
             if (!keepBasePath) {

@@ -24,6 +24,7 @@ var _entries = require("./entries");
 var Log = _interopRequireWildcard(require("./output/log"));
 var _config = require("./webpack/config");
 var _overrideCssConfiguration = require("./webpack/config/blocks/css/overrideCssConfiguration");
+var _middlewarePlugin = _interopRequireDefault(require("./webpack/plugins/middleware-plugin"));
 var _buildManifestPlugin = _interopRequireDefault(require("./webpack/plugins/build-manifest-plugin"));
 var _jsconfigPathsPlugin = require("./webpack/plugins/jsconfig-paths-plugin");
 var _nextDropClientPagePlugin = require("./webpack/plugins/next-drop-client-page-plugin");
@@ -272,6 +273,20 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
                 hasReactRefresh,
                 hasJsxRuntime: true
             }
+        },
+        babelMiddleware: {
+            loader: require.resolve('./babel/loader/index'),
+            options: {
+                cache: false,
+                configFile: babelConfigFile,
+                cwd: dir,
+                development: dev,
+                distDir,
+                hasJsxRuntime: true,
+                hasReactRefresh: false,
+                isServer: true,
+                pagesDir
+            }
         }
     };
     const babelIncludeRegexes = [
@@ -487,11 +502,14 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
         // as we don't need a separate vendor chunk from that
         // and all other chunk depend on them so there is no
         // duplication that need to be pulled out.
-        chunks: (chunk)=>!/^(polyfills|main|pages\/_app)$/.test(chunk.name)
+        chunks: (chunk)=>!/^(polyfills|main|pages\/_app)$/.test(chunk.name) && !_constants.MIDDLEWARE_ROUTE.test(chunk.name)
         ,
         cacheGroups: {
             framework: {
-                chunks: 'all',
+                chunks: (chunk)=>{
+                    var ref;
+                    return !((ref = chunk.name) === null || ref === void 0 ? void 0 : ref.match(_constants.MIDDLEWARE_ROUTE));
+                },
                 name: 'framework',
                 // This regex ignores nested copies of framework libraries so they're
                 // bundled with their issuer.
@@ -528,6 +546,15 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
                 name: 'commons',
                 minChunks: totalPages,
                 priority: 20
+            },
+            middleware: {
+                chunks: (chunk)=>{
+                    var ref;
+                    return (ref = chunk.name) === null || ref === void 0 ? void 0 : ref.match(_constants.MIDDLEWARE_ROUTE);
+                },
+                filename: 'server/middleware-chunks/[name].js',
+                minChunks: 2,
+                enforce: true
             }
         },
         maxInitialRequests: 25,
@@ -713,7 +740,9 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
             splitChunks: isServer ? dev ? false : {
                 filename: '[name].js',
                 // allow to split entrypoints
-                chunks: 'all',
+                chunks: ({ name  })=>{
+                    return !(name === null || name === void 0 ? void 0 : name.match(_constants.MIDDLEWARE_ROUTE));
+                },
                 // size of files is not so relevant for server build
                 // we want to prefer deduplication to load less code
                 minSize: 1000
@@ -787,7 +816,9 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
             chunkFilename: isServer ? '[name].js' : `static/chunks/${isDevFallback ? 'fallback/' : ''}${dev ? '[name]' : '[name].[contenthash]'}.js`,
             strictModuleExceptionHandling: true,
             crossOriginLoading: crossOrigin,
-            webassemblyModuleFilename: 'static/wasm/[modulehash].wasm'
+            webassemblyModuleFilename: 'static/wasm/[modulehash].wasm',
+            hashFunction: 'xxhash64',
+            hashDigestLength: 16
         },
         performance: false,
         resolve: resolveConfig,
@@ -800,7 +831,8 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
                 'next-image-loader',
                 'next-serverless-loader',
                 'next-style-loader',
-                'noop-loader', 
+                'noop-loader',
+                'next-middleware-loader', 
             ].reduce((alias, loader)=>{
                 // using multiple aliases to replace `resolveLoader.modules`
                 alias[loader] = _path.default.join(__dirname, 'webpack', 'loaders', loader);
@@ -843,6 +875,11 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
                                 url: true
                             },
                             use: defaultLoaders.babel
+                        },
+                        {
+                            ...codeCondition,
+                            issuerLayer: 'middleware',
+                            use: defaultLoaders.babelMiddleware
                         },
                         {
                             ...codeCondition,
@@ -897,7 +934,7 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
                 }),
                 ...Object.keys(config.env).reduce((acc, key)=>{
                     if (/^(?:NODE_.+)|^(?:__.+)$/i.test(key)) {
-                        throw new Error(`The key "${key}" under "env" in next.config.js is not allowed. https://nextjs.org/docs/messages/env-key-not-allowed`);
+                        throw new Error(`The key "${key}" under "env" in ${config.configFileName} is not allowed. https://nextjs.org/docs/messages/env-key-not-allowed`);
                     }
                     return {
                         ...acc,
@@ -1002,6 +1039,11 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
                 serverless: isLikeServerless,
                 dev
             }),
+            // MiddlewarePlugin should be after DefinePlugin so  NEXT_PUBLIC_*
+            // replacement is done before its process.env.* handling
+            !isServer && new _middlewarePlugin.default({
+                dev
+            }),
             isServer && new _nextjsSsrImport.default(),
             !isServer && new _buildManifestPlugin.default({
                 buildId,
@@ -1020,7 +1062,7 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
             new _wellknownErrorsPlugin.WellKnownErrorsPlugin(),
             !isServer && new _copyFilePlugin.CopyFilePlugin({
                 filePath: require.resolve('./polyfills/polyfill-nomodule'),
-                cacheKey: "11.1.3-canary.81",
+                cacheKey: "11.1.3-canary.95",
                 name: `static/chunks/polyfills${dev ? '' : '-[hash]'}.js`,
                 minimize: false,
                 info: {
@@ -1044,7 +1086,16 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
     const webpack5Config = webpackConfig;
     webpack5Config.experiments = {
         layers: true,
-        cacheUnaffected: true
+        cacheUnaffected: true,
+        buildHttp: Array.isArray(config.experimental.urlImports) ? {
+            allowedUris: config.experimental.urlImports,
+            cacheLocation: _path.default.join(dir, 'next.lock/data'),
+            lockfileLocation: _path.default.join(dir, 'next.lock/lock.json')
+        } : config.experimental.urlImports ? {
+            cacheLocation: _path.default.join(dir, 'next.lock/data'),
+            lockfileLocation: _path.default.join(dir, 'next.lock/lock.json'),
+            ...config.experimental.urlImports
+        } : undefined
     };
     webpack5Config.module.parser = {
         javascript: {
@@ -1056,44 +1107,34 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
             filename: 'static/media/[name].[hash:8][ext]'
         }
     };
+    if (!isServer) {
+        webpack5Config.output.enabledLibraryTypes = [
+            'assign'
+        ];
+    }
     if (dev) {
         // @ts-ignore unsafeCache exists
         webpack5Config.module.unsafeCache = (module)=>!/[\\/]pages[\\/][^\\/]+(?:$|\?|#)/.test(module.resource)
         ;
     }
-    // Due to bundling of webpack the default values can't be correctly detected
-    // This restores the webpack defaults
+    // This enables managedPaths for all node_modules
+    // and also for the unplugged folder when using yarn pnp
+    // It also add the yarn cache to the immutable paths
     webpack5Config.snapshot = {
     };
     if (process.versions.pnp === '3') {
-        const match = /^(.+?)[\\/]cache[\\/]jest-worker-npm-[^\\/]+\.zip[\\/]node_modules[\\/]/.exec(require.resolve('jest-worker'));
-        if (match) {
-            webpack5Config.snapshot.managedPaths = [
-                _path.default.resolve(match[1], 'unplugged'), 
-            ];
-        }
+        webpack5Config.snapshot.managedPaths = [
+            /^(.+?(?:[\\/]\.yarn[\\/]unplugged[\\/][^\\/]+)?[\\/]node_modules[\\/])/, 
+        ];
     } else {
-        const match = /^(.+?[\\/]node_modules)[\\/]/.exec(require.resolve('jest-worker'));
-        if (match) {
-            webpack5Config.snapshot.managedPaths = [
-                match[1]
-            ];
-        }
+        webpack5Config.snapshot.managedPaths = [
+            /^(.+?[\\/]node_modules[\\/])/
+        ];
     }
-    if (process.versions.pnp === '1') {
-        const match = /^(.+?[\\/]v4)[\\/]npm-jest-worker-[^\\/]+-[\da-f]{40}[\\/]node_modules[\\/]/.exec(require.resolve('jest-worker'));
-        if (match) {
-            webpack5Config.snapshot.immutablePaths = [
-                match[1]
-            ];
-        }
-    } else if (process.versions.pnp === '3') {
-        const match = /^(.+?)[\\/]jest-worker-npm-[^\\/]+\.zip[\\/]node_modules[\\/]/.exec(require.resolve('jest-worker'));
-        if (match) {
-            webpack5Config.snapshot.immutablePaths = [
-                match[1]
-            ];
-        }
+    if (process.versions.pnp === '3') {
+        webpack5Config.snapshot.immutablePaths = [
+            /^(.+?[\\/]cache[\\/][^\\/]+\.zip[\\/]node_modules[\\/])/, 
+        ];
     }
     if (dev) {
         if (!webpack5Config.optimization) {
@@ -1135,7 +1176,7 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
         // Includes:
         //  - Next.js version
         //  - next.config.js keys that affect compilation
-        version: `${"11.1.3-canary.81"}|${configVars}`,
+        version: `${"11.1.3-canary.95"}|${configVars}`,
         cacheDirectory: _path.default.join(distDir, 'cache', 'webpack')
     };
     // Adds `next.config.js` as a buildDependency when custom webpack config is provided
@@ -1214,7 +1255,7 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
             webpack: _webpack.webpack
         });
         if (!webpackConfig) {
-            throw new Error('Webpack config is undefined. You may have forgot to return properly from within the "webpack" method of your next.config.js.\n' + 'See more info here https://nextjs.org/docs/messages/undefined-webpack-config');
+            throw new Error(`Webpack config is undefined. You may have forgot to return properly from within the "webpack" method of your ${config.configFileName}.\n` + 'See more info here https://nextjs.org/docs/messages/undefined-webpack-config');
         }
         if (dev && originalDevtool !== webpackConfig.devtool) {
             webpackConfig.devtool = originalDevtool;
@@ -1365,7 +1406,7 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
             return true;
         });
         if (foundTsRule) {
-            console.warn('\n@zeit/next-typescript is no longer needed since Next.js has built-in support for TypeScript now. Please remove it from your next.config.js and your .babelrc\n');
+            console.warn(`\n@zeit/next-typescript is no longer needed since Next.js has built-in support for TypeScript now. Please remove it from your ${config.configFileName} and your .babelrc\n`);
         }
     }
     // Patch `@zeit/next-sass`, `@zeit/next-less`, `@zeit/next-stylus` for compatibility
@@ -1444,7 +1485,11 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
             }
             delete entry['main.js'];
             for (const name of Object.keys(entry)){
-                entry[name] = (0, _entries).finalizeEntrypoint(name, entry[name], isServer);
+                entry[name] = (0, _entries).finalizeEntrypoint({
+                    value: entry[name],
+                    isServer,
+                    name
+                });
             }
             return entry;
         };

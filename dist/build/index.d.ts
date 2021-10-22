@@ -4,7 +4,6 @@ export declare type SsgRoute = {
     initialRevalidateSeconds: number | false;
     srcRoute: string | null;
     dataRoute: string;
-    isNotFound?: boolean;
 };
 export declare type DynamicSsgRoute = {
     routeRegex: string;

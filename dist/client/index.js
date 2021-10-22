@@ -114,7 +114,7 @@ function _objectSpread(target) {
 }
 const data = JSON.parse(document.getElementById('__NEXT_DATA__').textContent);
 window.__NEXT_DATA__ = data;
-const version = "11.1.3-canary.81";
+const version = "11.1.3-canary.95";
 exports.version = version;
 const looseToArray = (input)=>[].slice.call(input)
 ;
@@ -314,6 +314,11 @@ function _initNext() {
                         }
                         error.name = initialErr.name;
                         error.stack = initialErr.stack;
+                        // Errors from the middleware are reported as client-side errors
+                        // since the middleware is compiled using the client compiler
+                        if ('middleware' in hydrateErr) {
+                            throw error;
+                        }
                         const node = getNodeError(error);
                         throw node;
                     });

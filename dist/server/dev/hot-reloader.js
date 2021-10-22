@@ -142,7 +142,7 @@ class HotReloader {
         this.dir = dir;
         this.middlewares = [];
         this.pagesDir = pagesDir;
-        this.stats = null;
+        this.clientStats = null;
         this.serverStats = null;
         this.serverPrevDocumentHash = null;
         this.config = config;
@@ -315,7 +315,11 @@ class HotReloader {
                     const isClientKey = pageKey.startsWith('client');
                     if (isClientKey !== isClientCompilation) return;
                     const page = pageKey.slice(isClientKey ? 'client'.length : 'server'.length);
-                    if (isClientCompilation && page.match(_constants.API_ROUTE)) {
+                    const isMiddleware = page.match(_constants.MIDDLEWARE_ROUTE);
+                    if (isClientCompilation && page.match(_constants.API_ROUTE) && !isMiddleware) {
+                        return;
+                    }
+                    if (!isClientCompilation && isMiddleware) {
                         return;
                     }
                     const { bundlePath , absolutePagePath , dispose  } = _onDemandEntryHandler.entries[pageKey];
@@ -330,12 +334,28 @@ class HotReloader {
                         page,
                         absolutePagePath
                     };
-                    if (isClientCompilation) {
-                        entrypoints[bundlePath] = (0, _entries).finalizeEntrypoint(bundlePath, `next-client-pages-loader?${(0, _querystring).stringify(pageLoaderOpts)}!`, false);
+                    if (isClientCompilation && isMiddleware) {
+                        entrypoints[bundlePath] = (0, _entries).finalizeEntrypoint({
+                            name: bundlePath,
+                            value: `next-middleware-loader?${(0, _querystring).stringify(pageLoaderOpts)}!`,
+                            isServer: false
+                        });
+                    } else if (isClientCompilation) {
+                        entrypoints[bundlePath] = (0, _entries).finalizeEntrypoint({
+                            name: bundlePath,
+                            value: `next-client-pages-loader?${(0, _querystring).stringify(pageLoaderOpts)}!`,
+                            isServer: false
+                        });
                     } else {
                         let request = (0, _path).relative(config.context, absolutePagePath);
-                        if (!(0, _path).isAbsolute(request) && !request.startsWith('../')) request = `./${request}`;
-                        entrypoints[bundlePath] = (0, _entries).finalizeEntrypoint(bundlePath, request, true);
+                        if (!(0, _path).isAbsolute(request) && !request.startsWith('../')) {
+                            request = `./${request}`;
+                        }
+                        entrypoints[bundlePath] = (0, _entries).finalizeEntrypoint({
+                            name: bundlePath,
+                            value: request,
+                            isServer: true
+                        });
                     }
                 }));
                 return entrypoints;
@@ -355,6 +375,7 @@ class HotReloader {
         const trackPageChanges = (pageHashMap, changedItems)=>(stats)=>{
                 stats.entrypoints.forEach((entry, key)=>{
                     if (key.startsWith('pages/')) {
+                        // TODO this doesn't handle on demand loaded chunks
                         entry.chunks.forEach((chunk)=>{
                             if (chunk.id === key) {
                                 const prevHash = pageHashMap.get(key);
@@ -402,8 +423,15 @@ class HotReloader {
         });
         multiCompiler.hooks.done.tap('NextjsHotReloaderForServer', ()=>{
             const serverOnlyChanges = (0, _utils).difference(changedServerPages, changedClientPages);
+            const middlewareChanges = Array.from(changedClientPages).filter((name)=>name.match(_constants.MIDDLEWARE_ROUTE)
+            );
             changedClientPages.clear();
             changedServerPages.clear();
+            if (middlewareChanges.length > 0) {
+                this.send({
+                    event: 'middlewareChanges'
+                });
+            }
             if (serverOnlyChanges.length > 0) {
                 this.send({
                     event: 'serverOnlyChanges',
@@ -414,11 +442,11 @@ class HotReloader {
         });
         multiCompiler.compilers[0].hooks.failed.tap('NextjsHotReloaderForClient', (err)=>{
             this.clientError = err;
-            this.stats = null;
+            this.clientStats = null;
         });
         multiCompiler.compilers[0].hooks.done.tap('NextjsHotReloaderForClient', (stats)=>{
             this.clientError = null;
-            this.stats = stats;
+            this.clientStats = stats;
             const { compilation  } = stats;
             const chunkNames = new Set([
                 ...compilation.namedChunks.keys()
@@ -465,7 +493,7 @@ class HotReloader {
         this.middlewares = [
             (0, _middleware).getOverlayMiddleware({
                 rootDirectory: this.dir,
-                stats: ()=>this.stats
+                stats: ()=>this.clientStats
                 ,
                 serverStats: ()=>this.serverStats
             }), 
@@ -490,15 +518,15 @@ class HotReloader {
             return [
                 this.clientError || this.serverError
             ];
-        } else if ((ref = this.stats) === null || ref === void 0 ? void 0 : ref.hasErrors()) {
-            const { compilation  } = this.stats;
+        } else if ((ref = this.clientStats) === null || ref === void 0 ? void 0 : ref.hasErrors()) {
+            const { compilation  } = this.clientStats;
             const failedPages = erroredPages(compilation);
             // If there is an error related to the requesting page we display it instead of the first error
             if (failedPages[normalizedPage] && failedPages[normalizedPage].length > 0) {
                 return failedPages[normalizedPage];
             }
             // If none were found we still have to show the other errors
-            return this.stats.compilation.errors;
+            return this.clientStats.compilation.errors;
         } else if ((ref6 = this.serverStats) === null || ref6 === void 0 ? void 0 : ref6.hasErrors()) {
             const { compilation  } = this.serverStats;
             const failedPages = erroredPages(compilation);

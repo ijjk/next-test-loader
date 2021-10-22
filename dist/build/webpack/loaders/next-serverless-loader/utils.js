@@ -11,7 +11,7 @@ var _pathMatch = _interopRequireDefault(require("../../../../shared/lib/router/u
 var _routeRegex = require("../../../../shared/lib/router/utils/route-regex");
 var _routeMatcher = require("../../../../shared/lib/router/utils/route-matcher");
 var _prepareDestination = _interopRequireWildcard(require("../../../../shared/lib/router/utils/prepare-destination"));
-var _accept = _interopRequireDefault(require("@hapi/accept"));
+var _acceptHeader = require("../../../../server/accept-header");
 var _detectLocaleCookie = require("../../../../shared/lib/i18n/detect-locale-cookie");
 var _detectDomainLocale = require("../../../../shared/lib/i18n/detect-domain-locale");
 var _denormalizePagePath = require("../../../../server/denormalize-page-path");
@@ -252,7 +252,7 @@ function getUtils({ page , i18n , basePath , rewrites , pageIsDynamic  }) {
         let detectedLocale = (0, _detectLocaleCookie).detectLocaleCookie(req, i18n.locales);
         let acceptPreferredLocale;
         try {
-            acceptPreferredLocale = i18n.localeDetection !== false ? _accept.default.language(req.headers['accept-language'], i18n.locales) : detectedLocale;
+            acceptPreferredLocale = i18n.localeDetection !== false ? (0, _acceptHeader).acceptLanguage(req.headers['accept-language'], i18n.locales) : detectedLocale;
         } catch (_) {
             acceptPreferredLocale = detectedLocale;
         }

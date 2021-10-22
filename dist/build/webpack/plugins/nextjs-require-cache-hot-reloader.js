@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
+var _sandbox = require("../../../server/web/sandbox");
 var _fs = require("fs");
 var _path = _interopRequireDefault(require("path"));
 var _isError = _interopRequireDefault(require("../../../lib/is-error"));
@@ -44,10 +45,10 @@ function deleteCache(filePath) {
 const PLUGIN_NAME = 'NextJsRequireCacheHotReloader';
 class NextJsRequireCacheHotReloader {
     apply(compiler) {
-        // @ts-ignored Webpack has this hooks
-        compiler.hooks.assetEmitted.tap(PLUGIN_NAME, (_file, { targetPath  })=>{
+        compiler.hooks.assetEmitted.tap(PLUGIN_NAME, (_file, { targetPath , content  })=>{
             this.currentOutputPathsWebpack5.add(targetPath);
             deleteCache(targetPath);
+            (0, _sandbox).clearSandboxCache(targetPath, content.toString('utf-8'));
         });
         compiler.hooks.afterEmit.tap(PLUGIN_NAME, (compilation)=>{
             RUNTIME_NAMES.forEach((name)=>{

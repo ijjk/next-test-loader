@@ -3,16 +3,11 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 exports.getLocaleMetadata = getLocaleMetadata;
-var _accept = _interopRequireDefault(require("@hapi/accept"));
+var _acceptHeader = require("../../../server/accept-header");
 var _denormalizePagePath = require("../../../server/denormalize-page-path");
 var _detectDomainLocale = require("./detect-domain-locale");
 var _formatUrl = require("../router/utils/format-url");
 var _normalizeLocalePath = require("./normalize-locale-path");
-function _interopRequireDefault(obj) {
-    return obj && obj.__esModule ? obj : {
-        default: obj
-    };
-}
 function getLocaleMetadata(params) {
     const { i18n  } = params.nextConfig;
     const { cookies , headers , nextConfig , url  } = params;
@@ -48,7 +43,7 @@ function getAcceptPreferredLocale(i18n, headers) {
     const value = headers === null || headers === void 0 ? void 0 : headers['accept-language'];
     if (i18n.localeDetection !== false && value && !Array.isArray(value)) {
         try {
-            return _accept.default.language(value, i18n.locales);
+            return (0, _acceptHeader).acceptLanguage(value, i18n.locales);
         } catch (err) {
         }
     }

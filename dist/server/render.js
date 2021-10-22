@@ -797,11 +797,11 @@ async function renderToHTML(req, res, pathname, query, renderOpts) {
     return new _renderResult.default(chainPipers(pipers));
 }
 function errorToJSON(err) {
-    const { name , message , stack  } = err;
     return {
-        name,
-        message,
-        stack
+        name: err.name,
+        message: err.message,
+        stack: err.stack,
+        middleware: err.middleware
     };
 }
 function serializeError(dev, err) {
@@ -883,7 +883,7 @@ function renderToStream(element, generateStaticHTML) {
                 });
             }
         };
-        const { abort , startWriting  } = ReactDOMServer.pipeToNodeWritable(element, stream, {
+        const { abort , pipe  } = ReactDOMServer.renderToPipeableStream(element, {
             onError (error) {
                 if (!resolved) {
                     resolved = true;
@@ -893,11 +893,13 @@ function renderToStream(element, generateStaticHTML) {
             },
             onCompleteShell () {
                 if (!generateStaticHTML) {
-                    doResolve(startWriting);
+                    doResolve(()=>pipe(stream)
+                    );
                 }
             },
             onCompleteAll () {
-                doResolve(startWriting);
+                doResolve(()=>pipe(stream)
+                );
             }
         });
     });

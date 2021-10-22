@@ -36,6 +36,7 @@ var _parseStack = require("@next/react-dev-overlay/lib/internal/helpers/parseSta
 var _middleware = require("@next/react-dev-overlay/lib/middleware");
 var Log = _interopRequireWildcard(require("../../build/output/log"));
 var _isError = _interopRequireDefault(require("../../lib/is-error"));
+var _getMiddlewareRegex = require("../../shared/lib/router/utils/get-middleware-regex");
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
         default: obj
@@ -172,6 +173,7 @@ class DevServer extends _nextServer.default {
         if (this.webpackWatcher) {
             return;
         }
+        const regexMiddleware = new RegExp(`/(_middleware.(?:${this.nextConfig.pageExtensions.join('|')}))$`);
         const regexPageExtension = new RegExp(`\\.+(?:${this.nextConfig.pageExtensions.join('|')})$`);
         let resolved = false;
         return new Promise((resolve, reject)=>{
@@ -191,10 +193,15 @@ class DevServer extends _nextServer.default {
                 pagesDir
             ], 0);
             wp.on('aggregated', ()=>{
+                const routedMiddleware = [];
                 const routedPages = [];
                 const knownFiles = wp.getTimeInfoEntries();
                 for (const [fileName, { accuracy  }] of knownFiles){
                     if (accuracy === undefined || !regexPageExtension.test(fileName)) {
+                        continue;
+                    }
+                    if (regexMiddleware.test(fileName)) {
+                        routedMiddleware.push(`/${(0, _path).relative(pagesDir, fileName)}`.replace(/\\+/g, '').replace(/^\/+/g, '/').replace(regexMiddleware, '/'));
                         continue;
                     }
                     let pageName = '/' + (0, _path).relative(pagesDir, fileName).replace(/\\+/g, '/');
@@ -202,6 +209,11 @@ class DevServer extends _nextServer.default {
                     pageName = pageName.replace(/\/index$/, '') || '/';
                     routedPages.push(pageName);
                 }
+                this.middleware = (0, _utils).getSortedRoutes(routedMiddleware).map((page)=>({
+                        match: (0, _utils).getRouteMatcher((0, _getMiddlewareRegex).getMiddlewareRegex(page)),
+                        page
+                    })
+                );
                 try {
                     var ref;
                     // we serve a separate manifest with all pages for the client in
@@ -355,6 +367,23 @@ class DevServer extends _nextServer.default {
             }
         }
     }
+    async runMiddleware(params) {
+        try {
+            const result = await super.runMiddleware(params);
+            result === null || result === void 0 ? void 0 : result.promise.catch((error)=>this.logErrorWithOriginalStack(error, 'unhandledRejection', 'client')
+            );
+            result === null || result === void 0 ? void 0 : result.waitUntil.catch((error)=>this.logErrorWithOriginalStack(error, 'unhandledRejection', 'client')
+            );
+            return result;
+        } catch (error) {
+            this.logErrorWithOriginalStack(error, undefined, 'client');
+            const err = (0, _isError).default(error) ? error : new Error(error + '');
+            err.middleware = true;
+            const { request , response , parsedUrl  } = params;
+            this.renderError(err, request, response, parsedUrl.pathname);
+            return null;
+        }
+    }
     async run(req, res, parsedUrl) {
         var ref;
         await this.devReady;
@@ -399,17 +428,17 @@ class DevServer extends _nextServer.default {
             }
         }
     }
-    async logErrorWithOriginalStack(err, type) {
+    async logErrorWithOriginalStack(err, type, stats = 'server') {
         let usedOriginalStack = false;
         if ((0, _isError).default(err) && err.name && err.stack && err.message) {
             try {
                 const frames = (0, _parseStack).parseStack(err.stack);
                 const frame = frames[0];
                 if (frame.lineNumber && (frame === null || frame === void 0 ? void 0 : frame.file)) {
-                    var ref, ref1, ref2, ref3;
-                    const compilation = (ref = this.hotReloader) === null || ref === void 0 ? void 0 : (ref1 = ref.serverStats) === null || ref1 === void 0 ? void 0 : ref1.compilation;
+                    var ref, ref1, ref2, ref3, ref4, ref5;
+                    const compilation = stats === 'client' ? (ref = this.hotReloader) === null || ref === void 0 ? void 0 : (ref1 = ref.clientStats) === null || ref1 === void 0 ? void 0 : ref1.compilation : (ref2 = this.hotReloader) === null || ref2 === void 0 ? void 0 : (ref3 = ref2.serverStats) === null || ref3 === void 0 ? void 0 : ref3.compilation;
                     const moduleId = frame.file.replace(/^(webpack-internal:\/\/\/|file:\/\/)/, '');
-                    const source = await (0, _middleware).getSourceById(!!((ref2 = frame.file) === null || ref2 === void 0 ? void 0 : ref2.startsWith(_path.sep)) || !!((ref3 = frame.file) === null || ref3 === void 0 ? void 0 : ref3.startsWith('file:')), moduleId, compilation);
+                    const source = await (0, _middleware).getSourceById(!!((ref4 = frame.file) === null || ref4 === void 0 ? void 0 : ref4.startsWith(_path.sep)) || !!((ref5 = frame.file) === null || ref5 === void 0 ? void 0 : ref5.startsWith('file:')), moduleId, compilation);
                     const originalFrame = await (0, _middleware).createOriginalStackFrame({
                         line: frame.lineNumber,
                         column: frame.column,
@@ -464,6 +493,15 @@ class DevServer extends _nextServer.default {
             previewModeEncryptionKey: _crypto.default.randomBytes(32).toString('hex')
         };
     }
+    getMiddleware() {
+        return [];
+    }
+    async hasMiddleware(pathname) {
+        return this.hasPage(getMiddlewareFilepath(pathname));
+    }
+    async ensureMiddleware(pathname) {
+        return this.hotReloader.ensurePage(getMiddlewareFilepath(pathname));
+    }
     generateRoutes() {
         const { fsRoutes , ...otherRoutes } = super.generateRoutes();
         // In development we expose all compiled files for react-error-overlay's line show feature
@@ -490,6 +528,21 @@ class DevServer extends _nextServer.default {
                 res.end(JSON.stringify({
                     pages: this.sortedRoutes
                 }));
+                return {
+                    finished: true
+                };
+            }
+        });
+        fsRoutes.unshift({
+            match: (0, _router).route(`/_next/${_constants1.CLIENT_STATIC_FILES_PATH}/${this.buildId}/${_constants1.DEV_MIDDLEWARE_MANIFEST}`),
+            type: 'route',
+            name: `_next/${_constants1.CLIENT_STATIC_FILES_PATH}/${this.buildId}/${_constants1.DEV_MIDDLEWARE_MANIFEST}`,
+            fn: async (_req, res)=>{
+                var ref;
+                res.statusCode = 200;
+                res.setHeader('Content-Type', 'application/json; charset=utf-8');
+                res.end(JSON.stringify(((ref = this.middleware) === null || ref === void 0 ? void 0 : ref.map((middleware)=>middleware.page
+                )) || []));
                 return {
                     finished: true
                 };
@@ -546,10 +599,11 @@ class DevServer extends _nextServer.default {
         // we lazy load the staticPaths to prevent the user
         // from waiting on them for the page to load in dev mode
         const __getStaticPaths = async ()=>{
-            const { publicRuntimeConfig , serverRuntimeConfig , httpAgentOptions  } = this.nextConfig;
+            const { configFileName , publicRuntimeConfig , serverRuntimeConfig , httpAgentOptions ,  } = this.nextConfig;
             const { locales , defaultLocale  } = this.nextConfig.i18n || {
             };
             const paths = await this.staticPathsWorker.loadStaticPaths(this.distDir, pathname, !this.renderOpts.dev && this._isLikeServerless, {
+                configFileName,
                 publicRuntimeConfig,
                 serverRuntimeConfig
             }, httpAgentOptions, locales, defaultLocale);
@@ -641,5 +695,8 @@ class DevServer extends _nextServer.default {
     }
 }
 exports.default = DevServer;
+function getMiddlewareFilepath(pathname) {
+    return pathname.endsWith('/') ? `${pathname}_middleware` : `${pathname}/_middleware`;
+}
 
 //# sourceMappingURL=next-dev-server.js.map

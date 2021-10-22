@@ -5,6 +5,7 @@ Object.defineProperty(exports, "__esModule", {
 exports.markAssetError = markAssetError;
 exports.isAssetError = isAssetError;
 exports.getClientBuildManifest = getClientBuildManifest;
+exports.getMiddlewareManifest = getMiddlewareManifest;
 exports.createRouteLoader = createRouteLoader;
 var _getAssetPathFromRoute = _interopRequireDefault(require("../shared/lib/router/utils/get-asset-path-from-route"));
 var _requestIdleCallback = require("./request-idle-callback");
@@ -146,6 +147,19 @@ function getClientBuildManifest() {
         };
     });
     return resolvePromiseWithTimeout(onBuildManifest, MS_MAX_IDLE_DELAY, markAssetError(new Error('Failed to load client build manifest')));
+}
+function getMiddlewareManifest() {
+    if (self.__MIDDLEWARE_MANIFEST) {
+        return Promise.resolve(self.__MIDDLEWARE_MANIFEST);
+    }
+    const onMiddlewareManifest = new Promise((resolve)=>{
+        const cb = self.__MIDDLEWARE_MANIFEST_CB;
+        self.__MIDDLEWARE_MANIFEST_CB = ()=>{
+            resolve(self.__MIDDLEWARE_MANIFEST);
+            cb && cb();
+        };
+    });
+    return resolvePromiseWithTimeout(onMiddlewareManifest, MS_MAX_IDLE_DELAY, markAssetError(new Error('Failed to load client middleware manifest')));
 }
 function getFilesForRoute(assetPrefix, route) {
     if (process.env.NODE_ENV === 'development') {

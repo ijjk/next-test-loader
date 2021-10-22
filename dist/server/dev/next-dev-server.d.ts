@@ -8,6 +8,8 @@ import { Params } from '../router';
 import { NextConfig } from '../config';
 import { ParsedUrlQuery } from 'querystring';
 import { LoadComponentsReturnType } from '../load-components';
+import type { FetchEventResult } from '../web/types';
+import type { ParsedNextUrl } from '../../shared/lib/router/utils/parse-next-url';
 export default class DevServer extends Server {
     private devReady;
     private setDevReady?;
@@ -33,11 +35,20 @@ export default class DevServer extends Server {
     protected hasPage(pathname: string): Promise<boolean>;
     protected _beforeCatchAllRender(req: IncomingMessage, res: ServerResponse, params: Params, parsedUrl: UrlWithParsedQuery): Promise<boolean>;
     private setupWebSocketHandler;
+    runMiddleware(params: {
+        request: IncomingMessage;
+        response: ServerResponse;
+        parsedUrl: ParsedNextUrl;
+        parsed: UrlWithParsedQuery;
+    }): Promise<FetchEventResult | null>;
     run(req: IncomingMessage, res: ServerResponse, parsedUrl: UrlWithParsedQuery): Promise<void>;
     private logErrorWithOriginalStack;
     protected getCustomRoutes(): CustomRoutes;
     private _devCachedPreviewProps;
     protected getPreviewProps(): __ApiPreviewProps;
+    protected getMiddleware(): never[];
+    protected hasMiddleware(pathname: string): Promise<boolean>;
+    protected ensureMiddleware(pathname: string): Promise<any>;
     generateRoutes(): {
         basePath: string;
         headers: import("../router").Route[];
@@ -48,6 +59,7 @@ export default class DevServer extends Server {
         };
         redirects: import("../router").Route[];
         catchAllRoute: import("../router").Route;
+        catchAllMiddleware?: import("../router").Route | undefined;
         pageChecker: import("../router").PageChecker;
         useFileSystemPublicRoutes: boolean;
         dynamicRoutes: import("../router").DynamicRoutes | undefined;

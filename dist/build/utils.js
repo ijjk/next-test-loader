@@ -82,27 +82,27 @@ const fsStat = (file)=>{
     return fileStats[file] = fileSize(file);
 };
 function collectPages(directory, pageExtensions) {
-    return((0, _recursiveReaddir).recursiveReadDir(directory, new RegExp(`\\.(?:${pageExtensions.join('|')})$`)));
+    return (0, _recursiveReaddir).recursiveReadDir(directory, new RegExp(`\\.(?:${pageExtensions.join('|')})$`));
 }
 async function printTreeView(list, pageInfos, serverless, { distPath , buildId , pagesDir , pageExtensions , buildManifest , useStatic404 , gzipSize =true  }) {
     const getPrettySize = (_size)=>{
         const size = (0, _prettyBytes).default(_size);
         // green for 0-130kb
-        if (_size < 130 * 1000) return(_chalk.default.green(size));
+        if (_size < 130 * 1000) return _chalk.default.green(size);
         // yellow for 130-170kb
-        if (_size < 170 * 1000) return(_chalk.default.yellow(size));
+        if (_size < 170 * 1000) return _chalk.default.yellow(size);
         // red for >= 170kb
-        return(_chalk.default.red.bold(size));
+        return _chalk.default.red.bold(size);
     };
     const MIN_DURATION = 300;
     const getPrettyDuration = (_duration)=>{
         const duration = `${_duration} ms`;
         // green for 300-1000ms
-        if (_duration < 1000) return(_chalk.default.green(duration));
+        if (_duration < 1000) return _chalk.default.green(duration);
         // yellow for 1000-2000ms
-        if (_duration < 2000) return(_chalk.default.yellow(duration));
+        if (_duration < 2000) return _chalk.default.yellow(duration);
         // red for >= 2000ms
-        return(_chalk.default.red.bold(duration));
+        return _chalk.default.red.bold(duration);
     };
     const getCleanName = (fileName)=>fileName// Trim off `static/`
         .replace(/^static\//, '')// Re-add `static/` for root files
@@ -463,7 +463,7 @@ async function getJsPageSizeInKb(page, distPath, buildManifest, gzipSize = true,
         -1
     ];
 }
-async function buildStaticPaths(page, getStaticPaths, locales, defaultLocale) {
+async function buildStaticPaths(page, getStaticPaths, configFileName, locales, defaultLocale) {
     const prerenderPaths = new Set();
     const encodedPrerenderPaths = new Set();
     const _routeRegex = (0, _utils).getRouteRegex(page);
@@ -541,7 +541,7 @@ async function buildStaticPaths(page, getStaticPaths, locales, defaultLocale) {
                 encodedBuiltPage = encodedBuiltPage.replace(replaced, repeat ? paramValue.map(encodeURIComponent).join('/') : encodeURIComponent(paramValue)).replace(/(?!^)\/$/, '');
             });
             if (entry.locale && !(locales === null || locales === void 0 ? void 0 : locales.includes(entry.locale))) {
-                throw new Error(`Invalid locale returned from getStaticPaths for ${page}, the locale ${entry.locale} is not specified in next.config.js`);
+                throw new Error(`Invalid locale returned from getStaticPaths for ${page}, the locale ${entry.locale} is not specified in ${configFileName}`);
             }
             const curLocale = entry.locale || defaultLocale || '';
             prerenderPaths.add(`${curLocale ? `/${curLocale}` : ''}${curLocale && builtPage === '/' ? '' : builtPage}`);
@@ -558,7 +558,7 @@ async function buildStaticPaths(page, getStaticPaths, locales, defaultLocale) {
         ]
     };
 }
-async function isPageStatic(page, distDir, serverless, runtimeEnvConfig, httpAgentOptions, locales, defaultLocale, parentId) {
+async function isPageStatic(page, distDir, serverless, configFileName, runtimeEnvConfig, httpAgentOptions, locales, defaultLocale, parentId) {
     const isPageStaticSpan = (0, _trace).trace('is-page-static-utils', parentId);
     return isPageStaticSpan.traceAsyncFn(async ()=>{
         try {
@@ -612,7 +612,7 @@ async function isPageStatic(page, distDir, serverless, runtimeEnvConfig, httpAge
             let encodedPrerenderRoutes;
             let prerenderFallback;
             if (hasStaticProps && hasStaticPaths) {
-                ({ paths: prerenderRoutes , fallback: prerenderFallback , encodedPaths: encodedPrerenderRoutes ,  } = await buildStaticPaths(page, mod.getStaticPaths, locales, defaultLocale));
+                ({ paths: prerenderRoutes , fallback: prerenderFallback , encodedPaths: encodedPrerenderRoutes ,  } = await buildStaticPaths(page, mod.getStaticPaths, configFileName, locales, defaultLocale));
             }
             const isNextImageImported = global.__NEXT_IMAGE_IMPORTED;
             const config = mod.pageConfig;

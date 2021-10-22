@@ -13,14 +13,17 @@ import './node-polyfill-fetch';
 import { PagesManifest } from '../build/webpack/plugins/pages-manifest-plugin';
 import { FontManifest } from './font-utils';
 import { NextConfigComplete } from './config-shared';
+import type { FetchEventResult } from './web/types';
+import type { MiddlewareManifest } from '../build/webpack/plugins/middleware-plugin';
+import type { ParsedNextUrl } from '../shared/lib/router/utils/parse-next-url';
 export declare type FindComponentsResult = {
     components: LoadComponentsReturnType;
     query: ParsedUrlQuery;
 };
-declare type DynamicRouteItem = {
+interface RoutingItem {
     page: string;
     match: ReturnType<typeof getRouteMatcher>;
-};
+}
 export declare type ServerConstructor = {
     /**
      * Where the Next project is located - @default '.'
@@ -84,6 +87,8 @@ export default class Server {
     protected router: Router;
     protected dynamicRoutes?: DynamicRoutes;
     protected customRoutes: CustomRoutes;
+    protected middlewareManifest?: MiddlewareManifest;
+    protected middleware?: RoutingItem[];
     constructor({ dir, quiet, conf, dev, minimalMode, customServer, }: ServerConstructor & {
         conf: NextConfig;
         minimalMode?: boolean;
@@ -99,6 +104,21 @@ export default class Server {
     private _cachedPreviewManifest;
     protected getPrerenderManifest(): PrerenderManifest;
     protected getPreviewProps(): __ApiPreviewProps;
+    protected getMiddleware(): {
+        match: (pathname: string | null | undefined) => false | {
+            [paramName: string]: string | string[];
+        };
+        page: string;
+    }[];
+    protected hasMiddleware(pathname: string): Promise<boolean>;
+    protected ensureMiddleware(_pathname: string): Promise<void>;
+    private middlewareBetaWarning;
+    protected runMiddleware(params: {
+        request: IncomingMessage;
+        response: ServerResponse;
+        parsedUrl: ParsedNextUrl;
+        parsed: UrlWithParsedQuery;
+    }): Promise<FetchEventResult | null>;
     protected generateRoutes(): {
         basePath: string;
         headers: Route[];
@@ -110,6 +130,7 @@ export default class Server {
         fsRoutes: Route[];
         redirects: Route[];
         catchAllRoute: Route;
+        catchAllMiddleware?: Route;
         pageChecker: PageChecker;
         useFileSystemPublicRoutes: boolean;
         dynamicRoutes: DynamicRoutes | undefined;
@@ -127,7 +148,7 @@ export default class Server {
      */
     private handleApiRequest;
     protected generatePublicRoutes(): Route[];
-    protected getDynamicRoutes(): Array<DynamicRouteItem>;
+    protected getDynamicRoutes(): Array<RoutingItem>;
     private handleCompression;
     protected run(req: IncomingMessage, res: ServerResponse, parsedUrl: UrlWithParsedQuery): Promise<void>;
     private pipe;

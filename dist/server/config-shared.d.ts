@@ -1,3 +1,4 @@
+import type webpack5 from 'webpack5';
 import { Header, Redirect, Rewrite } from '../lib/load-custom-routes';
 import { ImageConfig, ImageConfigComplete } from './image-config';
 export declare type NextConfigComplete = Required<NextConfig> & {
@@ -5,6 +6,7 @@ export declare type NextConfigComplete = Required<NextConfig> & {
     typescript: Required<TypeScriptConfig>;
     configOrigin?: string;
     configFile?: string;
+    configFileName: string;
 };
 export interface I18NConfig {
     defaultLocale: string;
@@ -104,6 +106,7 @@ export declare type NextConfig = {
         webpack5?: false;
         strictPostcssConfiguration?: boolean;
     };
+    staticPageGenerationTimeout?: number;
     crossOrigin?: false | 'anonymous' | 'use-credentials';
     experimental?: {
         swcMinify?: boolean;
@@ -131,12 +134,12 @@ export declare type NextConfig = {
         gzipSize?: boolean;
         craCompat?: boolean;
         esmExternals?: boolean | 'loose';
-        staticPageGenerationTimeout?: number;
         isrMemoryCacheSize?: number;
         outputFileTracing?: boolean;
         concurrentFeatures?: boolean;
         serverComponents?: boolean;
         fullySpecified?: boolean;
+        urlImports?: NonNullable<webpack5.Configuration['experiments']>['buildHttp'];
     };
 };
 export declare const defaultConfig: NextConfig;

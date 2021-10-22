@@ -143,7 +143,7 @@ async function imageOptimizer(server, req, res, parsedUrl, nextConfig, distDir, 
         };
     }
     // Should match output from next-image-loader
-    const isStatic = url.startsWith(`${nextConfig.basePath || ''}/_next/static/image`);
+    const isStatic = url.startsWith(`${nextConfig.basePath || ''}/_next/static/media`);
     const width = parseInt(w, 10);
     if (!width || isNaN(width)) {
         res.statusCode = 400;

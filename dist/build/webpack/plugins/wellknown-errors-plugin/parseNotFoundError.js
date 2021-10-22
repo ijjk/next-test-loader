@@ -6,7 +6,6 @@ exports.getNotFoundError = getNotFoundError;
 var _chalk = _interopRequireDefault(require("chalk"));
 var _simpleWebpackError = require("./simpleWebpackError");
 var _middleware = require("@next/react-dev-overlay/lib/middleware");
-var _path = _interopRequireDefault(require("path"));
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
         default: obj
@@ -78,16 +77,11 @@ async function getNotFoundError(compilation, input, fileName) {
         }
         const errorMessage = input.error.message.replace(/ in '.*?'/, '').replace(/Can't resolve '(.*)'/, `Can't resolve '${chalk.green('$1')}'`);
         const importTrace = ()=>{
-            let importTraceLine = '\nImport trace for requested module:\n';
-            const moduleTrace = getModuleTrace(input, compilation);
-            for (const { origin  } of moduleTrace){
-                if (!origin.resource) {
-                    continue;
-                }
-                const filePath = _path.default.relative(compilation.options.context, origin.resource);
-                importTraceLine += `./${filePath}\n`;
-            }
-            return importTraceLine + '\n';
+            const moduleTrace = getModuleTrace(input, compilation).map(({ origin  })=>origin.readableIdentifier(compilation.requestShortener)
+            ).filter((name)=>name && !name.includes('next-client-pages-loader.js')
+            );
+            if (moduleTrace.length === 0) return '';
+            return `\nImport trace for requested module:\n${moduleTrace.join('\n')}\n\n`;
         };
         var _originalCodeFrame;
         const frame = (_originalCodeFrame = result.originalCodeFrame) !== null && _originalCodeFrame !== void 0 ? _originalCodeFrame : '';

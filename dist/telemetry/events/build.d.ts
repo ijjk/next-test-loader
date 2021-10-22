@@ -51,6 +51,7 @@ declare type EventBuildOptimized = {
     headersWithHasCount: number;
     rewritesWithHasCount: number;
     redirectsWithHasCount: number;
+    middlewareCount: number;
 };
 export declare function eventBuildOptimize(pagePaths: string[], event: Omit<EventBuildOptimized, 'totalPageCount' | 'hasDunderPages' | 'hasTestPages'>): {
     eventName: string;

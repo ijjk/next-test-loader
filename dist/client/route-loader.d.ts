@@ -4,6 +4,8 @@ declare global {
     interface Window {
         __BUILD_MANIFEST?: ClientBuildManifest;
         __BUILD_MANIFEST_CB?: Function;
+        __MIDDLEWARE_MANIFEST?: any;
+        __MIDDLEWARE_MANIFEST_CB?: Function;
     }
 }
 export interface LoadedEntrypointSuccess {
@@ -38,4 +40,5 @@ export interface RouteLoader {
 export declare function markAssetError(err: Error): Error;
 export declare function isAssetError(err?: Error): boolean | undefined;
 export declare function getClientBuildManifest(): Promise<ClientBuildManifest>;
+export declare function getMiddlewareManifest(): Promise<any>;
 export declare function createRouteLoader(assetPrefix: string): RouteLoader;

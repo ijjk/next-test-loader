@@ -1,0 +1,1 @@
+{"version":3,"sources":["../../../../server/web/spec-extension/fetch-event.ts"],"names":["FetchEvent","NextRequest","NextFetchEvent","request","constructor"],"mappings":";;;;AAA2B,GAA+B,CAA/B,WAA+B;MAG7C,cAAc,SAHA,WAA+B;gBAK5C,OAAoB,CAAE,CAAC;QACjC,KAAK,CAAC,OAAO;QACb,IAAI,CAAC,OAAO,GAAG,OAAO;IACxB,CAAC;;QALU,cAAc,GAAd,cAAc"}

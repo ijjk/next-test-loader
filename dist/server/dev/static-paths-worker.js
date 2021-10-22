@@ -24,7 +24,7 @@ async function loadStaticPaths(distDir, pathname, serverless, config, httpAgentO
         throw new Error(`Invariant: failed to load page with getStaticPaths for ${pathname}`);
     }
     workerWasUsed = true;
-    return (0, _utils).buildStaticPaths(pathname, components.getStaticPaths, locales, defaultLocale);
+    return (0, _utils).buildStaticPaths(pathname, components.getStaticPaths, config.configFileName, locales, defaultLocale);
 }
 
 //# sourceMappingURL=static-paths-worker.js.map

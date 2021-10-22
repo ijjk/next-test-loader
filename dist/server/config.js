@@ -26,6 +26,7 @@ exports.setHttpAgentOptions = setHttpAgentOptions;
 var _chalk = _interopRequireDefault(require("chalk"));
 var _findUp = _interopRequireDefault(require("next/dist/compiled/find-up"));
 var _path = require("path");
+var _url = require("url");
 var _http = require("http");
 var _https = require("https");
 var Log = _interopRequireWildcard(require("../build/output/log"));
@@ -76,8 +77,9 @@ const experimentalWarning = (0, _utils).execOnce(()=>{
 });
 function assignDefaults(userConfig) {
     var ref, ref1;
+    const configFileName = userConfig.configFileName;
     if (typeof userConfig.exportTrailingSlash !== 'undefined') {
-        console.warn(_chalk.default.yellow.bold('Warning: ') + 'The "exportTrailingSlash" option has been renamed to "trailingSlash". Please update your next.config.js.');
+        console.warn(_chalk.default.yellow.bold('Warning: ') + `The "exportTrailingSlash" option has been renamed to "trailingSlash". Please update your ${configFileName}.`);
         if (typeof userConfig.trailingSlash === 'undefined') {
             userConfig.trailingSlash = userConfig.exportTrailingSlash;
         }
@@ -85,7 +87,7 @@ function assignDefaults(userConfig) {
     }
     if (typeof ((ref = userConfig.experimental) === null || ref === void 0 ? void 0 : ref.reactMode) !== 'undefined') {
         var ref5;
-        console.warn(_chalk.default.yellow.bold('Warning: ') + 'The experimental "reactMode" option has been replaced with "reactRoot". Please update your next.config.js.');
+        console.warn(_chalk.default.yellow.bold('Warning: ') + `The experimental "reactMode" option has been replaced with "reactRoot". Please update your ${configFileName}.`);
         if (typeof ((ref5 = userConfig.experimental) === null || ref5 === void 0 ? void 0 : ref5.reactRoot) === 'undefined') {
             userConfig.experimental.reactRoot = [
                 'concurrent',
@@ -240,6 +242,9 @@ function assignDefaults(userConfig) {
         if (!_imageConfig.VALID_LOADERS.includes(images.loader)) {
             throw new Error(`Specified images.loader should be one of (${_imageConfig.VALID_LOADERS.join(', ')}), received invalid value (${images.loader}).\nSee more info here: https://nextjs.org/docs/messages/invalid-images-config`);
         }
+        if (images.loader !== 'default' && images.loader !== 'custom' && !(images.path || '').startsWith('http')) {
+            throw new Error(`Specified images.loader property (${images.loader}) also requires images.path property to be assigned to a URL prefix.\nSee more info here: https://nextjs.org/docs/api-reference/next/image#loader-configuration`);
+        }
         // Append trailing slash for non-default loaders and when trailingSlash is set
         if (images.path) {
             if (images.loader !== 'default' && images.path[images.path.length - 1] !== '/' || result.trailingSlash) {
@@ -271,11 +276,11 @@ function assignDefaults(userConfig) {
         }
     }
     if (result.webpack5 === false) {
-        throw new Error('Webpack 4 is no longer supported in Next.js. Please upgrade to webpack 5 by removing "webpack5: false" from next.config.js. https://nextjs.org/docs/messages/webpack5');
+        throw new Error(`Webpack 4 is no longer supported in Next.js. Please upgrade to webpack 5 by removing "webpack5: false" from ${configFileName}. https://nextjs.org/docs/messages/webpack5`);
     }
     if (result.experimental && 'nftTracing' in result.experimental) {
         // TODO: remove this warning and assignment when we leave experimental phase
-        Log.warn(`Experimental \`nftTracing\` has been renamed to \`outputFileTracing\`. Please update your next.config.js file accordingly.`);
+        Log.warn(`Experimental \`nftTracing\` has been renamed to \`outputFileTracing\`. Please update your ${configFileName} file accordingly.`);
         result.experimental.outputFileTracing = result.experimental.nftTracing;
     }
     // TODO: Change defaultConfig type to NextConfigComplete
@@ -369,9 +374,11 @@ function assignDefaults(userConfig) {
 async function loadConfig(phase, dir, customConfig) {
     await (0, _env).loadEnvConfig(dir, phase === _constants.PHASE_DEVELOPMENT_SERVER, Log);
     await (0, _configUtils).loadWebpackHook();
+    let configFileName = 'next.config.js';
     if (customConfig) {
         return assignDefaults({
             configOrigin: 'server',
+            configFileName,
             ...customConfig
         });
     }
@@ -381,17 +388,20 @@ async function loadConfig(phase, dir, customConfig) {
     // If config file was found
     if (path === null || path === void 0 ? void 0 : path.length) {
         var ref;
+        configFileName = (0, _path).basename(path);
         let userConfigModule;
         try {
-            // we must use file for absolute dynamic imports on Windows
-            userConfigModule = await import(`file://${path}`);
+            // `import()` expects url-encoded strings, so the path must be properly
+            // escaped and (especially on Windows) absolute paths must pe prefixed
+            // with the `file://` protocol
+            userConfigModule = await import((0, _url).pathToFileURL(path).href);
         } catch (err) {
-            console.error(_chalk.default.red('Error:') + ' failed to load next.config.js, see more info here https://nextjs.org/docs/messages/next-config-error');
+            Log.error(`Failed to load ${configFileName}, see more info here https://nextjs.org/docs/messages/next-config-error`);
             throw err;
         }
         const userConfig = (0, _configShared).normalizeConfig(phase, userConfigModule.default || userConfigModule);
         if (Object.keys(userConfig).length === 0) {
-            Log.warn('Detected next.config.js, no exported configuration found. https://nextjs.org/docs/messages/empty-configuration');
+            Log.warn(`Detected ${configFileName}, no exported configuration found. https://nextjs.org/docs/messages/empty-configuration`);
         }
         if (userConfig.target && !targets.includes(userConfig.target)) {
             throw new Error(`Specified target is invalid. Provided: "${userConfig.target}" should be one of ${targets.join(', ')}`);
@@ -409,6 +419,7 @@ async function loadConfig(phase, dir, customConfig) {
         return assignDefaults({
             configOrigin: (0, _path).relative(dir, path),
             configFile: path,
+            configFileName,
             ...userConfig
         });
     } else {
@@ -426,6 +437,7 @@ async function loadConfig(phase, dir, customConfig) {
         }
     }
     const completeConfig = _configShared.defaultConfig;
+    completeConfig.configFileName = configFileName;
     setHttpAgentOptions(completeConfig.httpAgentOptions);
     return completeConfig;
 }

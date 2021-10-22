@@ -7,6 +7,7 @@ import { RouterEvent } from '../../../client/router';
 import type { DomainLocale } from '../../../server/config';
 import { MittEmitter } from '../mitt';
 import { NextPageContext, NEXT_DATA } from '../utils';
+import { parseRelativeUrl } from './utils/parse-relative-url';
 declare global {
     interface Window {
         __NEXT_DATA__: NEXT_DATA;
@@ -25,6 +26,32 @@ interface NextHistoryState {
     as: string;
     options: TransitionOptions;
 }
+interface PreflightData {
+    redirect?: string | null;
+    refresh?: boolean;
+    rewrite?: string | null;
+}
+declare type PreflightEffect = {
+    asPath: string;
+    matchedPage?: boolean;
+    parsedAs: ReturnType<typeof parseRelativeUrl>;
+    resolvedHref: string;
+    type: 'rewrite';
+} | {
+    destination?: undefined;
+    newAs: string;
+    newUrl: string;
+    type: 'redirect';
+} | {
+    destination: string;
+    newAs?: undefined;
+    newUrl?: undefined;
+    type: 'redirect';
+} | {
+    type: 'refresh';
+} | {
+    type: 'next';
+};
 export declare function getDomainLocale(path: string, locale?: string | false, locales?: string[], domainLocales?: DomainLocale[]): string | false;
 export declare function addLocale(path: string, locale?: string | false, defaultLocale?: string): string;
 export declare function delLocale(path: string, locale?: string): string;
@@ -85,6 +112,9 @@ declare type Subscription = (data: PrivateRouteInfo, App: AppComponent, resetScr
 declare type BeforePopStateCallback = (state: NextHistoryState) => boolean;
 declare type ComponentLoadCancel = (() => void) | null;
 declare type HistoryMethod = 'replaceState' | 'pushState';
+interface NextDataCache {
+    [asPath: string]: Promise<object>;
+}
 export default class Router implements BaseRouter {
     route: string;
     pathname: string;
@@ -97,11 +127,10 @@ export default class Router implements BaseRouter {
     components: {
         [pathname: string]: PrivateRouteInfo;
     };
-    sdc: {
+    sdc: NextDataCache;
+    sdr: NextDataCache;
+    sde: {
         [asPath: string]: object;
-    };
-    sdr: {
-        [asPath: string]: Promise<object>;
     };
     sub: Subscription;
     clc: ComponentLoadCancel;
@@ -185,8 +214,17 @@ export default class Router implements BaseRouter {
     prefetch(url: string, asPath?: string, options?: PrefetchOptions): Promise<void>;
     fetchComponent(route: string): Promise<GoodPageCache>;
     _getData<T>(fn: () => Promise<T>): Promise<T>;
-    _getStaticData(dataHref: string): Promise<object>;
-    _getServerData(dataHref: string): Promise<object>;
+    _preflightRequest(options: {
+        as: string;
+        cache?: boolean;
+        pages: string[];
+        pathname: string;
+        query: ParsedUrlQuery;
+    }): Promise<PreflightEffect>;
+    _getPreflightData(params: {
+        preflightHref: string;
+        shouldCache?: boolean;
+    }): Promise<PreflightData>;
     getInitialProps(Component: ComponentType, ctx: NextPageContext): Promise<any>;
     abortComponentLoad(as: string, routeProps: RouteProperties): void;
     notify(data: PrivateRouteInfo, resetScroll: {

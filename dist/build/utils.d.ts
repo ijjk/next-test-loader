@@ -40,11 +40,11 @@ declare type ComputeManifestShape = {
 export declare function computeFromManifest(manifest: BuildManifest, distPath: string, gzipSize?: boolean, pageInfos?: Map<string, PageInfo>): Promise<ComputeManifestShape>;
 export declare function difference<T>(main: T[] | Set<T>, sub: T[] | Set<T>): T[];
 export declare function getJsPageSizeInKb(page: string, distPath: string, buildManifest: BuildManifest, gzipSize?: boolean, computedManifestData?: ComputeManifestShape): Promise<[number, number]>;
-export declare function buildStaticPaths(page: string, getStaticPaths: GetStaticPaths, locales?: string[], defaultLocale?: string): Promise<Omit<UnwrapPromise<ReturnType<GetStaticPaths>>, 'paths'> & {
+export declare function buildStaticPaths(page: string, getStaticPaths: GetStaticPaths, configFileName: string, locales?: string[], defaultLocale?: string): Promise<Omit<UnwrapPromise<ReturnType<GetStaticPaths>>, 'paths'> & {
     paths: string[];
     encodedPaths: string[];
 }>;
-export declare function isPageStatic(page: string, distDir: string, serverless: boolean, runtimeEnvConfig: any, httpAgentOptions: NextConfigComplete['httpAgentOptions'], locales?: string[], defaultLocale?: string, parentId?: any): Promise<{
+export declare function isPageStatic(page: string, distDir: string, serverless: boolean, configFileName: string, runtimeEnvConfig: any, httpAgentOptions: NextConfigComplete['httpAgentOptions'], locales?: string[], defaultLocale?: string, parentId?: any): Promise<{
     isStatic?: boolean;
     isAmpOnly?: boolean;
     isHybridAmp?: boolean;

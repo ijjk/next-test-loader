@@ -2,6 +2,12 @@
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
+Object.defineProperty(exports, "getMiddlewareRegex", {
+    enumerable: true,
+    get: function() {
+        return _getMiddlewareRegex.getMiddlewareRegex;
+    }
+});
 Object.defineProperty(exports, "getRouteMatcher", {
     enumerable: true,
     get: function() {
@@ -26,6 +32,7 @@ Object.defineProperty(exports, "isDynamicRoute", {
         return _isDynamic.isDynamicRoute;
     }
 });
+var _getMiddlewareRegex = require("./get-middleware-regex");
 var _routeMatcher = require("./route-matcher");
 var _routeRegex = require("./route-regex");
 var _sortedRoutes = require("./sorted-routes");

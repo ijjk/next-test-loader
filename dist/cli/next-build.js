@@ -90,8 +90,12 @@ const nextBuild = (argv)=>{
     }
     return (0, _build).default(dir, null, args['--profile'], args['--debug'], !args['--no-lint']).catch((err)=>{
         console.error('');
-        console.error('> Build error occurred');
-        (0, _utils).printAndExit(err);
+        if ((0, _isError).default(err) && (err.code === 'INVALID_RESOLVE_ALIAS' || err.code === 'WEBPACK_ERRORS' || err.code === 'BUILD_OPTIMIZATION_FAILED')) {
+            (0, _utils).printAndExit(`> ${err.message}`);
+        } else {
+            console.error('> Build error occurred');
+            (0, _utils).printAndExit(err);
+        }
     });
 };
 exports.nextBuild = nextBuild;

@@ -25,6 +25,7 @@ var _querystring = require("./utils/querystring");
 var _resolveRewrites = _interopRequireDefault(require("./utils/resolve-rewrites"));
 var _routeMatcher = require("./utils/route-matcher");
 var _routeRegex = require("./utils/route-regex");
+var _getMiddlewareRegex = require("./utils/get-middleware-regex");
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
         default: obj
@@ -293,14 +294,26 @@ function fetchRetry(url, attempts) {
         return res.json();
     });
 }
-function fetchNextData(dataHref, isServerRender) {
-    return fetchRetry(dataHref, isServerRender ? 3 : 1).catch((err)=>{
+function fetchNextData(dataHref, isServerRender, inflightCache, persistCache) {
+    const { href: cacheKey  } = new URL(dataHref, window.location.href);
+    if (inflightCache[cacheKey] !== undefined) {
+        return inflightCache[cacheKey];
+    }
+    return inflightCache[cacheKey] = fetchRetry(dataHref, isServerRender ? 3 : 1).catch((err)=>{
         // We should only trigger a server-side transition if this was caused
         // on a client-side transition. Otherwise, we'd get into an infinite
         // loop.
         if (!isServerRender) {
             (0, _routeLoader).markAssetError(err);
         }
+        throw err;
+    }).then((data)=>{
+        if (!persistCache || process.env.NODE_ENV !== 'production') {
+            delete inflightCache[cacheKey];
+        }
+        return data;
+    }).catch((err)=>{
+        delete inflightCache[cacheKey];
         throw err;
     });
 }
@@ -311,6 +324,9 @@ class Router {
         };
         // In-flight Server Data Requests, for deduping
         this.sdr = {
+        };
+        // In-flight middleware preflight requests
+        this.sde = {
         };
         this._idx = 0;
         this.onPopState = (e)=>{
@@ -594,8 +610,11 @@ class Router {
         // when rewritten to
         let pages, rewrites;
         try {
-            pages = await this.pageLoader.getPageList();
-            ({ __rewrites: rewrites  } = await (0, _routeLoader).getClientBuildManifest());
+            [pages, { __rewrites: rewrites  }] = await Promise.all([
+                this.pageLoader.getPageList(),
+                (0, _routeLoader).getClientBuildManifest(),
+                this.pageLoader.getMiddlewareList(), 
+            ]);
         } catch (err) {
             // If we fail to resolve the page list or client-build manifest, we must
             // do a server-side transition:
@@ -639,7 +658,6 @@ class Router {
                 }
             }
         }
-        const route = (0, _normalizeTrailingSlash).removePathTrailingSlash(pathname);
         if (!isLocalURL(as)) {
             if (process.env.NODE_ENV !== 'production') {
                 throw new Error(`Invalid href: "${url}" and as: "${as}", received relative href and external as` + `\nSee more info: https://nextjs.org/docs/messages/invalid-relative-url-external-as`);
@@ -648,6 +666,34 @@ class Router {
             return false;
         }
         resolvedAs = delLocale(delBasePath(resolvedAs), this.locale);
+        const effect = await this._preflightRequest({
+            as,
+            cache: process.env.NODE_ENV === 'production',
+            pages,
+            pathname,
+            query
+        });
+        if (effect.type === 'rewrite') {
+            query = {
+                ...query,
+                ...effect.parsedAs.query
+            };
+            resolvedAs = effect.asPath;
+            pathname = effect.resolvedHref;
+            parsed.pathname = effect.resolvedHref;
+            url = (0, _utils).formatWithValidation(parsed);
+        } else if (effect.type === 'redirect' && effect.newAs) {
+            return this.change(method, effect.newUrl, effect.newAs, options);
+        } else if (effect.type === 'redirect' && effect.destination) {
+            window.location.href = effect.destination;
+            return new Promise(()=>{
+            });
+        } else if (effect.type === 'refresh') {
+            window.location.href = as;
+            return new Promise(()=>{
+            });
+        }
+        const route = (0, _normalizeTrailingSlash).removePathTrailingSlash(pathname);
         if ((0, _isDynamic).isDynamicRoute(route)) {
             const parsedAs = (0, _parseRelativeUrl).parseRelativeUrl(resolvedAs);
             const asPathname = parsedAs.pathname;
@@ -858,7 +904,7 @@ class Router {
                     query
                 }), resolvedAs, __N_SSG, this.locale);
             }
-            const props = await this._getData(()=>__N_SSG ? this._getStaticData(dataHref) : __N_SSP ? this._getServerData(dataHref) : this.getInitialProps(Component, // we provide AppTree later so this needs to be `any`
+            const props = await this._getData(()=>__N_SSG || __N_SSP ? fetchNextData(dataHref, this.isSsr, __N_SSG ? this.sdc : this.sdr, !!__N_SSG) : this.getInitialProps(Component, // we provide AppTree later so this needs to be `any`
                 {
                     pathname,
                     query,
@@ -939,7 +985,7 @@ class Router {
    */ async prefetch(url, asPath = url, options = {
     }) {
         let parsed = (0, _parseRelativeUrl).parseRelativeUrl(url);
-        let { pathname  } = parsed;
+        let { pathname , query  } = parsed;
         if (process.env.__NEXT_I18N_SUPPORT) {
             if (options.locale === false) {
                 pathname = (0, _normalizeLocalePath).normalizeLocalePath(pathname, this.locales).pathname;
@@ -975,14 +1021,31 @@ class Router {
                 url = (0, _utils).formatWithValidation(parsed);
             }
         }
-        const route = (0, _normalizeTrailingSlash).removePathTrailingSlash(pathname);
         // Prefetch is not supported in development mode because it would trigger on-demand-entries
         if (process.env.NODE_ENV !== 'production') {
             return;
         }
+        const effects = await this._preflightRequest({
+            as: asPath,
+            cache: true,
+            pages,
+            pathname,
+            query
+        });
+        if (effects.type === 'rewrite') {
+            parsed.pathname = effects.resolvedHref;
+            pathname = effects.resolvedHref;
+            query = {
+                ...query,
+                ...effects.parsedAs.query
+            };
+            resolvedAs = effects.asPath;
+            url = (0, _utils).formatWithValidation(parsed);
+        }
+        const route = (0, _normalizeTrailingSlash).removePathTrailingSlash(pathname);
         await Promise.all([
             this.pageLoader._isSsg(route).then((isSsg)=>{
-                return isSsg ? this._getStaticData(this.pageLoader.getDataHref(url, resolvedAs, true, typeof options.locale !== 'undefined' ? options.locale : this.locale)) : false;
+                return isSsg ? fetchNextData(this.pageLoader.getDataHref(url, resolvedAs, true, typeof options.locale !== 'undefined' ? options.locale : this.locale), false, this.sdc, true) : false;
             }),
             this.pageLoader[options.priority ? 'loadPage' : 'prefetch'](route), 
         ]);
@@ -1029,26 +1092,96 @@ class Router {
             return data;
         });
     }
-    _getStaticData(dataHref) {
-        const { href: cacheKey  } = new URL(dataHref, window.location.href);
-        if (process.env.NODE_ENV === 'production' && !this.isPreview && this.sdc[cacheKey]) {
-            return Promise.resolve(this.sdc[cacheKey]);
-        }
-        return fetchNextData(dataHref, this.isSsr).then((data)=>{
-            this.sdc[cacheKey] = data;
-            return data;
+    async _preflightRequest(options) {
+        var ref;
+        const cleanedAs = delLocale(hasBasePath(options.as) ? delBasePath(options.as) : options.as, this.locale);
+        const fns = await this.pageLoader.getMiddlewareList();
+        const requiresPreflight = fns.some((middleware)=>{
+            return (0, _routeMatcher).getRouteMatcher((0, _getMiddlewareRegex).getMiddlewareRegex(middleware))(cleanedAs);
         });
-    }
-    _getServerData(dataHref) {
-        const { href: resourceKey  } = new URL(dataHref, window.location.href);
-        if (this.sdr[resourceKey] !== undefined) {
-            return this.sdr[resourceKey];
+        if (!requiresPreflight) {
+            return {
+                type: 'next'
+            };
         }
-        return this.sdr[resourceKey] = fetchNextData(dataHref, this.isSsr).then((data)=>{
-            delete this.sdr[resourceKey];
+        const preflight = await this._getPreflightData({
+            preflightHref: options.as,
+            shouldCache: options.cache
+        });
+        if ((ref = preflight.rewrite) === null || ref === void 0 ? void 0 : ref.startsWith('/')) {
+            const parsed = (0, _parseRelativeUrl).parseRelativeUrl((0, _normalizeLocalePath).normalizeLocalePath(hasBasePath(preflight.rewrite) ? delBasePath(preflight.rewrite) : preflight.rewrite, this.locales).pathname);
+            const fsPathname = (0, _normalizeTrailingSlash).removePathTrailingSlash(parsed.pathname);
+            let matchedPage;
+            let resolvedHref;
+            if (options.pages.includes(fsPathname)) {
+                matchedPage = true;
+                resolvedHref = fsPathname;
+            } else {
+                resolvedHref = resolveDynamicRoute(fsPathname, options.pages);
+                if (resolvedHref !== parsed.pathname && options.pages.includes(resolvedHref)) {
+                    matchedPage = true;
+                }
+            }
+            return {
+                type: 'rewrite',
+                asPath: parsed.pathname,
+                parsedAs: parsed,
+                matchedPage,
+                resolvedHref
+            };
+        }
+        if (preflight.redirect) {
+            if (preflight.redirect.startsWith('/')) {
+                const cleanRedirect = (0, _normalizeTrailingSlash).removePathTrailingSlash((0, _normalizeLocalePath).normalizeLocalePath(hasBasePath(preflight.redirect) ? delBasePath(preflight.redirect) : preflight.redirect, this.locales).pathname);
+                const { url: newUrl , as: newAs  } = prepareUrlAs(this, cleanRedirect, cleanRedirect);
+                return {
+                    type: 'redirect',
+                    newUrl,
+                    newAs
+                };
+            }
+            return {
+                type: 'redirect',
+                destination: preflight.redirect
+            };
+        }
+        if (preflight.refresh) {
+            return {
+                type: 'refresh'
+            };
+        }
+        return {
+            type: 'next'
+        };
+    }
+    _getPreflightData(params) {
+        const { preflightHref , shouldCache =false  } = params;
+        const { href: cacheKey  } = new URL(preflightHref, window.location.href);
+        if (process.env.NODE_ENV === 'production' && !this.isPreview && shouldCache && this.sde[cacheKey]) {
+            return Promise.resolve(this.sde[cacheKey]);
+        }
+        return fetch(preflightHref, {
+            method: 'HEAD',
+            credentials: 'same-origin',
+            headers: {
+                'x-middleware-preflight': '1'
+            }
+        }).then((res)=>{
+            if (!res.ok) {
+                throw new Error(`Failed to preflight request`);
+            }
+            return {
+                redirect: res.headers.get('Location'),
+                refresh: res.headers.has('x-middleware-refresh'),
+                rewrite: res.headers.get('x-middleware-rewrite')
+            };
+        }).then((data)=>{
+            if (shouldCache) {
+                this.sde[cacheKey] = data;
+            }
             return data;
         }).catch((err)=>{
-            delete this.sdr[resourceKey];
+            delete this.sde[cacheKey];
             throw err;
         });
     }

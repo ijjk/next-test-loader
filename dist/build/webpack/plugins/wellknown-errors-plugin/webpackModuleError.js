@@ -41,8 +41,8 @@ function _interopRequireWildcard(obj) {
 function getFileData(compilation, m) {
     var ref;
     let resolved;
-    var ref1, ref2;
-    let ctx = (ref2 = (ref1 = (ref = compilation.compiler) === null || ref === void 0 ? void 0 : ref.context) !== null && ref1 !== void 0 ? ref1 : compilation.context) !== null && ref2 !== void 0 ? ref2 : null;
+    var ref1;
+    let ctx = (ref1 = (ref = compilation.compiler) === null || ref === void 0 ? void 0 : ref.context) !== null && ref1 !== void 0 ? ref1 : null;
     if (ctx !== null && typeof m.resource === 'string') {
         const res = path.relative(ctx, m.resource).replace(/\\/g, path.posix.sep);
         resolved = res.startsWith('.') ? res : `.${path.posix.sep}${res}`;

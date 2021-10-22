@@ -1,7 +1,7 @@
-import { webpack } from 'next/dist/compiled/webpack/webpack';
-export declare class NextJsRequireCacheHotReloader implements webpack.Plugin {
+import type { Compiler, WebpackPluginInstance } from 'webpack5';
+export declare class NextJsRequireCacheHotReloader implements WebpackPluginInstance {
     prevAssets: any;
     previousOutputPathsWebpack5: Set<string>;
     currentOutputPathsWebpack5: Set<string>;
-    apply(compiler: webpack.Compiler): void;
+    apply(compiler: Compiler): void;
 }

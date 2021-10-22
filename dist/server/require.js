@@ -6,6 +6,7 @@ exports.pageNotFoundError = pageNotFoundError;
 exports.getPagePath = getPagePath;
 exports.requirePage = requirePage;
 exports.requireFontManifest = requireFontManifest;
+exports.getMiddlewareInfo = getMiddlewareInfo;
 var _fs = require("fs");
 var _path = require("path");
 var _constants = require("../shared/lib/constants");
@@ -50,6 +51,25 @@ function requireFontManifest(distDir, serverless) {
     const serverBuildPath = (0, _path).join(distDir, serverless ? _constants.SERVERLESS_DIRECTORY : _constants.SERVER_DIRECTORY);
     const fontManifest = require((0, _path).join(serverBuildPath, _constants.FONT_MANIFEST));
     return fontManifest;
+}
+function getMiddlewareInfo(params) {
+    const serverBuildPath = (0, _path).join(params.distDir, params.serverless && !params.dev ? _constants.SERVERLESS_DIRECTORY : _constants.SERVER_DIRECTORY);
+    const middlewareManifest = require((0, _path).join(serverBuildPath, _constants.MIDDLEWARE_MANIFEST));
+    let page;
+    try {
+        page = (0, _normalizePagePath).denormalizePagePath((0, _normalizePagePath).normalizePagePath(params.page));
+    } catch (err) {
+        throw pageNotFoundError(params.page);
+    }
+    let pageInfo = middlewareManifest.middleware[page];
+    if (!pageInfo) {
+        throw pageNotFoundError(page);
+    }
+    return {
+        name: pageInfo.name,
+        paths: pageInfo.files.map((file)=>(0, _path).join(params.distDir, file)
+        )
+    };
 }
 
 //# sourceMappingURL=require.js.map

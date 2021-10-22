@@ -25,10 +25,9 @@ function getModuleFromDependency(compilation, dep) {
     return compilation.moduleGraph.getModule(dep);
 }
 class TraceEntryPointsPlugin {
-    constructor({ appDir , excludeFiles , esmExternals , staticImageImports , externalDir  }){
+    constructor({ appDir , excludeFiles , esmExternals , staticImageImports  }){
         this.appDir = appDir;
         this.entryTraces = new Map();
-        this.externalDir = externalDir;
         this.esmExternals = esmExternals;
         this.excludeFiles = excludeFiles || [];
         this.staticImageImports = staticImageImports;
@@ -227,7 +226,7 @@ class TraceEntryPointsPlugin {
                 await finishModulesSpan.traceChild('collect-traced-files').traceAsyncFn(()=>{
                     for (const file of fileList){
                         const reason = reasons.get(file);
-                        if (!reason || reason.type === 'initial' || !reason.parents) {
+                        if (!reason || !reason.parents || reason.type === 'initial' && reason.parents.size === 0) {
                             continue;
                         }
                         propagateToParents(reason.parents, file);

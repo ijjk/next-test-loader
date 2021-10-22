@@ -128,20 +128,28 @@ function onDemandEntryHandler(watcher, multiCompiler, { pagesDir , pageExtension
             if (pagePath === null) {
                 throw (0, _require).pageNotFoundError(normalizedPagePath);
             }
-            let pageUrl = pagePath.replace(/\\/g, '/');
-            pageUrl = `${pageUrl[0] !== '/' ? '/' : ''}${pageUrl.replace(new RegExp(`\\.+(?:${pageExtensions.join('|')})$`), '').replace(/\/index$/, '')}`;
-            pageUrl = pageUrl === '' ? '/' : pageUrl;
-            const bundleFile = (0, _normalizePagePath).normalizePagePath(pageUrl);
-            const bundlePath = _path.posix.join('pages', bundleFile);
-            const absolutePagePath = pagePath.startsWith('next/dist/pages') ? require.resolve(pagePath) : (0, _path).join(pagesDir, pagePath);
-            page = _path.posix.normalize(pageUrl);
+            let bundlePath;
+            let absolutePagePath;
+            if (pagePath.startsWith('next/dist/pages/')) {
+                bundlePath = page;
+                absolutePagePath = require.resolve(pagePath);
+            } else {
+                let pageUrl = pagePath.replace(/\\/g, '/');
+                pageUrl = `${pageUrl[0] !== '/' ? '/' : ''}${pageUrl.replace(new RegExp(`\\.+(?:${pageExtensions.join('|')})$`), '').replace(/\/index$/, '')}`;
+                pageUrl = pageUrl === '' ? '/' : pageUrl;
+                const bundleFile = (0, _normalizePagePath).normalizePagePath(pageUrl);
+                bundlePath = _path.posix.join('pages', bundleFile);
+                absolutePagePath = (0, _path).join(pagesDir, pagePath);
+                page = _path.posix.normalize(pageUrl);
+            }
             const normalizedPage = (0, _normalizePagePath).normalizePathSep(page);
-            const isApiRoute = normalizedPage.match(_constants.API_ROUTE);
+            const isMiddleware = normalizedPage.match(_constants.MIDDLEWARE_ROUTE);
+            const isApiRoute = normalizedPage.match(_constants.API_ROUTE) && !isMiddleware;
             let entriesChanged = false;
             const addPageEntry = (type)=>{
                 return new Promise((resolve, reject)=>{
                     // Makes sure the page that is being kept in on-demand-entries matches the webpack output
-                    const pageKey = `${type}${normalizedPage}`;
+                    const pageKey = `${type}${page}`;
                     const entryInfo = entries[pageKey];
                     if (entryInfo) {
                         entryInfo.lastActiveTime = Date.now();
@@ -168,12 +176,12 @@ function onDemandEntryHandler(watcher, multiCompiler, { pagesDir , pageExtension
                     }
                 });
             };
-            const promise = isApiRoute ? addPageEntry('server') : clientOnly ? addPageEntry('client') : Promise.all([
+            const promise = isApiRoute ? addPageEntry('server') : clientOnly || isMiddleware ? addPageEntry('client') : Promise.all([
                 addPageEntry('client'),
                 addPageEntry('server')
             ]);
             if (entriesChanged) {
-                (0, _output).reportTrigger(isApiRoute ? `${normalizedPage} (server only)` : clientOnly ? `${normalizedPage} (client only)` : normalizedPage);
+                (0, _output).reportTrigger(isApiRoute || isMiddleware ? `${normalizedPage} (server only)` : clientOnly ? `${normalizedPage} (client only)` : normalizedPage);
                 invalidator.invalidate();
             }
             return promise;

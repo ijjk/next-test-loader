@@ -28,7 +28,7 @@ function nextImageLoader(content) {
             context,
             content
         };
-        const interpolatedName = _loaderUtils.default.interpolateName(this, '/static/image/[path][name].[hash].[ext]', opts);
+        const interpolatedName = _loaderUtils.default.interpolateName(this, '/static/media/[name].[hash:8].[ext]', opts);
         const outputPath = assetPrefix + '/_next' + interpolatedName;
         let extension = _loaderUtils.default.interpolateName(this, '[ext]', opts);
         if (extension === 'jpg') {

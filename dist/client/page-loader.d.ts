@@ -14,9 +14,11 @@ export default class PageLoader {
     private assetPrefix;
     private promisedSsgManifest?;
     private promisedDevPagesManifest?;
+    private promisedMiddlewareManifest?;
     routeLoader: RouteLoader;
     constructor(buildId: string, assetPrefix: string);
     getPageList(): any;
+    getMiddlewareList(): Promise<string[]>;
     /**
      * @param {string} href the route href (file-system path)
      * @param {string} asPath the URL as shown in browser (virtual path); used for dynamic routes

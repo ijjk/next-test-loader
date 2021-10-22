@@ -201,9 +201,8 @@ function watchCompilers(client, server) {
                 }
             });
             const { errors , warnings  } = (0, _formatWebpackMessages).default(stats.toJson({
-                all: false,
-                warnings: true,
-                errors: true
+                preset: 'error-warnings',
+                moduleTrace: true
             }));
             const hasErrors = !!(errors === null || errors === void 0 ? void 0 : errors.length);
             const hasWarnings = !!(warnings === null || warnings === void 0 ? void 0 : warnings.length);

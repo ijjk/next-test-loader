@@ -5,11 +5,14 @@ Object.defineProperty(exports, "__esModule", {
 exports.runCompiler = runCompiler;
 var _webpack = require("next/dist/compiled/webpack/webpack");
 function generateStats(result, stat) {
-    const { errors , warnings  } = stat.toJson('errors-warnings');
-    if (errors.length > 0) {
+    const { errors , warnings  } = stat.toJson({
+        preset: 'errors-warnings',
+        moduleTrace: true
+    });
+    if (errors && errors.length > 0) {
         result.errors.push(...errors);
     }
-    if (warnings.length > 0) {
+    if (warnings && warnings.length > 0) {
         result.warnings.push(...warnings);
     }
     return result;
@@ -33,17 +36,21 @@ function runCompiler(config, { runWebpackSpan  }) {
             webpackCloseSpan.traceAsyncFn(()=>closeCompiler(compiler)
             ).then(()=>{
                 if (err) {
-                    const reason = err === null || err === void 0 ? void 0 : err.toString();
+                    var _stack;
+                    const reason = (_stack = err.stack) !== null && _stack !== void 0 ? _stack : err.toString();
                     if (reason) {
                         return resolve({
                             errors: [
-                                reason
+                                {
+                                    message: reason,
+                                    details: err.details
+                                }
                             ],
                             warnings: []
                         });
                     }
                     return reject(err);
-                }
+                } else if (!stats) throw new Error('No Stats from webpack');
                 const result = webpackCloseSpan.traceChild('webpack-generate-error-stats').traceFn(()=>generateStats({
                         errors: [],
                         warnings: []

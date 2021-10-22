@@ -15,7 +15,7 @@ export default class HotReloader {
     private pagesDir;
     private webpackHotMiddleware?;
     private config;
-    private stats;
+    clientStats: webpack.Stats | null;
     serverStats: webpack.Stats | null;
     private clientError;
     private serverError;

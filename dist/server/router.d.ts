@@ -1,6 +1,7 @@
 /// <reference types="node" />
-import { IncomingMessage, ServerResponse } from 'http';
-import { UrlWithParsedQuery } from 'url';
+import type { IncomingMessage, ServerResponse } from 'http';
+import type { ParsedUrlQuery } from 'querystring';
+import type { UrlWithParsedQuery } from 'url';
 import { RouteHas } from '../lib/load-custom-routes';
 export declare const route: (path: string, regexModifier?: ((regex: string) => string) | undefined) => (pathname: string | null | undefined, params?: any) => any;
 export declare type Params = {
@@ -10,9 +11,7 @@ export declare type RouteMatch = (pathname: string | null | undefined) => false 
 declare type RouteResult = {
     finished: boolean;
     pathname?: string;
-    query?: {
-        [k: string]: string;
-    };
+    query?: ParsedUrlQuery;
 };
 export declare type Route = {
     match: RouteMatch;
@@ -41,11 +40,12 @@ export default class Router {
         fallback: Route[];
     };
     catchAllRoute: Route;
+    catchAllMiddleware?: Route;
     pageChecker: PageChecker;
     dynamicRoutes: DynamicRoutes;
     useFileSystemPublicRoutes: boolean;
     locales: string[];
-    constructor({ basePath, headers, fsRoutes, rewrites, redirects, catchAllRoute, dynamicRoutes, pageChecker, useFileSystemPublicRoutes, locales, }: {
+    constructor({ basePath, headers, fsRoutes, rewrites, redirects, catchAllRoute, catchAllMiddleware, dynamicRoutes, pageChecker, useFileSystemPublicRoutes, locales, }: {
         basePath: string;
         headers: Route[];
         fsRoutes: Route[];
@@ -56,6 +56,7 @@ export default class Router {
         };
         redirects: Route[];
         catchAllRoute: Route;
+        catchAllMiddleware?: Route;
         dynamicRoutes: DynamicRoutes | undefined;
         pageChecker: PageChecker;
         useFileSystemPublicRoutes: boolean;
