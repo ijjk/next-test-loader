@@ -1,4 +1,4 @@
-import { webpack } from 'next/dist/compiled/webpack/webpack';
+import type { webpack5 as webpack } from 'next/dist/compiled/webpack/webpack';
 import type ws from 'ws';
 export declare class WebpackHotMiddleware {
     eventStream: EventStream;

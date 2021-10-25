@@ -29,8 +29,9 @@ function getCssModuleLoader(ctx, postCssPlugins, preProcessors = []) {
             importLoaders: 1 + preProcessors.length,
             // Use CJS mode for backwards compatibility:
             esModule: false,
-            url: _fileResolve.cssFileResolve,
-            import: (url, _, resourcePath)=>(0, _fileResolve).cssFileResolve(url, resourcePath)
+            url: (url, resourcePath)=>(0, _fileResolve).cssFileResolve(url, resourcePath, ctx.experimental.urlImports)
+            ,
+            import: (url, _, resourcePath)=>(0, _fileResolve).cssFileResolve(url, resourcePath, ctx.experimental.urlImports)
             ,
             modules: {
                 // Do not transform class names (CJS mode backwards compatibility):
@@ -40,6 +41,7 @@ function getCssModuleLoader(ctx, postCssPlugins, preProcessors = []) {
                 // Disallow global style exports so we can code-split CSS and
                 // not worry about loading order.
                 mode: 'pure',
+                // noop
                 // Generate a friendly production-ready name so it's
                 // reasonably understandable. The same name is used for
                 // development.

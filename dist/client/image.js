@@ -379,14 +379,27 @@ function Image(_param) {
     });
     const isVisible = !isLazy || isIntersected;
     const wrapperStyle = {
-        all: 'initial',
         boxSizing: 'border-box',
-        overflow: 'hidden'
+        display: 'block',
+        overflow: 'hidden',
+        width: 'initial',
+        height: 'initial',
+        background: 'none',
+        opacity: 1,
+        border: 0,
+        margin: 0,
+        padding: 0
     };
     const sizerStyle = {
-        all: 'initial',
         boxSizing: 'border-box',
-        display: 'block'
+        display: 'block',
+        width: 'initial',
+        height: 'initial',
+        background: 'none',
+        opacity: 1,
+        border: 0,
+        margin: 0,
+        padding: 0
     };
     let hasSizer = false;
     let sizerSvg;
@@ -479,11 +492,14 @@ function Image(_param) {
         style: sizerStyle
     }, sizerSvg ? /*#__PURE__*/ _react.default.createElement("img", {
         style: {
-            all: 'initial',
-            maxWidth: '100%',
             display: 'block',
+            maxWidth: '100%',
+            width: 'initial',
+            height: 'initial',
+            background: 'none',
+            opacity: 1,
+            border: 0,
             margin: 0,
-            border: 'none',
             padding: 0
         },
         alt: "",

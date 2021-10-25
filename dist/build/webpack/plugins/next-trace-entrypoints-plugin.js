@@ -76,9 +76,7 @@ class TraceEntryPointsPlugin {
                 const additionalEntries = new Map();
                 const depModMap = new Map();
                 finishModulesSpan.traceChild('get-entries').traceFn(()=>{
-                    compilation.entries.forEach((entry)=>{
-                        var ref;
-                        const name = entry.name || ((ref = entry.options) === null || ref === void 0 ? void 0 : ref.name);
+                    compilation.entries.forEach((entry, name)=>{
                         if (name === null || name === void 0 ? void 0 : name.replace(/\\/g, '/').startsWith('pages/')) {
                             for (const dep of entry.dependencies){
                                 if (!dep) continue;
@@ -324,10 +322,12 @@ class TraceEntryPointsPlugin {
                 };
                 const CJS_RESOLVE_OPTIONS = {
                     ..._webpackConfig.NODE_RESOLVE_OPTIONS,
+                    modules: undefined,
                     extensions: undefined
                 };
                 const ESM_RESOLVE_OPTIONS = {
                     ..._webpackConfig.NODE_ESM_RESOLVE_OPTIONS,
+                    modules: undefined,
                     extensions: undefined
                 };
                 const doResolve = async (request, parent, job, isEsmRequested)=>{

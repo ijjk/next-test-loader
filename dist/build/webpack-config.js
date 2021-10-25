@@ -70,6 +70,7 @@ function _interopRequireWildcard(obj) {
 const devtoolRevertWarning = (0, _utils).execOnce((devtool)=>{
     console.warn(_chalk.default.yellow.bold('Warning: ') + _chalk.default.bold(`Reverting webpack devtool to '${devtool}'.\n`) + 'Changing the webpack devtool in development mode will cause severe performance regressions.\n' + 'Read more: https://nextjs.org/docs/messages/improper-devtool');
 });
+let loggedSwcDisabled = false;
 function parseJsonFile(filePath) {
     const JSON5 = require('next/dist/compiled/json5');
     const contents = (0, _fs).readFileSync(filePath, 'utf8');
@@ -250,44 +251,35 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
         return await memo || (await (0, _fileExists).fileExists(configFilePath) ? configFilePath : undefined);
     }, Promise.resolve(undefined));
     const distDir = _path.default.join(dir, config.distDir);
-    const useSWCLoader = config.experimental.swcLoader;
-    if (useSWCLoader && babelConfigFile) {
-        Log.warn(`experimental.swcLoader enabled. The custom Babel configuration will not be used.`);
+    const useSWCLoader = !babelConfigFile;
+    if (!loggedSwcDisabled && !useSWCLoader && babelConfigFile) {
+        Log.warn(`Disabled SWC because of custom Babel configuration "${_path.default.relative(dir, babelConfigFile)}" https://nextjs.org/docs/messages/swc-disabled`);
+        loggedSwcDisabled = true;
     }
-    const defaultLoaders = {
-        babel: useSWCLoader ? {
+    const getBabelOrSwcLoader = (isMiddleware)=>{
+        return useSWCLoader ? {
             loader: 'next-swc-loader',
             options: {
-                isServer,
-                pagesDir
+                isServer: isMiddleware || isServer,
+                pagesDir,
+                hasReactRefresh: !isMiddleware && hasReactRefresh
             }
         } : {
             loader: require.resolve('./babel/loader/index'),
             options: {
                 configFile: babelConfigFile,
-                isServer,
+                isServer: isMiddleware ? true : isServer,
                 distDir,
                 pagesDir,
                 cwd: dir,
                 development: dev,
-                hasReactRefresh,
+                hasReactRefresh: isMiddleware ? false : hasReactRefresh,
                 hasJsxRuntime: true
             }
-        },
-        babelMiddleware: {
-            loader: require.resolve('./babel/loader/index'),
-            options: {
-                cache: false,
-                configFile: babelConfigFile,
-                cwd: dir,
-                development: dev,
-                distDir,
-                hasJsxRuntime: true,
-                hasReactRefresh: false,
-                isServer: true,
-                pagesDir
-            }
-        }
+        };
+    };
+    const defaultLoaders = {
+        babel: getBabelOrSwcLoader(false)
     };
     const babelIncludeRegexes = [
         /next[\\/]dist[\\/]shared[\\/]lib/,
@@ -455,7 +447,8 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
                 // url: require.resolve('url/'),
                 util: require.resolve('util/'),
                 vm: require.resolve('vm-browserify'),
-                zlib: require.resolve('browserify-zlib')
+                zlib: require.resolve('browserify-zlib'),
+                events: require.resolve('events')
             }
         } : undefined,
         mainFields: isServer ? [
@@ -759,7 +752,7 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
                     new TerserPlugin({
                         cacheDir: _path.default.join(distDir, 'cache', 'next-minifier'),
                         parallel: config.experimental.cpus,
-                        swcMinify: config.experimental.swcMinify,
+                        swcMinify: config.swcMinify,
                         terserOptions
                     }).apply(compiler);
                 },
@@ -879,7 +872,7 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
                         {
                             ...codeCondition,
                             issuerLayer: 'middleware',
-                            use: defaultLoaders.babelMiddleware
+                            use: getBabelOrSwcLoader(true)
                         },
                         {
                             ...codeCondition,
@@ -1062,7 +1055,7 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
             new _wellknownErrorsPlugin.WellKnownErrorsPlugin(),
             !isServer && new _copyFilePlugin.CopyFilePlugin({
                 filePath: require.resolve('./polyfills/polyfill-nomodule'),
-                cacheKey: "11.1.3-canary.95",
+                cacheKey: "11.1.3-canary.101",
                 name: `static/chunks/polyfills${dev ? '' : '-[hash]'}.js`,
                 minimize: false,
                 info: {
@@ -1168,15 +1161,15 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
         hasRewrites,
         reactRoot: config.experimental.reactRoot,
         concurrentFeatures: config.experimental.concurrentFeatures,
-        swcMinify: config.experimental.swcMinify,
-        swcLoader: config.experimental.swcLoader
+        swcMinify: config.swcMinify,
+        swcLoader: useSWCLoader
     });
     const cache = {
         type: 'filesystem',
         // Includes:
         //  - Next.js version
         //  - next.config.js keys that affect compilation
-        version: `${"11.1.3-canary.95"}|${configVars}`,
+        version: `${"11.1.3-canary.101"}|${configVars}`,
         cacheDirectory: _path.default.join(distDir, 'cache', 'webpack')
     };
     // Adds `next.config.js` as a buildDependency when custom webpack config is provided
@@ -1240,8 +1233,10 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
         sassOptions: config.sassOptions,
         productionBrowserSourceMaps: config.productionBrowserSourceMaps,
         future: config.future,
-        isCraCompat: config.experimental.craCompat
+        experimental: config.experimental
     });
+    // @ts-ignore Cache exists
+    webpackConfig.cache.name = `${webpackConfig.name}-${webpackConfig.mode}${isDevFallback ? '-fallback' : ''}`;
     let originalDevtool = webpackConfig.devtool;
     if (typeof config.webpack === 'function') {
         webpackConfig = config.webpack(webpackConfig, {

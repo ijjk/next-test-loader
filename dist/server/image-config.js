@@ -38,7 +38,6 @@ const imageConfigDefault = {
     disableStaticImages: false,
     minimumCacheTTL: 60,
     formats: [
-        'image/avif',
         'image/webp'
     ]
 };

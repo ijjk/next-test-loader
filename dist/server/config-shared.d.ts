@@ -1,4 +1,4 @@
-import type webpack5 from 'webpack5';
+import type { webpack5 } from 'next/dist/compiled/webpack/webpack';
 import { Header, Redirect, Rewrite } from '../lib/load-custom-routes';
 import { ImageConfig, ImageConfigComplete } from './image-config';
 export declare type NextConfigComplete = Required<NextConfig> & {
@@ -108,9 +108,9 @@ export declare type NextConfig = {
     };
     staticPageGenerationTimeout?: number;
     crossOrigin?: false | 'anonymous' | 'use-credentials';
+    swcMinify?: boolean;
     experimental?: {
         swcMinify?: boolean;
-        swcLoader?: boolean;
         cpus?: number;
         sharedPool?: boolean;
         plugins?: boolean;

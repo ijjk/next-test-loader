@@ -114,10 +114,10 @@ function erroredPages(compilation) {
     const failedPages = {
     };
     for (const error of compilation.errors){
-        if (!error.origin) {
+        if (!error.module) {
             continue;
         }
-        const entryModule = findEntryModule(error.origin);
+        const entryModule = findEntryModule(error.module);
         const { name  } = entryModule;
         if (!name) {
             continue;
@@ -410,7 +410,7 @@ class HotReloader {
             }
             // Initial value
             if (this.serverPrevDocumentHash === null) {
-                this.serverPrevDocumentHash = documentChunk.hash;
+                this.serverPrevDocumentHash = documentChunk.hash || null;
                 return;
             }
             // If _document.js didn't change we don't trigger a reload
@@ -419,7 +419,7 @@ class HotReloader {
             }
             // Notify reload to reload the page, as _document.js was changed (different hash)
             this.send('reloadPage');
-            this.serverPrevDocumentHash = documentChunk.hash;
+            this.serverPrevDocumentHash = documentChunk.hash || null;
         });
         multiCompiler.hooks.done.tap('NextjsHotReloaderForServer', ()=>{
             const serverOnlyChanges = (0, _utils).difference(changedServerPages, changedClientPages);

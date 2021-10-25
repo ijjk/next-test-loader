@@ -1,4 +1,4 @@
-import type { Compiler } from 'webpack';
+import type { webpack5 as webpack } from 'next/dist/compiled/webpack/webpack';
 declare type Feature = 'next/image' | 'next/script' | 'next/dynamic';
 interface FeatureUsage {
     featureName: Feature;
@@ -9,10 +9,10 @@ interface FeatureUsage {
  * certain features (e.g. next/image and next/script) and record how many times
  * they are imported.
  */
-export declare class TelemetryPlugin {
+export declare class TelemetryPlugin implements webpack.WebpackPluginInstance {
     private usageTracker;
     constructor();
-    apply(compiler: Compiler): void;
+    apply(compiler: webpack.Compiler): void;
     usages(): FeatureUsage[];
 }
 export {};

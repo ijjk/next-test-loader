@@ -278,6 +278,13 @@ function assignDefaults(userConfig) {
     if (result.webpack5 === false) {
         throw new Error(`Webpack 4 is no longer supported in Next.js. Please upgrade to webpack 5 by removing "webpack5: false" from ${configFileName}. https://nextjs.org/docs/messages/webpack5`);
     }
+    if (result.experimental && 'swcMinify' in result.experimental) {
+        Log.warn(`\`swcMinify\` has been moved out of \`experimental\`. Please update your ${configFileName} file accordingly.`);
+        result.swcMinify = result.experimental.swcMinify;
+    }
+    if (result.swcMinify) {
+        Log.warn('SWC minify beta enabled. nextjs.org/docs/messages/swc-minify-enabled');
+    }
     if (result.experimental && 'nftTracing' in result.experimental) {
         // TODO: remove this warning and assignment when we leave experimental phase
         Log.warn(`Experimental \`nftTracing\` has been renamed to \`outputFileTracing\`. Please update your ${configFileName} file accordingly.`);
@@ -405,6 +412,9 @@ async function loadConfig(phase, dir, customConfig) {
         }
         if (userConfig.target && !targets.includes(userConfig.target)) {
             throw new Error(`Specified target is invalid. Provided: "${userConfig.target}" should be one of ${targets.join(', ')}`);
+        }
+        if (userConfig.target && userConfig.target !== 'server') {
+            Log.warn('The `target` config is deprecated and will be removed in a future version.\n' + 'See more info here https://nextjs.org/docs/messages/deprecated-target-config');
         }
         if ((ref = userConfig.amp) === null || ref === void 0 ? void 0 : ref.canonicalBase) {
             const { canonicalBase  } = userConfig.amp || {

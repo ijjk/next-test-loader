@@ -32,9 +32,9 @@ _postcss.default.plugin = function postcssPlugin(name, initializer) {
         }
     });
     creator.process = function(css, processOpts, pluginOpts) {
-        return (0, _postcss).default([
+        return((0, _postcss).default([
             creator(pluginOpts)
-        ]).process(css, processOpts);
+        ]).process(css, processOpts));
     };
     return creator;
 };
@@ -243,7 +243,7 @@ const css = (0, _lodashCurry).default(async function css(ctx, config) {
                     },
                     // Global CSS is only supported in the user's application, not in
                     // node_modules.
-                    issuer: ctx.isCraCompat ? undefined : {
+                    issuer: ctx.experimental.craCompat ? undefined : {
                         and: [
                             ctx.rootDirectory
                         ],
@@ -295,7 +295,7 @@ const css = (0, _lodashCurry).default(async function css(ctx, config) {
         }
     }
     // Throw an error for Global CSS used inside of `node_modules`
-    if (!ctx.isCraCompat) {
+    if (!ctx.experimental.craCompat) {
         fns.push((0, _helpers).loader({
             oneOf: [
                 {
@@ -350,15 +350,9 @@ const css = (0, _lodashCurry).default(async function css(ctx, config) {
                         /\.json$/,
                         /\.webpack\[[^\]]+\]$/, 
                     ],
-                    use: {
-                        // `file-loader` always emits a URL reference, where `url-loader`
-                        // might inline the asset as a data URI
-                        loader: require.resolve('next/dist/compiled/file-loader'),
-                        options: {
-                            // Hash the file for immutable cacheability
-                            name: 'static/media/[name].[hash].[ext]'
-                        }
-                    }
+                    // `asset/resource` always emits a URL reference, where `asset`
+                    // might inline the asset as a data URI
+                    type: 'asset/resource'
                 }, 
             ]
         }));

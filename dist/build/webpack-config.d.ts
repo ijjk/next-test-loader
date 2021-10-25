@@ -1,5 +1,5 @@
 import { webpack } from 'next/dist/compiled/webpack/webpack';
-import type webpack5 from 'webpack5';
+import type { webpack5 } from 'next/dist/compiled/webpack/webpack';
 import { CustomRoutes } from '../lib/load-custom-routes.js';
 import { NextConfigComplete } from '../server/config-shared';
 import type { Span } from '../trace';

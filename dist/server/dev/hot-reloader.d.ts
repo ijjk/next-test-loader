@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import { IncomingMessage, ServerResponse } from 'http';
 import { UrlObject } from 'url';
-import { webpack } from 'next/dist/compiled/webpack/webpack';
+import type { webpack5 } from 'next/dist/compiled/webpack/webpack';
 import { __ApiPreviewProps } from '../api-utils';
 import { NextConfigComplete } from '../config-shared';
 import { CustomRoutes } from '../../lib/load-custom-routes';
@@ -15,8 +15,8 @@ export default class HotReloader {
     private pagesDir;
     private webpackHotMiddleware?;
     private config;
-    clientStats: webpack.Stats | null;
-    serverStats: webpack.Stats | null;
+    clientStats: webpack5.Stats | null;
+    serverStats: webpack5.Stats | null;
     private clientError;
     private serverError;
     private serverPrevDocumentHash;

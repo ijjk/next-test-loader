@@ -1,7 +1,7 @@
 import { __ApiPreviewProps } from '../server/api-utils';
 import { LoadedEnvFiles } from '@next/env';
 import { NextConfigComplete } from '../server/config-shared';
-import type webpack5 from 'webpack5';
+import type { webpack5 } from 'next/dist/compiled/webpack/webpack';
 declare type ObjectValue<T> = T extends {
     [key: string]: infer V;
 } ? V : never;

@@ -82,27 +82,27 @@ const fsStat = (file)=>{
     return fileStats[file] = fileSize(file);
 };
 function collectPages(directory, pageExtensions) {
-    return (0, _recursiveReaddir).recursiveReadDir(directory, new RegExp(`\\.(?:${pageExtensions.join('|')})$`));
+    return((0, _recursiveReaddir).recursiveReadDir(directory, new RegExp(`\\.(?:${pageExtensions.join('|')})$`)));
 }
 async function printTreeView(list, pageInfos, serverless, { distPath , buildId , pagesDir , pageExtensions , buildManifest , useStatic404 , gzipSize =true  }) {
     const getPrettySize = (_size)=>{
         const size = (0, _prettyBytes).default(_size);
         // green for 0-130kb
-        if (_size < 130 * 1000) return _chalk.default.green(size);
+        if (_size < 130 * 1000) return(_chalk.default.green(size));
         // yellow for 130-170kb
-        if (_size < 170 * 1000) return _chalk.default.yellow(size);
+        if (_size < 170 * 1000) return(_chalk.default.yellow(size));
         // red for >= 170kb
-        return _chalk.default.red.bold(size);
+        return(_chalk.default.red.bold(size));
     };
     const MIN_DURATION = 300;
     const getPrettyDuration = (_duration)=>{
         const duration = `${_duration} ms`;
         // green for 300-1000ms
-        if (_duration < 1000) return _chalk.default.green(duration);
+        if (_duration < 1000) return(_chalk.default.green(duration));
         // yellow for 1000-2000ms
-        if (_duration < 2000) return _chalk.default.yellow(duration);
+        if (_duration < 2000) return(_chalk.default.yellow(duration));
         // red for >= 2000ms
-        return _chalk.default.red.bold(duration);
+        return(_chalk.default.red.bold(duration));
     };
     const getCleanName = (fileName)=>fileName// Trim off `static/`
         .replace(/^static\//, '')// Re-add `static/` for root files
@@ -129,18 +129,22 @@ async function printTreeView(list, pageInfos, serverless, { distPath , buildId ,
         ];
     }
     const sizeData = await computeFromManifest(buildManifest, distPath, gzipSize, pageInfos);
+    const usedSymbols = new Set();
     const pageList = list.slice().filter((e)=>!(e === '/_document' || e === '/_error' || !hasCustomApp && e === '/_app')
     ).sort((a, b)=>a.localeCompare(b)
     );
     pageList.forEach((item, i, arr)=>{
         var ref, ref1, ref2;
-        const symbol = i === 0 ? arr.length === 1 ? '─' : '┌' : i === arr.length - 1 ? '└' : '├';
+        const border = i === 0 ? arr.length === 1 ? '─' : '┌' : i === arr.length - 1 ? '└' : '├';
         const pageInfo = pageInfos.get(item);
         const ampFirst = buildManifest.ampFirstPages.includes(item);
         const totalDuration = ((pageInfo === null || pageInfo === void 0 ? void 0 : pageInfo.pageDuration) || 0) + ((pageInfo === null || pageInfo === void 0 ? void 0 : (ref = pageInfo.ssgPageDurations) === null || ref === void 0 ? void 0 : ref.reduce((a, b)=>a + (b || 0)
         , 0)) || 0);
+        const symbol = item === '/_app' ? ' ' : item.endsWith('/_middleware') ? 'ƒ' : (pageInfo === null || pageInfo === void 0 ? void 0 : pageInfo.static) ? '○' : (pageInfo === null || pageInfo === void 0 ? void 0 : pageInfo.isSsg) ? '●' : 'λ';
+        usedSymbols.add(symbol);
+        if (pageInfo === null || pageInfo === void 0 ? void 0 : pageInfo.initialRevalidateSeconds) usedSymbols.add('ISR');
         messages.push([
-            `${symbol} ${item === '/_app' ? ' ' : (pageInfo === null || pageInfo === void 0 ? void 0 : pageInfo.static) ? '○' : (pageInfo === null || pageInfo === void 0 ? void 0 : pageInfo.isSsg) ? '●' : 'λ'} ${(pageInfo === null || pageInfo === void 0 ? void 0 : pageInfo.initialRevalidateSeconds) ? `${item} (ISR: ${pageInfo === null || pageInfo === void 0 ? void 0 : pageInfo.initialRevalidateSeconds} Seconds)` : item}${totalDuration > MIN_DURATION ? ` (${getPrettyDuration(totalDuration)})` : ''}`,
+            `${border} ${symbol} ${(pageInfo === null || pageInfo === void 0 ? void 0 : pageInfo.initialRevalidateSeconds) ? `${item} (ISR: ${pageInfo === null || pageInfo === void 0 ? void 0 : pageInfo.initialRevalidateSeconds} Seconds)` : item}${totalDuration > MIN_DURATION ? ` (${getPrettyDuration(totalDuration)})` : ''}`,
             pageInfo ? ampFirst ? _chalk.default.cyan('AMP') : pageInfo.size >= 0 ? (0, _prettyBytes).default(pageInfo.size) : '' : '',
             pageInfo ? ampFirst ? _chalk.default.cyan('AMP') : pageInfo.size >= 0 ? getPrettySize(pageInfo.totalSize) : '' : '', 
         ]);
@@ -249,27 +253,33 @@ async function printTreeView(list, pageInfos, serverless, { distPath , buildId ,
     }));
     console.log();
     console.log((0, _textTable).default([
-        [
+        usedSymbols.has('ƒ') && [
+            'ƒ',
+            '(Middleware)',
+            `intercepts requests (uses ${_chalk.default.cyan('_middleware')})`, 
+        ],
+        usedSymbols.has('λ') && [
             'λ',
             serverless ? '(Lambda)' : '(Server)',
             `server-side renders at runtime (uses ${_chalk.default.cyan('getInitialProps')} or ${_chalk.default.cyan('getServerSideProps')})`, 
         ],
-        [
+        usedSymbols.has('○') && [
             '○',
             '(Static)',
             'automatically rendered as static HTML (uses no initial props)', 
         ],
-        [
+        usedSymbols.has('●') && [
             '●',
             '(SSG)',
             `automatically generated as static HTML + JSON (uses ${_chalk.default.cyan('getStaticProps')})`, 
         ],
-        [
+        usedSymbols.has('ISR') && [
             '',
             '(ISR)',
             `incremental static regeneration (uses revalidate in ${_chalk.default.cyan('getStaticProps')})`, 
         ], 
-    ], {
+    ].filter((x)=>x
+    ), {
         align: [
             'l',
             'l',

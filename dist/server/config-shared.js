@@ -70,9 +70,8 @@ const defaultConfig = {
         keepAlive: true
     },
     staticPageGenerationTimeout: 60,
+    swcMinify: false,
     experimental: {
-        swcLoader: false,
-        swcMinify: false,
         cpus: Math.max(1, (Number(process.env.CIRCLE_NODE_TOTAL) || (_os.default.cpus() || {
             length: 1
         }).length) - 1),
@@ -93,7 +92,7 @@ const defaultConfig = {
         esmExternals: true,
         // default to 50MB limit
         isrMemoryCacheSize: 50 * 1024 * 1024,
-        outputFileTracing: false,
+        outputFileTracing: true,
         concurrentFeatures: false,
         serverComponents: false,
         fullySpecified: false

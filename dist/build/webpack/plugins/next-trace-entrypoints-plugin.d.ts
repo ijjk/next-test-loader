@@ -1,7 +1,7 @@
 import { Span } from '../../../trace';
-import { webpack } from 'next/dist/compiled/webpack/webpack';
+import type { webpack5 } from 'next/dist/compiled/webpack/webpack';
 import { NextConfigComplete } from '../../../server/config-shared';
-export declare class TraceEntryPointsPlugin implements webpack.Plugin {
+export declare class TraceEntryPointsPlugin implements webpack5.WebpackPluginInstance {
     private appDir;
     private entryTraces;
     private excludeFiles;
@@ -14,6 +14,6 @@ export declare class TraceEntryPointsPlugin implements webpack.Plugin {
         esmExternals?: NextConfigComplete['experimental']['esmExternals'];
     });
     createTraceAssets(compilation: any, assets: any, span: Span): void;
-    tapfinishModules(compilation: webpack.compilation.Compilation, traceEntrypointsPluginSpan: Span, doResolve?: (request: string, parent: string, job: import('@vercel/nft/out/node-file-trace').Job, isEsmRequested: boolean) => Promise<string>): void;
-    apply(compiler: webpack.Compiler): void;
+    tapfinishModules(compilation: webpack5.Compilation, traceEntrypointsPluginSpan: Span, doResolve?: (request: string, parent: string, job: import('@vercel/nft/out/node-file-trace').Job, isEsmRequested: boolean) => Promise<string>): void;
+    apply(compiler: webpack5.Compiler): void;
 }

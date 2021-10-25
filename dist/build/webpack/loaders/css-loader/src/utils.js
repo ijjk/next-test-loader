@@ -46,6 +46,9 @@ function requestify(url, rootContext) {
     if (/^file:/i.test(url)) {
         return (0, _url).fileURLToPath(url);
     }
+    if (/^[a-z][a-z0-9+.-]*:/i.test(url)) {
+        return url;
+    }
     return url.charAt(0) === '/' ? (0, _loaderUtils).urlToRequest(url, rootContext) : (0, _loaderUtils).urlToRequest(url);
 }
 function getFilter(filter, resourcePath) {
@@ -417,8 +420,8 @@ function isUrlRequestable(url) {
         return true;
     }
     // Absolute URLs
-    if (/^[a-z][a-z0-9+.-]*:/i.test(url) && !matchNativeWin32Path.test(url)) {
-        return false;
+    if (/^[a-z][a-z0-9+.-]*:/i.test(url)) {
+        return true;
     }
     // `#` URLs
     if (/^#/.test(url)) {

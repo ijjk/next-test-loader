@@ -6,7 +6,7 @@ exports.default = swcLoader;
 var _loaderUtils = require("next/dist/compiled/loader-utils");
 var _swc = require("../../swc");
 const nextDistPath = /(next[\\/]dist[\\/]shared[\\/]lib)|(next[\\/]dist[\\/]client)|(next[\\/]dist[\\/]pages)/;
-function getSWCOptions({ isTypeScript , isServer , development , isPageFile , pagesDir , isNextDist , isCommonJS ,  }) {
+function getSWCOptions({ isTypeScript , isServer , development , isPageFile , pagesDir , isNextDist , hasReactRefresh , isCommonJS ,  }) {
     const jsc = {
         parser: {
             syntax: isTypeScript ? 'typescript' : 'ecmascript',
@@ -21,7 +21,15 @@ function getSWCOptions({ isTypeScript , isServer , development , isPageFile , pa
                 throwIfNamespace: true,
                 development: development,
                 useBuiltins: true,
-                refresh: development && !isServer
+                refresh: hasReactRefresh
+            },
+            optimizer: {
+                simplify: false,
+                globals: {
+                    typeofs: {
+                        window: isServer ? 'undefined' : 'object'
+                    }
+                }
             }
         }
     };
@@ -37,7 +45,10 @@ function getSWCOptions({ isTypeScript , isServer , development , isPageFile , pa
             },
             // Disables getStaticProps/getServerSideProps tree shaking on the server compilation for pages
             disableNextSsg: true,
+            disablePageConfig: true,
+            isDevelopment: development,
             pagesDir,
+            isPageFile,
             env: {
                 targets: {
                     // Targets the current version of Node.js
@@ -57,7 +68,9 @@ function getSWCOptions({ isTypeScript , isServer , development , isPageFile , pa
             } : {
             },
             disableNextSsg: !isPageFile,
+            isDevelopment: development,
             pagesDir,
+            isPageFile,
             jsc
         };
     }
@@ -68,7 +81,7 @@ async function loaderTransform(parentTrace, source, inputSourceMap) {
     const isTypeScript = filename.endsWith('.ts') || filename.endsWith('.tsx');
     let loaderOptions = (0, _loaderUtils).getOptions(this) || {
     };
-    const { isServer , pagesDir  } = loaderOptions;
+    const { isServer , pagesDir , hasReactRefresh  } = loaderOptions;
     const isPageFile = filename.startsWith(pagesDir);
     const isNextDist = nextDistPath.test(filename);
     const isCommonJS = source.indexOf('module.exports') !== -1;
@@ -79,7 +92,8 @@ async function loaderTransform(parentTrace, source, inputSourceMap) {
         isPageFile,
         development: this.mode === 'development',
         isNextDist,
-        isCommonJS
+        isCommonJS,
+        hasReactRefresh
     });
     const programmaticOptions = {
         ...swcOptions,

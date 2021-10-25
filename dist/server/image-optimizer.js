@@ -55,7 +55,6 @@ let showSharpMissingWarning = process.env.NODE_ENV === 'production';
 async function imageOptimizer(server, req, res, parsedUrl, nextConfig, distDir, isDev = false) {
     const imageData = nextConfig.images || _imageConfig.imageConfigDefault;
     const { deviceSizes =[] , imageSizes =[] , domains =[] , loader , minimumCacheTTL =60 , formats =[
-        'image/avif',
         'image/webp'
     ] ,  } = imageData;
     if (loader !== 'default') {

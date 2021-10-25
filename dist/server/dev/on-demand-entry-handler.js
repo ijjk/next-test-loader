@@ -181,7 +181,7 @@ function onDemandEntryHandler(watcher, multiCompiler, { pagesDir , pageExtension
                 addPageEntry('server')
             ]);
             if (entriesChanged) {
-                (0, _output).reportTrigger(isApiRoute || isMiddleware ? `${normalizedPage} (server only)` : clientOnly ? `${normalizedPage} (client only)` : normalizedPage);
+                (0, _output).reportTrigger(isApiRoute ? `${normalizedPage} (server only)` : clientOnly || isMiddleware ? `${normalizedPage} (client only)` : normalizedPage);
                 invalidator.invalidate();
             }
             return promise;

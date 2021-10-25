@@ -5,7 +5,6 @@ Object.defineProperty(exports, "__esModule", {
 exports.default = void 0;
 var _compression = _interopRequireDefault(require("next/dist/compiled/compression"));
 var _fs = _interopRequireDefault(require("fs"));
-var _chalk = _interopRequireDefault(require("chalk"));
 var _httpProxy = _interopRequireDefault(require("next/dist/compiled/http-proxy"));
 var _path = require("path");
 var _querystring = require("querystring");
@@ -79,10 +78,10 @@ class Server {
     constructor({ dir ='.' , quiet =false , conf , dev =false , minimalMode =false , customServer =true  }){
         var ref, ref1, ref2;
         this.middlewareBetaWarning = (0, _utils1).execOnce(()=>{
-            console.warn(_chalk.default.bold.yellow(`Warning: `) + _chalk.default.yellow(`using beta Middleware (not covered by semver) - https://nextjs.org/docs/messages/beta-middleware`));
+            Log.warn(`using beta Middleware (not covered by semver) - https://nextjs.org/docs/messages/beta-middleware`);
         });
         this.customErrorNo404Warn = (0, _utils1).execOnce(()=>{
-            console.warn(_chalk.default.bold.yellow(`Warning: `) + _chalk.default.yellow(`You have added a custom /_error page without a custom /404 page. This prevents the 404 page from being auto statically optimized.\nSee here for info: https://nextjs.org/docs/messages/custom-error-no-custom-404`));
+            Log.warn(`You have added a custom /_error page without a custom /404 page. This prevents the 404 page from being auto statically optimized.\nSee here for info: https://nextjs.org/docs/messages/custom-error-no-custom-404`);
         });
         this._validFilesystemPathSet = null;
         this.dir = (0, _path).resolve(dir);

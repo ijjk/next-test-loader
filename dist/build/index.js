@@ -175,7 +175,7 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
         const hasCustomErrorPage = mappedPages['/_error'].startsWith('private-next-pages');
         const hasPages404 = Boolean(mappedPages['/404'] && mappedPages['/404'].startsWith('private-next-pages'));
         if (hasMiddleware) {
-            console.warn(_chalk.default.bold.yellow(`Warning: `) + _chalk.default.yellow(`using beta Middleware (not covered by semver) - https://nextjs.org/docs/messages/beta-middleware`));
+            Log.warn(`using beta Middleware (not covered by semver) - https://nextjs.org/docs/messages/beta-middleware`);
         }
         if (hasPublicDir) {
             const hasPublicUnderScoreNextDir = await (0, _fileExists).fileExists(_path.default.join(publicDir, '_next'));
@@ -714,11 +714,7 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
                 });
                 const tracedFiles = new Set();
                 serverResult.fileList.forEach((file)=>{
-                    const reason = serverResult.reasons.get(file);
-                    if ((reason === null || reason === void 0 ? void 0 : reason.type) === 'initial') {
-                        return;
-                    }
-                    tracedFiles.add(_path.default.relative(distDir, _path.default.join(root, file)));
+                    tracedFiles.add(_path.default.relative(distDir, _path.default.join(root, file)).replace(/\\/g, '/'));
                 });
                 await _fs.promises.writeFile(nextServerTraceOutput, JSON.stringify({
                     version: 1,
@@ -784,7 +780,6 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
             invocationCount: config.experimental.optimizeCss ? 1 : 0
         };
         telemetry.record({
-            // noop
             eventName: _events.EVENT_BUILD_FEATURE_USAGE,
             payload: optimizeCss
         });

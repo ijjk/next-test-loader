@@ -173,7 +173,7 @@ class DevServer extends _nextServer.default {
         if (this.webpackWatcher) {
             return;
         }
-        const regexMiddleware = new RegExp(`/(_middleware.(?:${this.nextConfig.pageExtensions.join('|')}))$`);
+        const regexMiddleware = new RegExp(`[\\\\/](_middleware.(?:${this.nextConfig.pageExtensions.join('|')}))$`);
         const regexPageExtension = new RegExp(`\\.+(?:${this.nextConfig.pageExtensions.join('|')})$`);
         let resolved = false;
         return new Promise((resolve, reject)=>{
@@ -201,7 +201,7 @@ class DevServer extends _nextServer.default {
                         continue;
                     }
                     if (regexMiddleware.test(fileName)) {
-                        routedMiddleware.push(`/${(0, _path).relative(pagesDir, fileName)}`.replace(/\\+/g, '').replace(/^\/+/g, '/').replace(regexMiddleware, '/'));
+                        routedMiddleware.push(`/${(0, _path).relative(pagesDir, fileName).replace(/\\+/g, '/')}`.replace(/^\/+/g, '/').replace(regexMiddleware, '/'));
                         continue;
                     }
                     let pageName = '/' + (0, _path).relative(pagesDir, fileName).replace(/\\+/g, '/');
