@@ -14,6 +14,8 @@ exports.hasCustomGetInitialProps = hasCustomGetInitialProps;
 exports.getNamedExports = getNamedExports;
 exports.detectConflictingPaths = detectConflictingPaths;
 exports.getCssFilePaths = getCssFilePaths;
+exports.getRawPageExtensions = getRawPageExtensions;
+exports.isFlightPage = isFlightPage;
 require("../server/node-polyfill-fetch");
 var _chalk = _interopRequireDefault(require("chalk"));
 var _gzipSize = _interopRequireDefault(require("next/dist/compiled/gzip-size"));
@@ -140,7 +142,7 @@ async function printTreeView(list, pageInfos, serverless, { distPath , buildId ,
         const ampFirst = buildManifest.ampFirstPages.includes(item);
         const totalDuration = ((pageInfo === null || pageInfo === void 0 ? void 0 : pageInfo.pageDuration) || 0) + ((pageInfo === null || pageInfo === void 0 ? void 0 : (ref = pageInfo.ssgPageDurations) === null || ref === void 0 ? void 0 : ref.reduce((a, b)=>a + (b || 0)
         , 0)) || 0);
-        const symbol = item === '/_app' ? ' ' : item.endsWith('/_middleware') ? 'ƒ' : (pageInfo === null || pageInfo === void 0 ? void 0 : pageInfo.static) ? '○' : (pageInfo === null || pageInfo === void 0 ? void 0 : pageInfo.isSsg) ? '●' : 'λ';
+        const symbol = item === '/_app' ? ' ' : item.endsWith('/_middleware') ? 'ƒ' : (pageInfo === null || pageInfo === void 0 ? void 0 : pageInfo.isWebSsr) ? 'ℇ' : (pageInfo === null || pageInfo === void 0 ? void 0 : pageInfo.static) ? '○' : (pageInfo === null || pageInfo === void 0 ? void 0 : pageInfo.isSsg) ? '●' : 'λ';
         usedSymbols.add(symbol);
         if (pageInfo === null || pageInfo === void 0 ? void 0 : pageInfo.initialRevalidateSeconds) usedSymbols.add('ISR');
         messages.push([
@@ -257,6 +259,11 @@ async function printTreeView(list, pageInfos, serverless, { distPath , buildId ,
             'ƒ',
             '(Middleware)',
             `intercepts requests (uses ${_chalk.default.cyan('_middleware')})`, 
+        ],
+        usedSymbols.has('ℇ') && [
+            'ℇ',
+            '(Streaming)',
+            `server-side renders with streaming (uses React 18 SSR streaming or Server Components)`, 
         ],
         usedSymbols.has('λ') && [
             'λ',
@@ -579,6 +586,7 @@ async function isPageStatic(page, distDir, serverless, configFileName, runtimeEn
             if (!Comp || !(0, _reactIs).isValidElementType(Comp) || typeof Comp === 'string') {
                 throw new Error('INVALID_DEFAULT_EXPORT');
             }
+            const hasFlightData = !!Comp.__next_rsc__;
             const hasGetInitialProps = !!Comp.getInitialProps;
             const hasStaticProps = !!mod.getStaticProps;
             const hasStaticPaths = !!mod.getStaticPaths;
@@ -627,7 +635,7 @@ async function isPageStatic(page, distDir, serverless, configFileName, runtimeEn
             const isNextImageImported = global.__NEXT_IMAGE_IMPORTED;
             const config = mod.pageConfig;
             return {
-                isStatic: !hasStaticProps && !hasGetInitialProps && !hasServerProps,
+                isStatic: !hasStaticProps && !hasGetInitialProps && !hasServerProps && !hasFlightData,
                 isHybridAmp: config.amp === 'hybrid',
                 isAmpOnly: config.amp === true,
                 prerenderRoutes,
@@ -635,6 +643,7 @@ async function isPageStatic(page, distDir, serverless, configFileName, runtimeEn
                 encodedPrerenderRoutes,
                 hasStaticProps,
                 hasServerProps,
+                hasFlightData,
                 isNextImageImported,
                 traceIncludes: config.unstable_includeFiles || [],
                 traceExcludes: config.unstable_excludeFiles || []
@@ -738,6 +747,18 @@ function getCssFilePaths(buildManifest) {
     return [
         ...cssFiles
     ];
+}
+function getRawPageExtensions(pageExtensions) {
+    return pageExtensions.filter((ext)=>!ext.startsWith('client.') && !ext.startsWith('server.')
+    );
+}
+function isFlightPage(nextConfig, pagePath) {
+    if (!(nextConfig.experimental.serverComponents && nextConfig.experimental.concurrentFeatures)) return false;
+    const rawPageExtensions = getRawPageExtensions(nextConfig.pageExtensions || []);
+    const isRscPage = rawPageExtensions.some((ext)=>{
+        return new RegExp(`\\.server\\.${ext}$`).test(pagePath);
+    });
+    return isRscPage;
 }
 
 //# sourceMappingURL=utils.js.map

@@ -2,20 +2,17 @@
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-exports.interopDefault = interopDefault;
 exports.loadDefaultErrorComponents = loadDefaultErrorComponents;
 exports.loadComponents = loadComponents;
 var _constants = require("../shared/lib/constants");
 var _path = require("path");
 var _require = require("./require");
-function interopDefault(mod) {
-    return mod.default || mod;
-}
+var _interopDefault = require("../lib/interop-default");
 async function loadDefaultErrorComponents(distDir) {
-    const Document = interopDefault(require('next/dist/pages/_document'));
-    const App = interopDefault(require('next/dist/pages/_app'));
+    const Document = (0, _interopDefault).interopDefault(require('next/dist/pages/_document'));
+    const App = (0, _interopDefault).interopDefault(require('next/dist/pages/_app'));
     const ComponentMod = require('next/dist/pages/_error');
-    const Component = interopDefault(ComponentMod);
+    const Component = (0, _interopDefault).interopDefault(ComponentMod);
     return {
         App,
         Document,
@@ -64,9 +61,9 @@ async function loadComponents(distDir, pathname, serverless) {
         require((0, _path).join(distDir, _constants.BUILD_MANIFEST)),
         require((0, _path).join(distDir, _constants.REACT_LOADABLE_MANIFEST)), 
     ]);
-    const Component = interopDefault(ComponentMod);
-    const Document = interopDefault(DocumentMod);
-    const App = interopDefault(AppMod);
+    const Component = (0, _interopDefault).interopDefault(ComponentMod);
+    const Document = (0, _interopDefault).interopDefault(DocumentMod);
+    const App = (0, _interopDefault).interopDefault(AppMod);
     const { getServerSideProps , getStaticProps , getStaticPaths  } = ComponentMod;
     return {
         App,

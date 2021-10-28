@@ -95,11 +95,15 @@ class ReactLoadablePlugin {
     constructor(opts){
         this.filename = opts.filename;
         this.pagesDir = opts.pagesDir;
+        this.runtimeAsset = opts.runtimeAsset;
     }
     createAssets(compiler, compilation, assets) {
         const manifest = buildManifest(compiler, compilation, this.pagesDir);
         // @ts-ignore: TODO: remove when webpack 5 is stable
         assets[this.filename] = new _webpack.sources.RawSource(JSON.stringify(manifest, null, 2));
+        if (this.runtimeAsset) {
+            assets[this.runtimeAsset] = new _webpack.sources.RawSource(`self.__REACT_LOADABLE_MANIFEST=${JSON.stringify(manifest)}`);
+        }
         return assets;
     }
     apply(compiler) {

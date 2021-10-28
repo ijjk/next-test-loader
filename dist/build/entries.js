@@ -12,16 +12,25 @@ var _constants = require("../lib/constants");
 var _config = require("../server/config");
 var _normalizePagePath = require("../server/normalize-page-path");
 var _log = require("./output/log");
+var _utils = require("./utils");
+var _middlewarePlugin = require("./webpack/plugins/middleware-plugin");
+var _constants1 = require("../shared/lib/constants");
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
         default: obj
     };
 }
-function createPagesMapping(pagePaths, extensions, isDev) {
+function createPagesMapping(pagePaths, extensions, isDev, hasServerComponents) {
     const previousPages = {
     };
     const pages = pagePaths.reduce((result, pagePath)=>{
-        let page = `${pagePath.replace(new RegExp(`\\.+(${extensions.join('|')})$`), '').replace(/\\/g, '/')}`.replace(/\/index$/, '');
+        let page = pagePath.replace(new RegExp(`\\.+(${extensions.join('|')})$`), '');
+        if (hasServerComponents && /\.client$/.test(page)) {
+            // Assume that if there's a Client Component, that there is
+            // a matching Server Component that will map to the page.
+            return result;
+        }
+        page = page.replace(/\\/g, '/').replace(/\/index$/, '');
         const pageKey = page === '' ? '/' : page;
         if (pageKey in result) {
             (0, _log).warn(`Duplicate page detected. ${_chalk.default.cyan((0, _path).join('pages', previousPages[pageKey]))} and ${_chalk.default.cyan((0, _path).join('pages', pagePath))} both resolve to ${_chalk.default.cyan(pageKey)}.`);
@@ -50,6 +59,8 @@ function createEntrypoints(pages, target, buildId, previewMode, config, loadedEn
     const client = {
     };
     const server = {
+    };
+    const serverWeb = {
     };
     const hasRuntimeConfig = Object.keys(config.publicRuntimeConfig).length > 0 || Object.keys(config.serverRuntimeConfig).length > 0;
     const defaultServerlessOptions = {
@@ -80,6 +91,8 @@ function createEntrypoints(pages, target, buildId, previewMode, config, loadedEn
         const clientBundlePath = _path.posix.join('pages', bundleFile);
         const serverBundlePath = _path.posix.join('pages', bundleFile);
         const isLikeServerless = (0, _config).isTargetLikeServerless(target);
+        const isFlight = (0, _utils).isFlightPage(config, absolutePagePath);
+        const webServerRuntime = !!config.experimental.concurrentFeatures;
         if (page.match(_constants.MIDDLEWARE_ROUTE)) {
             const loaderOpts = {
                 absolutePagePath: pages[page],
@@ -87,6 +100,24 @@ function createEntrypoints(pages, target, buildId, previewMode, config, loadedEn
             };
             client[clientBundlePath] = `next-middleware-loader?${(0, _querystring).stringify(loaderOpts)}!`;
             return;
+        }
+        if (webServerRuntime && !(page === '/_app' || page === '/_error' || page === '/_document') && !isApiRoute) {
+            _middlewarePlugin.ssrEntries.set(clientBundlePath, {
+                requireFlightManifest: isFlight
+            });
+            serverWeb[serverBundlePath] = finalizeEntrypoint({
+                name: '[name].js',
+                value: `next-middleware-ssr-loader?${(0, _querystring).stringify({
+                    page,
+                    absolutePagePath,
+                    isServerComponent: isFlight,
+                    buildId,
+                    basePath: config.basePath,
+                    assetPrefix: config.assetPrefix
+                })}!`,
+                isServer: false,
+                isServerWeb: true
+            });
         }
         if (isApiRoute && isLikeServerless) {
             const serverlessLoaderOptions = {
@@ -96,10 +127,12 @@ function createEntrypoints(pages, target, buildId, previewMode, config, loadedEn
             };
             server[serverBundlePath] = `next-serverless-loader?${(0, _querystring).stringify(serverlessLoaderOptions)}!`;
         } else if (isApiRoute || target === 'server') {
-            server[serverBundlePath] = [
-                absolutePagePath
-            ];
-        } else if (isLikeServerless && page !== '/_app' && page !== '/_document') {
+            if (!webServerRuntime || page === '/_document' || page === '/_app' || page === '/_error') {
+                server[serverBundlePath] = [
+                    absolutePagePath
+                ];
+            }
+        } else if (isLikeServerless && page !== '/_app' && page !== '/_document' && !webServerRuntime) {
             const serverlessLoaderOptions = {
                 page,
                 absolutePagePath,
@@ -127,10 +160,11 @@ function createEntrypoints(pages, target, buildId, previewMode, config, loadedEn
     });
     return {
         client,
-        server
+        server,
+        serverWeb
     };
 }
-function finalizeEntrypoint({ name , value , isServer  }) {
+function finalizeEntrypoint({ name , value , isServer , isMiddleware , isServerWeb  }) {
     const entry = typeof value !== 'object' || Array.isArray(value) ? {
         import: value
     } : value;
@@ -143,8 +177,22 @@ function finalizeEntrypoint({ name , value , isServer  }) {
             ...entry
         };
     }
-    if (name.match(_constants.MIDDLEWARE_ROUTE)) {
-        return {
+    if (isServerWeb) {
+        const ssrMiddlewareEntry = {
+            library: {
+                name: [
+                    '_ENTRIES',
+                    `middleware_[name]`
+                ],
+                type: 'assign'
+            },
+            runtime: _constants1.MIDDLEWARE_SSR_RUNTIME_WEBPACK,
+            ...entry
+        };
+        return ssrMiddlewareEntry;
+    }
+    if (isMiddleware) {
+        const middlewareEntry = {
             filename: 'server/[name].js',
             layer: 'middleware',
             library: {
@@ -156,6 +204,7 @@ function finalizeEntrypoint({ name , value , isServer  }) {
             },
             ...entry
         };
+        return middlewareEntry;
     }
     if (name !== 'polyfills' && name !== 'main' && name !== 'amp' && name !== 'react-refresh') {
         return {

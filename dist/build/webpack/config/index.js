@@ -7,14 +7,16 @@ var _base = require("./blocks/base");
 var _css = require("./blocks/css");
 var _images = require("./blocks/images");
 var _utils = require("./utils");
-async function build(config, { rootDirectory , customAppFile , isDevelopment , isServer , assetPrefix , sassOptions , productionBrowserSourceMaps , future , experimental  }) {
+async function build(config, { rootDirectory , customAppFile , isDevelopment , isServer , webServerRuntime , targetWeb , assetPrefix , sassOptions , productionBrowserSourceMaps , future , experimental  }) {
     const ctx = {
         rootDirectory,
         customAppFile,
         isDevelopment,
         isProduction: !isDevelopment,
         isServer,
+        webServerRuntime,
         isClient: !isServer,
+        targetWeb,
         assetPrefix: assetPrefix ? assetPrefix.endsWith('/') ? assetPrefix.slice(0, -1) : assetPrefix : '',
         sassOptions,
         productionBrowserSourceMaps,

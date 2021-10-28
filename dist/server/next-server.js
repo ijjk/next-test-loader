@@ -44,6 +44,7 @@ var _parseNextUrl = require("../shared/lib/router/utils/parse-next-url");
 var _isError = _interopRequireDefault(require("../lib/is-error"));
 var _parseUrl = require("../shared/lib/router/utils/parse-url");
 var _constants1 = require("../lib/constants");
+var _response = require("./web/spec-extension/response");
 var _sandbox = require("./web/sandbox");
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
@@ -356,14 +357,15 @@ class Server {
     }
     getMiddleware() {
         var ref;
-        return Object.keys(((ref = this.middlewareManifest) === null || ref === void 0 ? void 0 : ref.middleware) || {
-        }).map((page)=>({
-                match: (0, _utils).getRouteMatcher((0, _utils).getMiddlewareRegex(page)),
+        const middleware = ((ref = this.middlewareManifest) === null || ref === void 0 ? void 0 : ref.middleware) || {
+        };
+        return Object.keys(middleware).map((page)=>({
+                match: (0, _utils).getRouteMatcher((0, _utils).getMiddlewareRegex(page, _constants1.MIDDLEWARE_ROUTE.test(middleware[page].name))),
                 page
             })
         );
     }
-    async hasMiddleware(pathname) {
+    async hasMiddleware(pathname, _isSSR) {
         try {
             return (0, _require).getMiddlewareInfo({
                 dev: this.renderOpts.dev,
@@ -375,7 +377,7 @@ class Server {
         }
         return false;
     }
-    async ensureMiddleware(_pathname) {
+    async ensureMiddleware(_pathname, _isSSR) {
     }
     async runMiddleware(params) {
         this.middlewareBetaWarning();
@@ -393,20 +395,30 @@ class Server {
                 }
             }
         }
+        const subreq = params.request.headers[`x-middleware-subrequest`];
+        const subrequests = typeof subreq === 'string' ? subreq.split(':') : [];
+        const allHeaders = new Headers();
         let result = null;
         for (const middleware of this.middleware || []){
             if (middleware.match(params.parsedUrl.pathname)) {
-                if (!await this.hasMiddleware(middleware.page)) {
+                if (!await this.hasMiddleware(middleware.page, middleware.ssr)) {
                     console.warn(`The Edge Function for ${middleware.page} was not found`);
                     continue;
                 }
-                await this.ensureMiddleware(middleware.page);
+                await this.ensureMiddleware(middleware.page, middleware.ssr);
                 const middlewareInfo = (0, _require).getMiddlewareInfo({
                     dev: this.renderOpts.dev,
                     distDir: this.distDir,
                     page: middleware.page,
                     serverless: this._isLikeServerless
                 });
+                if (subrequests.includes(middlewareInfo.name)) {
+                    result = {
+                        response: _response.NextResponse.next(),
+                        waitUntil: Promise.resolve()
+                    };
+                    continue;
+                }
                 result = await (0, _sandbox).run({
                     name: middlewareInfo.name,
                     paths: middlewareInfo.paths,
@@ -420,12 +432,13 @@ class Server {
                         },
                         url: params.request.__NEXT_INIT_URL,
                         page: page
-                    }
+                    },
+                    ssr: !!this.nextConfig.experimental.concurrentFeatures
                 });
+                for (let [key, value] of result.response.headers){
+                    allHeaders.append(key, value);
+                }
                 if (!this.renderOpts.dev) {
-                    result.promise.catch((error)=>{
-                        console.error(`Uncaught: middleware error after responding`, error);
-                    });
                     result.waitUntil.catch((error)=>{
                         console.error(`Uncaught: middleware waitUntil errored`, error);
                     });
@@ -437,6 +450,10 @@ class Server {
         }
         if (!result) {
             this.render404(params.request, params.response, params.parsed);
+        } else {
+            for (let [key, value] of allHeaders){
+                result.response.headers.set(key, value);
+            }
         }
         return result;
     }
@@ -795,7 +812,11 @@ class Server {
                     result.response.headers.delete('x-middleware-next');
                     for (const [key, value] of result.response.headers.entries()){
                         if (key !== 'content-encoding') {
-                            res.setHeader(key, value);
+                            if (key.toLowerCase() === 'set-cookie') {
+                                res.setHeader(key, value.split(', '));
+                            } else {
+                                res.setHeader(key, value);
+                            }
                         }
                     }
                     const preflight = req.method === 'HEAD' && req.headers['x-middleware-preflight'];

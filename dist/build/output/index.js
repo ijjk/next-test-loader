@@ -26,6 +26,7 @@ function startedDevelopmentServer(appUrl, bindAddr) {
 }
 let previousClient = null;
 let previousServer = null;
+let previousServerWeb = null;
 function formatAmpMessages(amp) {
     let output = _chalk.default.bold('Amp Validation') + '\n\n';
     let messages = [];
@@ -86,7 +87,7 @@ function formatAmpMessages(amp) {
             'l'
         ],
         stringLength (str) {
-            return((0, _stripAnsi).default(str).length);
+            return (0, _stripAnsi).default(str).length;
         }
     });
     return output;
@@ -95,13 +96,14 @@ const buildStore = (0, _unistore).default();
 let buildWasDone = false;
 let clientWasLoading = true;
 let serverWasLoading = true;
+let serverWebWasLoading = false;
 buildStore.subscribe((state)=>{
-    const { amp , client , server , trigger  } = state;
+    const { amp , client , server , serverWeb , trigger  } = state;
     const { bootstrap: bootstrapping , appUrl  } = _store.store.getState();
     if (bootstrapping && (client.loading || server.loading)) {
         return;
     }
-    if (client.loading || server.loading) {
+    if (client.loading || server.loading || (serverWeb === null || serverWeb === void 0 ? void 0 : serverWeb.loading)) {
         _store.store.setState({
             bootstrap: false,
             appUrl: appUrl,
@@ -110,17 +112,19 @@ buildStore.subscribe((state)=>{
         }, true);
         clientWasLoading = !buildWasDone && clientWasLoading || client.loading;
         serverWasLoading = !buildWasDone && serverWasLoading || server.loading;
+        serverWebWasLoading = !buildWasDone && serverWasLoading || !!(serverWeb === null || serverWeb === void 0 ? void 0 : serverWeb.loading);
         buildWasDone = false;
         return;
     }
+    if (serverWeb === null || serverWeb === void 0 ? void 0 : serverWeb.loading) return;
     buildWasDone = true;
     let partialState = {
         bootstrap: false,
         appUrl: appUrl,
         loading: false,
         typeChecking: false,
-        partial: clientWasLoading && !serverWasLoading ? 'client' : serverWasLoading && !clientWasLoading ? 'server' : undefined,
-        modules: (clientWasLoading ? client.modules : 0) + (serverWasLoading ? server.modules : 0)
+        partial: clientWasLoading && !serverWasLoading && !serverWebWasLoading ? 'client' : serverWasLoading && !clientWasLoading && !serverWebWasLoading ? 'server' : serverWebWasLoading && !clientWasLoading && !serverWasLoading ? 'serverWeb' : undefined,
+        modules: (clientWasLoading ? client.modules : 0) + (serverWasLoading ? server.modules : 0) + (serverWebWasLoading ? (serverWeb === null || serverWeb === void 0 ? void 0 : serverWeb.modules) || 0 : 0)
     };
     if (client.errors) {
         // Show only client errors
@@ -136,11 +140,19 @@ buildStore.subscribe((state)=>{
             errors: server.errors,
             warnings: null
         }, true);
+    } else if (serverWeb && serverWeb.errors) {
+        // Show only serverWeb errors
+        _store.store.setState({
+            ...partialState,
+            errors: serverWeb.errors,
+            warnings: null
+        }, true);
     } else {
         // Show warnings from all of them
         const warnings = [
             ...client.warnings || [],
             ...server.warnings || [],
+            ...serverWeb && serverWeb.warnings || [],
             ...Object.keys(amp).length > 0 && formatAmpMessages(amp) || [], 
         ];
         _store.store.setState({
@@ -176,8 +188,8 @@ function ampValidation(page, errors, warnings) {
         })
     });
 }
-function watchCompilers(client, server) {
-    if (previousClient === client && previousServer === server) {
+function watchCompilers(client, server, serverWeb) {
+    if (previousClient === client && previousServer === server && previousServerWeb === serverWeb) {
         return;
     }
     buildStore.setState({
@@ -187,6 +199,9 @@ function watchCompilers(client, server) {
         server: {
             loading: true
         },
+        serverWeb: serverWeb ? {
+            loading: true
+        } : undefined,
         trigger: 'initial'
     });
     function tapCompiler(key, compiler, onEvent) {
@@ -238,8 +253,17 @@ function watchCompilers(client, server) {
             });
         }
     });
+    if (serverWeb) {
+        tapCompiler('serverWeb', serverWeb, (status)=>{
+            buildStore.setState({
+                serverWeb: status,
+                trigger: undefined
+            });
+        });
+    }
     previousClient = client;
     previousServer = server;
+    previousServerWeb = serverWeb;
 }
 function reportTrigger(trigger) {
     buildStore.setState({

@@ -1,6 +1,6 @@
 /// <reference types="node" />
-import { ServerResponse } from 'http';
-import { Writable } from 'stream';
+import type { ServerResponse } from 'http';
+import type { Writable } from 'stream';
 export declare type NodeWritablePiper = (res: Writable, next: (err?: Error) => void) => void;
 export default class RenderResult {
     _result: string | NodeWritablePiper;

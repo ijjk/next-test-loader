@@ -10,4 +10,5 @@ export declare function run(params: {
     name: string;
     paths: string[];
     request: RequestData;
+    ssr: boolean;
 }): Promise<FetchEventResult>;

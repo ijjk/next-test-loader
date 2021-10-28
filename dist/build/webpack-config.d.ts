@@ -84,11 +84,21 @@ export declare const NODE_BASE_ESM_RESOLVE_OPTIONS: {
     restrictions: never[];
 };
 export declare const nextImageLoaderRegex: RegExp;
-export default function getBaseWebpackConfig(dir: string, { buildId, config, dev, isServer, pagesDir, target, reactProductionProfiling, entrypoints, rewrites, isDevFallback, runWebpackSpan, }: {
+export declare function resolveExternal(appDir: string, esmExternalsConfig: NextConfigComplete['experimental']['esmExternals'], context: string, request: string, isEsmRequested: boolean, getResolve: (options: any) => (resolveContext: string, resolveRequest: string) => Promise<[string | null, boolean]>, isLocalCallback?: (res: string) => any, baseResolveCheck?: boolean, esmResolveOptions?: any, nodeResolveOptions?: any, baseEsmResolveOptions?: any, baseResolveOptions?: any): Promise<{
+    localRes: any;
+    res?: undefined;
+    isEsm?: undefined;
+} | {
+    res: string | null;
+    isEsm: boolean;
+    localRes?: undefined;
+}>;
+export default function getBaseWebpackConfig(dir: string, { buildId, config, dev, isServer, webServerRuntime, pagesDir, target, reactProductionProfiling, entrypoints, rewrites, isDevFallback, runWebpackSpan, }: {
     buildId: string;
     config: NextConfigComplete;
     dev?: boolean;
     isServer?: boolean;
+    webServerRuntime?: boolean;
     pagesDir: string;
     target?: string;
     reactProductionProfiling?: boolean;

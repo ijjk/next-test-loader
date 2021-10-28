@@ -1,5 +1,6 @@
 import type { webpack5 as webpack } from 'next/dist/compiled/webpack/webpack';
 import type ws from 'ws';
+import { NextConfigComplete } from '../config-shared';
 export declare const ADDED: unique symbol;
 export declare const BUILDING: unique symbol;
 export declare const BUILT: unique symbol;
@@ -12,9 +13,9 @@ export declare let entries: {
         dispose?: boolean;
     };
 };
-export default function onDemandEntryHandler(watcher: any, multiCompiler: webpack.MultiCompiler, { pagesDir, pageExtensions, maxInactiveAge, pagesBufferLength, }: {
+export default function onDemandEntryHandler(watcher: any, multiCompiler: webpack.MultiCompiler, { pagesDir, nextConfig, maxInactiveAge, pagesBufferLength, }: {
     pagesDir: string;
-    pageExtensions: string[];
+    nextConfig: NextConfigComplete;
     maxInactiveAge: number;
     pagesBufferLength: number;
 }): {

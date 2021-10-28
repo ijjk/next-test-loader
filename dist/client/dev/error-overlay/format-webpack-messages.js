@@ -15,7 +15,7 @@ function isLikelyASyntaxError(message) {
 function formatMessage(message, verbose) {
     // TODO: Replace this once webpack 5 is stable
     if (typeof message === 'object' && message.message) {
-        const filteredModuleTrace = message.moduleTrace && message.moduleTrace.filter((trace)=>!/next-(middleware|client-pages)-loader\.js/.test(trace.originName)
+        const filteredModuleTrace = message.moduleTrace && message.moduleTrace.filter((trace)=>!/next-(middleware|client-pages|flight-(client|server))-loader\.js/.test(trace.originName)
         );
         message = (message.moduleName ? (0, _stripAnsi).default(message.moduleName) + '\n' : '') + (message.file ? (0, _stripAnsi).default(message.file) + '\n' : '') + message.message + (message.details && verbose ? '\n' + message.details : '') + (filteredModuleTrace && filteredModuleTrace.length && verbose ? '\n\nImport trace for requested module:' + filteredModuleTrace.map((trace)=>`\n${trace.originName}`
         ).join('') : '') + (message.stack && verbose ? '\n' + message.stack : '');

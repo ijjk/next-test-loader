@@ -196,6 +196,9 @@ class DevServer extends _nextServer.default {
                 const routedMiddleware = [];
                 const routedPages = [];
                 const knownFiles = wp.getTimeInfoEntries();
+                const ssrMiddleware = new Set();
+                const isWebServerRuntime = this.nextConfig.experimental.concurrentFeatures;
+                const hasServerComponents = isWebServerRuntime && this.nextConfig.experimental.serverComponents;
                 for (const [fileName, { accuracy  }] of knownFiles){
                     if (accuracy === undefined || !regexPageExtension.test(fileName)) {
                         continue;
@@ -207,11 +210,19 @@ class DevServer extends _nextServer.default {
                     let pageName = '/' + (0, _path).relative(pagesDir, fileName).replace(/\\+/g, '/');
                     pageName = pageName.replace(regexPageExtension, '');
                     pageName = pageName.replace(/\/index$/, '') || '/';
+                    if (hasServerComponents && pageName.endsWith('.server')) {
+                        routedMiddleware.push(pageName);
+                        ssrMiddleware.add(pageName);
+                    } else if (isWebServerRuntime && !(pageName === '/_app' || pageName === '/_error' || pageName === '/_document')) {
+                        routedMiddleware.push(pageName);
+                        ssrMiddleware.add(pageName);
+                    }
                     routedPages.push(pageName);
                 }
                 this.middleware = (0, _utils).getSortedRoutes(routedMiddleware).map((page)=>({
-                        match: (0, _utils).getRouteMatcher((0, _getMiddlewareRegex).getMiddlewareRegex(page)),
-                        page
+                        match: (0, _utils).getRouteMatcher((0, _getMiddlewareRegex).getMiddlewareRegex(page, !ssrMiddleware.has(page))),
+                        page,
+                        ssr: ssrMiddleware.has(page)
                     })
                 );
                 try {
@@ -370,8 +381,6 @@ class DevServer extends _nextServer.default {
     async runMiddleware(params) {
         try {
             const result = await super.runMiddleware(params);
-            result === null || result === void 0 ? void 0 : result.promise.catch((error)=>this.logErrorWithOriginalStack(error, 'unhandledRejection', 'client')
-            );
             result === null || result === void 0 ? void 0 : result.waitUntil.catch((error)=>this.logErrorWithOriginalStack(error, 'unhandledRejection', 'client')
             );
             return result;
@@ -496,11 +505,11 @@ class DevServer extends _nextServer.default {
     getMiddleware() {
         return [];
     }
-    async hasMiddleware(pathname) {
-        return this.hasPage(getMiddlewareFilepath(pathname));
+    async hasMiddleware(pathname, isSSR) {
+        return this.hasPage(isSSR ? pathname : getMiddlewareFilepath(pathname));
     }
-    async ensureMiddleware(pathname) {
-        return this.hotReloader.ensurePage(getMiddlewareFilepath(pathname));
+    async ensureMiddleware(pathname, isSSR) {
+        return this.hotReloader.ensurePage(isSSR ? pathname : getMiddlewareFilepath(pathname));
     }
     generateRoutes() {
         const { fsRoutes , ...otherRoutes } = super.generateRoutes();
@@ -541,7 +550,10 @@ class DevServer extends _nextServer.default {
                 var ref;
                 res.statusCode = 200;
                 res.setHeader('Content-Type', 'application/json; charset=utf-8');
-                res.end(JSON.stringify(((ref = this.middleware) === null || ref === void 0 ? void 0 : ref.map((middleware)=>middleware.page
+                res.end(JSON.stringify(((ref = this.middleware) === null || ref === void 0 ? void 0 : ref.map((middleware)=>[
+                        middleware.page,
+                        !!middleware.ssr, 
+                    ]
                 )) || []));
                 return {
                     finished: true

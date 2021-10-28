@@ -2,45 +2,64 @@
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-exports.default = void 0;
+exports.default = exports.ssrEntries = void 0;
 var _webpack = require("next/dist/compiled/webpack/webpack");
 var _utils = require("../../../shared/lib/router/utils");
 var _constants = require("../../../shared/lib/constants");
 var _constants1 = require("../../../lib/constants");
+var _nonNullable = require("../../../lib/non-nullable");
 const PLUGIN_NAME = 'MiddlewarePlugin';
 const MIDDLEWARE_FULL_ROUTE_REGEX = /^pages[/\\]?(.*)\/_middleware$/;
+const ssrEntries = new Map();
+exports.ssrEntries = ssrEntries;
 class MiddlewarePlugin {
-    constructor({ dev  }){
+    constructor({ dev , hasServerComponents  }){
         this.dev = dev;
+        this.hasServerComponents = hasServerComponents;
     }
     createAssets(compilation, assets, envPerRoute) {
         const entrypoints = compilation.entrypoints;
         const middlewareManifest = {
             sortedMiddleware: [],
+            clientInfo: [],
             middleware: {
             },
             version: 1
         };
         for (const entrypoint of entrypoints.values()){
             const result = MIDDLEWARE_FULL_ROUTE_REGEX.exec(entrypoint.name);
-            const location = result ? `/${result[1]}` : null;
+            const ssrEntryInfo = ssrEntries.get(entrypoint.name);
+            const location = result ? `/${result[1]}` : ssrEntryInfo ? entrypoint.name.slice('pages'.length).replace(/\/index$/, '') || '/' : null;
             if (!location) {
                 continue;
             }
-            const files = entrypoint.getFiles().filter((file)=>!file.endsWith('.hot-update.js')
+            const files = ssrEntryInfo ? [
+                `server/${_constants.MIDDLEWARE_SSR_RUNTIME_WEBPACK}.js`,
+                ssrEntryInfo.requireFlightManifest ? `server/${_constants.MIDDLEWARE_FLIGHT_MANIFEST}.js` : null,
+                `server/${_constants.MIDDLEWARE_BUILD_MANIFEST}.js`,
+                `server/${_constants.MIDDLEWARE_REACT_LOADABLE_MANIFEST}.js`,
+                `server/${entrypoint.name}.js`, 
+            ].filter(_nonNullable.nonNullable) : entrypoint.getFiles().filter((file)=>!file.endsWith('.hot-update.js')
             ).map((file)=>// we need to use the unminified version of the webpack runtime,
                 // remove if we do start minifying middleware chunks
                 file.startsWith('static/chunks/webpack-') ? file.replace('webpack-', 'webpack-middleware-') : file
             );
             middlewareManifest.middleware[location] = {
-                env: envPerRoute.get(entrypoint.name),
+                env: envPerRoute.get(entrypoint.name) || [],
                 files,
                 name: entrypoint.name,
                 page: location,
-                regexp: (0, _utils).getMiddlewareRegex(location).namedRegex
+                regexp: (0, _utils).getMiddlewareRegex(location, !ssrEntryInfo).namedRegex
             };
         }
         middlewareManifest.sortedMiddleware = (0, _utils).getSortedRoutes(Object.keys(middlewareManifest.middleware));
+        middlewareManifest.clientInfo = middlewareManifest.sortedMiddleware.map((key)=>{
+            const ssrEntryInfo = ssrEntries.get(middlewareManifest.middleware[key].name);
+            return [
+                key,
+                !!ssrEntryInfo
+            ];
+        });
         assets[`server/${_constants.MIDDLEWARE_MANIFEST}`] = new _webpack.sources.RawSource(JSON.stringify(middlewareManifest, null, 2));
     }
     apply(compiler) {

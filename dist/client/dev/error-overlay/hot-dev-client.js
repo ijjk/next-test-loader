@@ -7,6 +7,7 @@ var _client = require("@next/react-dev-overlay/lib/client");
 var _stripAnsi = _interopRequireDefault(require("next/dist/compiled/strip-ansi"));
 var _websocket = require("./websocket");
 var _formatWebpackMessages = _interopRequireDefault(require("./format-webpack-messages"));
+var _router = _interopRequireDefault(require("next/router"));
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
         default: obj
@@ -55,7 +56,7 @@ function clearOutdatedErrors() {
 // Successful compilation.
 function handleSuccess() {
     clearOutdatedErrors();
-    const isHotUpdate = !isFirstCompilation;
+    const isHotUpdate = !isFirstCompilation || _router.default.pathname !== '/_error' && isUpdateAvailable();
     isFirstCompilation = false;
     hasCompileErrors = false;
     // Attempt to apply hot updates or reload.

@@ -17,12 +17,24 @@ const FEATURE_MODULE_MAP = new Map([
         '/next/dynamic.js'
     ], 
 ]);
+// List of build features used in webpack configuration
+const BUILD_FEATURES = [
+    'swcLoader',
+    'swcMinify'
+];
 class TelemetryPlugin {
-    constructor(){
+    // Build feature usage is on/off and is known before the build starts
+    constructor(buildFeaturesMap){
         this.usageTracker = new Map();
-        for (const featureName of FEATURE_MODULE_MAP.keys()){
+        for (const featureName of BUILD_FEATURES){
             this.usageTracker.set(featureName, {
                 featureName,
+                invocationCount: buildFeaturesMap.get(featureName) ? 1 : 0
+            });
+        }
+        for (const featureName1 of FEATURE_MODULE_MAP.keys()){
+            this.usageTracker.set(featureName1, {
+                featureName: featureName1,
                 invocationCount: 0
             });
         }

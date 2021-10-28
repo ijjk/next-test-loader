@@ -20,6 +20,7 @@ var _onDemandEntryHandler = _interopRequireWildcard(require("./on-demand-entry-h
 var _normalizePagePath = require("../normalize-page-path");
 var _getRouteFromEntrypoint = _interopRequireDefault(require("../get-route-from-entrypoint"));
 var _isWriteable = require("../../build/is-writeable");
+var _middlewarePlugin = require("../../build/webpack/plugins/middleware-plugin");
 var _querystring = require("querystring");
 var _utils = require("../../build/utils");
 var _utils1 = require("../../shared/lib/utils");
@@ -146,6 +147,8 @@ class HotReloader {
         this.serverStats = null;
         this.serverPrevDocumentHash = null;
         this.config = config;
+        this.webServerRuntime = !!config.experimental.concurrentFeatures;
+        this.hasServerComponents = !!(config.experimental.concurrentFeatures && config.experimental.serverComponents);
         this.previewProps = previewProps;
         this.rewrites = rewrites;
         this.hotReloaderSpan = (0, _trace).trace('hot-reloader');
@@ -237,7 +240,7 @@ class HotReloader {
                 ])
             );
             const pages = webpackConfigSpan.traceChild('create-pages-mapping').traceFn(()=>(0, _entries).createPagesMapping(pagePaths.filter((i)=>i !== null
-                ), this.config.pageExtensions, true)
+                ), this.config.pageExtensions, true, this.hasServerComponents)
             );
             const entrypoints = webpackConfigSpan.traceChild('create-entrypoints').traceFn(()=>(0, _entries).createEntrypoints(pages, 'server', this.buildId, this.previewProps, this.config, [])
             );
@@ -261,8 +264,19 @@ class HotReloader {
                         rewrites: this.rewrites,
                         entrypoints: entrypoints.server,
                         runWebpackSpan: this.hotReloaderSpan
-                    }), 
-                ])
+                    }),
+                    this.webServerRuntime ? (0, _webpackConfig).default(this.dir, {
+                        dev: true,
+                        isServer: true,
+                        webServerRuntime: true,
+                        config: this.config,
+                        buildId: this.buildId,
+                        pagesDir: this.pagesDir,
+                        rewrites: this.rewrites,
+                        entrypoints: entrypoints.serverWeb,
+                        runWebpackSpan: this.hotReloaderSpan
+                    }) : null, 
+                ].filter(Boolean))
             );
         });
     }
@@ -308,9 +322,11 @@ class HotReloader {
         for (const config of configs){
             const defaultEntry = config.entry;
             config.entry = async (...args)=>{
-                // @ts-ignore entry is always a functon
+                // @ts-ignore entry is always a function
                 const entrypoints = await defaultEntry(...args);
                 const isClientCompilation = config.name === 'client';
+                const isServerCompilation = config.name === 'server';
+                const isServerWebCompilation = config.name === 'server-web';
                 await Promise.all(Object.keys(_onDemandEntryHandler.entries).map(async (pageKey)=>{
                     const isClientKey = pageKey.startsWith('client');
                     if (isClientKey !== isClientCompilation) return;
@@ -319,6 +335,7 @@ class HotReloader {
                     if (isClientCompilation && page.match(_constants.API_ROUTE) && !isMiddleware) {
                         return;
                     }
+                    const isApiRoute = page.match(_constants.API_ROUTE);
                     if (!isClientCompilation && isMiddleware) {
                         return;
                     }
@@ -327,6 +344,10 @@ class HotReloader {
                     if (!pageExists) {
                         // page was removed or disposed
                         delete _onDemandEntryHandler.entries[pageKey];
+                        return;
+                    }
+                    const isServerComponent = this.hasServerComponents && (0, _utils).isFlightPage(this.config, absolutePagePath);
+                    if (isServerCompilation && this.webServerRuntime && !isApiRoute) {
                         return;
                     }
                     _onDemandEntryHandler.entries[pageKey].status = _onDemandEntryHandler.BUILDING;
@@ -338,7 +359,8 @@ class HotReloader {
                         entrypoints[bundlePath] = (0, _entries).finalizeEntrypoint({
                             name: bundlePath,
                             value: `next-middleware-loader?${(0, _querystring).stringify(pageLoaderOpts)}!`,
-                            isServer: false
+                            isServer: false,
+                            isMiddleware: true
                         });
                     } else if (isClientCompilation) {
                         entrypoints[bundlePath] = (0, _entries).finalizeEntrypoint({
@@ -346,6 +368,31 @@ class HotReloader {
                             value: `next-client-pages-loader?${(0, _querystring).stringify(pageLoaderOpts)}!`,
                             isServer: false
                         });
+                        if (isServerComponent) {
+                            _middlewarePlugin.ssrEntries.set(bundlePath, {
+                                requireFlightManifest: true
+                            });
+                        } else if (this.webServerRuntime && !(page === '/_app' || page === '/_error' || page === '/_document')) {
+                            _middlewarePlugin.ssrEntries.set(bundlePath, {
+                                requireFlightManifest: false
+                            });
+                        }
+                    } else if (isServerWebCompilation) {
+                        if (!(page === '/_app' || page === '/_error' || page === '/_document')) {
+                            entrypoints[bundlePath] = (0, _entries).finalizeEntrypoint({
+                                name: '[name].js',
+                                value: `next-middleware-ssr-loader?${(0, _querystring).stringify({
+                                    page,
+                                    absolutePagePath,
+                                    isServerComponent,
+                                    buildId: this.buildId,
+                                    basePath: this.config.basePath,
+                                    assetPrefix: this.config.assetPrefix
+                                })}!`,
+                                isServer: false,
+                                isServerWeb: true
+                            });
+                        }
                     } else {
                         let request = (0, _path).relative(config.context, absolutePagePath);
                         if (!(0, _path).isAbsolute(request) && !request.startsWith('../')) {
@@ -365,7 +412,7 @@ class HotReloader {
         // @ts-ignore webpack 5
         configs.parallelism = 1;
         const multiCompiler = (0, _webpack).webpack(configs);
-        (0, _output).watchCompilers(multiCompiler.compilers[0], multiCompiler.compilers[1]);
+        (0, _output).watchCompilers(multiCompiler.compilers[0], multiCompiler.compilers[1], multiCompiler.compilers[2] || null);
         // Watch for changes to client/server page files so we can tell when just
         // the server file changes and trigger a reload for GS(S)P pages
         const changedClientPages = new Set();
@@ -487,7 +534,7 @@ class HotReloader {
         });
         this.onDemandEntries = (0, _onDemandEntryHandler).default(this.watcher, multiCompiler, {
             pagesDir: this.pagesDir,
-            pageExtensions: this.config.pageExtensions,
+            nextConfig: this.config,
             ...this.config.onDemandEntries
         });
         this.middlewares = [

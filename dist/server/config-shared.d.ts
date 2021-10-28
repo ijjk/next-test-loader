@@ -106,6 +106,7 @@ export declare type NextConfig = {
         webpack5?: false;
         strictPostcssConfiguration?: boolean;
     };
+    outputFileTracing?: boolean;
     staticPageGenerationTimeout?: number;
     crossOrigin?: false | 'anonymous' | 'use-credentials';
     swcMinify?: boolean;
@@ -135,7 +136,6 @@ export declare type NextConfig = {
         craCompat?: boolean;
         esmExternals?: boolean | 'loose';
         isrMemoryCacheSize?: number;
-        outputFileTracing?: boolean;
         concurrentFeatures?: boolean;
         serverComponents?: boolean;
         fullySpecified?: boolean;

@@ -296,10 +296,10 @@ class TraceEntryPointsPlugin {
                                     // package.json could be needed for resolving e.g. stylis
                                     // stylis/package.json -> stylis/dist/umd/package.json
                                     if (result.includes('node_modules')) {
-                                        let requestPath = result.replace(/\\/g, '/');
+                                        let requestPath = result.replace(/\\/g, '/').replace(/\0/g, '');
                                         if (!_path.default.isAbsolute(request) && request.includes('/') && (resContext === null || resContext === void 0 ? void 0 : resContext.descriptionFileRoot)) {
                                             var ref;
-                                            requestPath = (resContext.descriptionFileRoot + request.substr(((ref = getPkgName(request)) === null || ref === void 0 ? void 0 : ref.length) || 0) + _path.default.sep + 'package.json').replace(/\\/g, '/');
+                                            requestPath = (resContext.descriptionFileRoot + request.substr(((ref = getPkgName(request)) === null || ref === void 0 ? void 0 : ref.length) || 0) + _path.default.sep + 'package.json').replace(/\\/g, '/').replace(/\0/g, '');
                                         }
                                         const rootSeparatorIndex = requestPath.indexOf('/');
                                         let separatorIndex;
@@ -315,49 +315,49 @@ class TraceEntryPointsPlugin {
                                 // we failed to resolve the package.json boundary,
                                 // we don't block emitting the initial asset from this
                                 }
-                                resolve(result);
+                                resolve([
+                                    result,
+                                    options.dependencyType === 'esm'
+                                ]);
                             });
                         });
                     };
                 };
                 const CJS_RESOLVE_OPTIONS = {
                     ..._webpackConfig.NODE_RESOLVE_OPTIONS,
+                    fullySpecified: undefined,
                     modules: undefined,
                     extensions: undefined
                 };
+                const BASE_CJS_RESOLVE_OPTIONS = {
+                    ...CJS_RESOLVE_OPTIONS,
+                    alias: false
+                };
                 const ESM_RESOLVE_OPTIONS = {
                     ..._webpackConfig.NODE_ESM_RESOLVE_OPTIONS,
+                    fullySpecified: undefined,
                     modules: undefined,
                     extensions: undefined
+                };
+                const BASE_ESM_RESOLVE_OPTIONS = {
+                    ...ESM_RESOLVE_OPTIONS,
+                    alias: false
                 };
                 const doResolve = async (request, parent, job, isEsmRequested)=>{
                     if (this.staticImageImports && _webpackConfig.nextImageLoaderRegex.test(request)) {
                         throw new Error(`not resolving ${request} as this is handled by next-image-loader`);
                     }
+                    const context = _path.default.dirname(parent);
                     // When in esm externals mode, and using import, we resolve with
                     // ESM resolving options.
-                    const esmExternals = this.esmExternals;
-                    const looseEsmExternals = this.esmExternals === 'loose';
-                    const preferEsm = esmExternals && isEsmRequested;
-                    const resolve = getResolve(preferEsm ? ESM_RESOLVE_OPTIONS : CJS_RESOLVE_OPTIONS);
-                    // Resolve the import with the webpack provided context, this
-                    // ensures we're resolving the correct version when multiple
-                    // exist.
-                    let res = '';
-                    try {
-                        res = await resolve(parent, request, job);
-                    } catch (_) {
-                    }
-                    // If resolving fails, and we can use an alternative way
-                    // try the alternative resolving options.
-                    if (!res && (isEsmRequested || looseEsmExternals)) {
-                        const resolveAlternative = getResolve(preferEsm ? CJS_RESOLVE_OPTIONS : ESM_RESOLVE_OPTIONS);
-                        res = await resolveAlternative(parent, request, job);
-                    }
+                    const { res  } = await (0, _webpackConfig).resolveExternal(this.appDir, this.esmExternals, context, request, isEsmRequested, (options)=>(_, resRequest)=>{
+                            return getResolve(options)(parent, resRequest, job);
+                        }
+                    , undefined, undefined, ESM_RESOLVE_OPTIONS, CJS_RESOLVE_OPTIONS, BASE_ESM_RESOLVE_OPTIONS, BASE_CJS_RESOLVE_OPTIONS);
                     if (!res) {
                         throw new Error(`failed to resolve ${request} from ${parent}`);
                     }
-                    return res;
+                    return res.replace(/\0/g, '');
                 };
                 this.tapfinishModules(compilation, traceEntrypointsPluginSpan, doResolve);
             });

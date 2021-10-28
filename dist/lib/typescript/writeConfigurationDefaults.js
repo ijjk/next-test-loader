@@ -147,6 +147,10 @@ async function writeConfigurationDefaults(ts, tsConfigPath, isFirstTimeSetup) {
         const check = desiredCompilerOptions[optionKey];
         if ('suggested' in check) {
             if (!(optionKey in tsOptions)) {
+                if (!userTsConfig.compilerOptions) {
+                    userTsConfig.compilerOptions = {
+                    };
+                }
                 userTsConfig.compilerOptions[optionKey] = check.suggested;
                 suggestedActions.push(_chalk.default.cyan(optionKey) + ' was set to ' + _chalk.default.bold(check.suggested));
             }
@@ -154,6 +158,10 @@ async function writeConfigurationDefaults(ts, tsConfigPath, isFirstTimeSetup) {
             var ref;
             const ev = tsOptions[optionKey];
             if (!('parsedValues' in check ? (ref = check.parsedValues) === null || ref === void 0 ? void 0 : ref.includes(ev) : 'parsedValue' in check ? check.parsedValue === ev : check.value === ev)) {
+                if (!userTsConfig.compilerOptions) {
+                    userTsConfig.compilerOptions = {
+                    };
+                }
                 userTsConfig.compilerOptions[optionKey] = check.value;
                 requiredActions.push(_chalk.default.cyan(optionKey) + ' was set to ' + _chalk.default.bold(check.value) + ` (${check.reason})`);
             }

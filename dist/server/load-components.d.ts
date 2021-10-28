@@ -2,7 +2,6 @@
 import { BuildManifest } from './get-page-files';
 import { AppType, DocumentType } from '../shared/lib/utils';
 import { PageConfig, GetStaticPaths, GetServerSideProps, GetStaticProps } from 'next/types';
-export declare function interopDefault(mod: any): any;
 export declare type ManifestItem = {
     id: number | string;
     files: string[];

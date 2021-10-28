@@ -26,7 +26,7 @@ exports.BUILT = BUILT;
 let entries = {
 };
 exports.entries = entries;
-function onDemandEntryHandler(watcher, multiCompiler, { pagesDir , pageExtensions , maxInactiveAge , pagesBufferLength  }) {
+function onDemandEntryHandler(watcher, multiCompiler, { pagesDir , nextConfig , maxInactiveAge , pagesBufferLength  }) {
     const { compilers  } = multiCompiler;
     const invalidator = new Invalidator(watcher, multiCompiler);
     let lastClientAccessPages = [
@@ -52,10 +52,11 @@ function onDemandEntryHandler(watcher, multiCompiler, { pagesDir , pageExtension
         if (invalidator.rebuildAgain) {
             return invalidator.doneBuilding();
         }
-        const [clientStats, serverStats] = multiStats.stats;
+        const [clientStats, serverStats, serverWebStats] = multiStats.stats;
         const pagePaths = [
             ...getPagePathsFromEntrypoints('client', clientStats.compilation.entrypoints),
-            ...getPagePathsFromEntrypoints('server', serverStats.compilation.entrypoints), 
+            ...getPagePathsFromEntrypoints('server', serverStats.compilation.entrypoints),
+            ...serverWebStats ? getPagePathsFromEntrypoints('server-web', serverWebStats.compilation.entrypoints) : [], 
         ];
         for (const page of pagePaths){
             const entry = entries[page];
@@ -120,7 +121,7 @@ function onDemandEntryHandler(watcher, multiCompiler, { pagesDir , pageExtension
                 console.error(err);
                 throw (0, _require).pageNotFoundError(page);
             }
-            let pagePath = await (0, _findPageFile).findPageFile(pagesDir, normalizedPagePath, pageExtensions);
+            let pagePath = await (0, _findPageFile).findPageFile(pagesDir, normalizedPagePath, nextConfig.pageExtensions);
             // Default the /_error route to the Next.js provided default page
             if (page === '/_error' && pagePath === null) {
                 pagePath = 'next/dist/pages/_error';
@@ -135,7 +136,7 @@ function onDemandEntryHandler(watcher, multiCompiler, { pagesDir , pageExtension
                 absolutePagePath = require.resolve(pagePath);
             } else {
                 let pageUrl = pagePath.replace(/\\/g, '/');
-                pageUrl = `${pageUrl[0] !== '/' ? '/' : ''}${pageUrl.replace(new RegExp(`\\.+(?:${pageExtensions.join('|')})$`), '').replace(/\/index$/, '')}`;
+                pageUrl = `${pageUrl[0] !== '/' ? '/' : ''}${pageUrl.replace(new RegExp(`\\.+(?:${nextConfig.pageExtensions.join('|')})$`), '').replace(/\/index$/, '')}`;
                 pageUrl = pageUrl === '' ? '/' : pageUrl;
                 const bundleFile = (0, _normalizePagePath).normalizePagePath(pageUrl);
                 bundlePath = _path.posix.join('pages', bundleFile);
@@ -145,6 +146,7 @@ function onDemandEntryHandler(watcher, multiCompiler, { pagesDir , pageExtension
             const normalizedPage = (0, _normalizePagePath).normalizePathSep(page);
             const isMiddleware = normalizedPage.match(_constants.MIDDLEWARE_ROUTE);
             const isApiRoute = normalizedPage.match(_constants.API_ROUTE) && !isMiddleware;
+            const isServerWeb = !!nextConfig.experimental.concurrentFeatures;
             let entriesChanged = false;
             const addPageEntry = (type)=>{
                 return new Promise((resolve, reject)=>{
@@ -178,7 +180,7 @@ function onDemandEntryHandler(watcher, multiCompiler, { pagesDir , pageExtension
             };
             const promise = isApiRoute ? addPageEntry('server') : clientOnly || isMiddleware ? addPageEntry('client') : Promise.all([
                 addPageEntry('client'),
-                addPageEntry('server')
+                addPageEntry(isServerWeb ? 'server-web' : 'server'), 
             ]);
             if (entriesChanged) {
                 (0, _output).reportTrigger(isApiRoute ? `${normalizedPage} (server only)` : clientOnly || isMiddleware ? `${normalizedPage} (client only)` : normalizedPage);

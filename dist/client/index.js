@@ -114,11 +114,11 @@ function _objectSpread(target) {
 }
 const data = JSON.parse(document.getElementById('__NEXT_DATA__').textContent);
 window.__NEXT_DATA__ = data;
-const version = "11.1.3-canary.101";
+const version = "12.0.2-canary.2";
 exports.version = version;
 const looseToArray = (input)=>[].slice.call(input)
 ;
-const { props: hydrateProps , err: hydrateErr , page , query , buildId , assetPrefix , runtimeConfig , dynamicIds , isFallback , locale , locales , domainLocales , isPreview ,  } = data;
+const { props: hydrateProps , err: hydrateErr , page , query , buildId , assetPrefix , runtimeConfig , dynamicIds , isFallback , locale , locales , domainLocales , isPreview , rsc ,  } = data;
 let { defaultLocale  } = data;
 const prefix = assetPrefix || '';
 // With dynamic assetPrefix it's no longer possible to set assetPrefix at the build time
@@ -555,15 +555,54 @@ const wrapApp = (App)=>(wrappedAppProps)=>{
         }, appProps))));
     }
 ;
+let RSCComponent;
+if (process.env.__NEXT_RSC) {
+    function createResponseCache() {
+        return new Map();
+    }
+    const rscCache = createResponseCache();
+    const RSCWrapper = ({ cacheKey , serialized , _fresh  })=>{
+        const { createFromFetch  } = require('react-server-dom-webpack');
+        let response = rscCache.get(cacheKey);
+        // If there is no cache, or there is serialized data already
+        if (!response) {
+            response = createFromFetch(serialized ? (()=>{
+                const t = new TransformStream();
+                t.writable.getWriter().write(new TextEncoder().encode(serialized));
+                return Promise.resolve({
+                    body: t.readable
+                });
+            })() : (()=>{
+                const search = location.search;
+                const flightReqUrl = location.pathname + search + (search ? '&__flight__' : '?__flight__');
+                return fetch(flightReqUrl);
+            })());
+            rscCache.set(cacheKey, response);
+        }
+        const root = response.readRoot();
+        return root;
+    };
+    RSCComponent = (props)=>{
+        const { asPath: cacheKey  } = (0, _router1).useRouter();
+        return(/*#__PURE__*/ _react.default.createElement(_react.default.Suspense, {
+            fallback: null
+        }, /*#__PURE__*/ _react.default.createElement(RSCWrapper, {
+            cacheKey: cacheKey,
+            serialized: props.__flight_serialized__,
+            _fresh: props.__flight_fresh__
+        })));
+    };
+}
 let lastAppProps;
 function doRender(input) {
-    let { App , Component , props , err  } = input;
+    let { App , Component , props , err , __N_RSC  } = input;
     let styleSheets = 'initial' in input ? undefined : input.styleSheets;
     Component = Component || lastAppProps.Component;
     props = props || lastAppProps.props;
+    const isRSC = process.env.__NEXT_RSC && 'initial' in input ? !!rsc : !!__N_RSC;
     const appProps = _objectSpread({
     }, props, {
-        Component,
+        Component: isRSC ? RSCComponent : Component,
         err,
         router
     });

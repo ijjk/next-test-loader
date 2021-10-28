@@ -18,10 +18,10 @@ var _rawBody = _interopRequireDefault(require("raw-body"));
 var _stream = require("stream");
 var _utils = require("../shared/lib/utils");
 var _cryptoUtils = require("./crypto-utils");
-var _loadComponents = require("./load-components");
 var _sendPayload = require("./send-payload");
 var _etag = _interopRequireDefault(require("etag"));
 var _isError = _interopRequireDefault(require("../lib/is-error"));
+var _interopDefault = require("../lib/interop-default");
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
         default: obj
@@ -91,7 +91,7 @@ async function apiResolver(req, res, query, resolverModule, apiContext, propagat
         ;
         apiRes.clearPreviewData = ()=>clearPreviewData(apiRes)
         ;
-        const resolver = (0, _loadComponents).interopDefault(resolverModule);
+        const resolver = (0, _interopDefault).interopDefault(resolverModule);
         let wasPiped = false;
         if (process.env.NODE_ENV !== 'production') {
             // listen for pipe event and don't show resolve warning

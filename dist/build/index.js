@@ -87,6 +87,8 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
         const distDir = _path.default.join(dir, config.distDir);
         (0, _trace).setGlobal('phase', _constants1.PHASE_PRODUCTION_BUILD);
         (0, _trace).setGlobal('distDir', distDir);
+        const webServerRuntime = !!config.experimental.concurrentFeatures;
+        const hasServerComponents = webServerRuntime && !!config.experimental.serverComponents;
         const { target  } = config;
         const buildId = await nextBuildSpan.traceChild('generate-buildid').traceAsyncFn(()=>(0, _generateBuildId).generateBuildId(config.generateBuildId, _indexCjs.nanoid)
         );
@@ -164,7 +166,7 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
             previewModeSigningKey: _crypto.default.randomBytes(32).toString('hex'),
             previewModeEncryptionKey: _crypto.default.randomBytes(32).toString('hex')
         };
-        const mappedPages = nextBuildSpan.traceChild('create-pages-mapping').traceFn(()=>(0, _entries).createPagesMapping(pagePaths, config.pageExtensions, false)
+        const mappedPages = nextBuildSpan.traceChild('create-pages-mapping').traceFn(()=>(0, _entries).createPagesMapping(pagePaths, config.pageExtensions, false, hasServerComponents)
         );
         const entrypoints = nextBuildSpan.traceChild('create-entrypoints').traceFn(()=>(0, _entries).createEntrypoints(mappedPages, target, buildId, previewProps, config, loadedEnvFiles)
         );
@@ -300,6 +302,7 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
                     _path.default.relative(distDir, manifestPath),
                     _constants1.BUILD_MANIFEST,
                     _constants1.PRERENDER_MANIFEST,
+                    hasServerComponents ? _path.default.join(_constants1.SERVER_DIRECTORY, _constants1.MIDDLEWARE_FLIGHT_MANIFEST + '.js') : null,
                     _constants1.REACT_LOADABLE_MANIFEST,
                     config.optimizeFonts ? _path.default.join(isLikeServerless ? _constants1.SERVERLESS_DIRECTORY : _constants1.SERVER_DIRECTORY, _constants1.FONT_MANIFEST) : null,
                     _constants1.BUILD_ID_FILE, 
@@ -331,7 +334,19 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
                     entrypoints: entrypoints.server,
                     rewrites,
                     runWebpackSpan
-                }), 
+                }),
+                webServerRuntime ? (0, _webpackConfig).default(dir, {
+                    buildId,
+                    reactProductionProfiling,
+                    isServer: true,
+                    webServerRuntime: true,
+                    config,
+                    target,
+                    pagesDir,
+                    entrypoints: entrypoints.serverWeb,
+                    rewrites,
+                    runWebpackSpan
+                }) : null, 
             ])
         );
         const clientConfig = configs[0];
@@ -362,14 +377,19 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
                 const serverResult = await (0, _compiler).runCompiler(configs[1], {
                     runWebpackSpan
                 });
+                const serverWebResult = configs[2] ? await (0, _compiler).runCompiler(configs[2], {
+                    runWebpackSpan
+                }) : null;
                 result = {
                     warnings: [
                         ...clientResult.warnings,
-                        ...serverResult.warnings
+                        ...serverResult.warnings,
+                        ...(serverWebResult === null || serverWebResult === void 0 ? void 0 : serverWebResult.warnings) || [], 
                     ],
                     errors: [
                         ...clientResult.errors,
-                        ...serverResult.errors
+                        ...serverResult.errors,
+                        ...(serverWebResult === null || serverWebResult === void 0 ? void 0 : serverWebResult.errors) || [], 
                     ]
                 };
             }
@@ -509,14 +529,15 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
                     let isStatic = false;
                     let isHybridAmp = false;
                     let ssgPageRoutes = null;
-                    if (!page.match(_constants.MIDDLEWARE_ROUTE) && !page.match(RESERVED_PAGE)) {
+                    let isMiddlewareRoute = !!page.match(_constants.MIDDLEWARE_ROUTE);
+                    if (!isMiddlewareRoute && !page.match(RESERVED_PAGE) && !webServerRuntime) {
                         try {
                             let isPageStaticSpan = checkPageSpan.traceChild('is-page-static');
                             let workerResult = await isPageStaticSpan.traceAsyncFn(()=>{
                                 var ref, ref22;
                                 return staticWorkers.isPageStatic(page, distDir, isLikeServerless, configFileName, runtimeEnvConfig, config.httpAgentOptions, (ref = config.i18n) === null || ref === void 0 ? void 0 : ref.locales, (ref22 = config.i18n) === null || ref22 === void 0 ? void 0 : ref22.defaultLocale, isPageStaticSpan.id);
                             });
-                            if (config.experimental.outputFileTracing) {
+                            if (config.outputFileTracing) {
                                 pageTraceIncludes.set(page, workerResult.traceIncludes || []);
                                 pageTraceExcludes.set(page, workerResult.traceExcludes || []);
                             }
@@ -545,7 +566,7 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
                                 }
                             } else if (workerResult.hasServerProps) {
                                 serverPropsPages.add(page);
-                            } else if (workerResult.isStatic && await customAppGetInitialPropsPromise === false) {
+                            } else if (workerResult.isStatic && !workerResult.hasFlightData && await customAppGetInitialPropsPromise === false) {
                                 staticPages.add(page);
                                 isStatic = true;
                             }
@@ -572,6 +593,7 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
                         totalSize: allSize,
                         static: isStatic,
                         isSsg,
+                        isWebSsr: webServerRuntime && !isMiddlewareRoute && !page.match(RESERVED_PAGE),
                         isHybridAmp,
                         ssgPageRoutes,
                         initialRevalidateSeconds: false,
@@ -599,7 +621,7 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
         if (!hasSsrAmpPages) {
             requiredServerFiles.ignore.push(_path.default.relative(dir, _path.default.join(_path.default.dirname(require.resolve('next/dist/compiled/@ampproject/toolbox-optimizer')), '**/*')));
         }
-        if (config.experimental.outputFileTracing) {
+        if (config.outputFileTracing) {
             const { nodeFileTrace  } = require('next/dist/compiled/@vercel/nft');
             const includeExcludeSpan = nextBuildSpan.traceChild('apply-include-excludes');
             await includeExcludeSpan.traceAsyncFn(async ()=>{
@@ -743,8 +765,8 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
                 let routeKeys;
                 if ((0, _utils).isDynamicRoute(page)) {
                     const routeRegex = (0, _utils).getRouteRegex(dataRoute.replace(/\.json$/, ''));
-                    dataRouteRegex = (0, _loadCustomRoutes).normalizeRouteRegex(routeRegex.re.source.replace(/\(\?:\\\/\)\?\$$/, '\\.json$'));
-                    namedDataRouteRegex = routeRegex.namedRegex.replace(/\(\?:\/\)\?\$$/, '\\.json$');
+                    dataRouteRegex = (0, _loadCustomRoutes).normalizeRouteRegex(routeRegex.re.source.replace(/\(\?:\\\/\)\?\$$/, `\\.json$`));
+                    namedDataRouteRegex = routeRegex.namedRegex.replace(/\(\?:\/\)\?\$$/, `\\.json$`);
                     routeKeys = routeRegex.routeKeys;
                 } else {
                     dataRouteRegex = (0, _loadCustomRoutes).normalizeRouteRegex(new RegExp(`^${_path.default.posix.join('/_next/data', (0, _escapeStringRegexp).default(buildId), `${pagePath}.json`)}$`).source);
@@ -780,6 +802,7 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
             invocationCount: config.experimental.optimizeCss ? 1 : 0
         };
         telemetry.record({
+            // noop
             eventName: _events.EVENT_BUILD_FEATURE_USAGE,
             payload: optimizeCss
         });
@@ -1162,7 +1185,7 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
             await _fs.promises.writeFile(_path.default.join(distDir, _constants1.PRERENDER_MANIFEST), JSON.stringify(prerenderManifest), 'utf8');
         }
         const middlewareManifest = JSON.parse(await _fs.promises.readFile(_path.default.join(distDir, _constants1.SERVER_DIRECTORY, _constants1.MIDDLEWARE_MANIFEST), 'utf8'));
-        await _fs.promises.writeFile(_path.default.join(distDir, _constants1.CLIENT_STATIC_FILES_PATH, buildId, '_middlewareManifest.js'), `self.__MIDDLEWARE_MANIFEST=${(0, _devalue).default(middlewareManifest.sortedMiddleware)};self.__MIDDLEWARE_MANIFEST_CB&&self.__MIDDLEWARE_MANIFEST_CB()`);
+        await _fs.promises.writeFile(_path.default.join(distDir, _constants1.CLIENT_STATIC_FILES_PATH, buildId, '_middlewareManifest.js'), `self.__MIDDLEWARE_MANIFEST=${(0, _devalue).default(middlewareManifest.clientInfo)};self.__MIDDLEWARE_MANIFEST_CB&&self.__MIDDLEWARE_MANIFEST_CB()`);
         const images = {
             ...config.images
         };

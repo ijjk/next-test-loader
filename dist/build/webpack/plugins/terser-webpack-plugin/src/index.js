@@ -233,7 +233,7 @@ class TerserPlugin {
         const availableNumberOfCores = this.options.parallel;
         compiler.hooks.compilation.tap(pluginName, (compilation)=>{
             // Don't run minifier against mini-css-extract-plugin
-            if (compilation.name !== 'client' && compilation.name !== 'server') {
+            if (compilation.name !== 'client' && compilation.name !== 'server' && compilation.name !== 'server-web') {
                 return;
             }
             const cache = compilation.getCache('TerserWebpackPlugin');

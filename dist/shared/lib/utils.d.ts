@@ -77,6 +77,7 @@ export declare type NEXT_DATA = {
     domainLocales?: DomainLocale[];
     scriptLoader?: any[];
     isPreview?: boolean;
+    rsc?: boolean;
 };
 /**
  * `Next` context
@@ -139,6 +140,7 @@ export declare type AppPropsType<R extends NextRouter = NextRouter, P = {}> = Ap
     router: R;
     __N_SSG?: boolean;
     __N_SSP?: boolean;
+    __N_RSC?: boolean;
 };
 export declare type DocumentContext = NextPageContext & {
     renderPage: RenderPage;

@@ -30,6 +30,7 @@ interface PreflightData {
     redirect?: string | null;
     refresh?: boolean;
     rewrite?: string | null;
+    ssr?: boolean;
 }
 declare type PreflightEffect = {
     asPath: string;
@@ -97,6 +98,7 @@ export declare type CompletePrivateRouteInfo = {
     styleSheets: StyleSheetTuple[];
     __N_SSG?: boolean;
     __N_SSP?: boolean;
+    __N_RSC?: boolean;
     props?: Record<string, any>;
     err?: Error;
     error?: any;
@@ -214,6 +216,7 @@ export default class Router implements BaseRouter {
     prefetch(url: string, asPath?: string, options?: PrefetchOptions): Promise<void>;
     fetchComponent(route: string): Promise<GoodPageCache>;
     _getData<T>(fn: () => Promise<T>): Promise<T>;
+    _getFlightData(dataHref: string): Promise<object>;
     _preflightRequest(options: {
         as: string;
         cache?: boolean;

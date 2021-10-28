@@ -11,8 +11,8 @@ import { LoadComponentsReturnType } from './load-components';
 import Router, { DynamicRoutes, PageChecker, Params, Route } from './router';
 import './node-polyfill-fetch';
 import { PagesManifest } from '../build/webpack/plugins/pages-manifest-plugin';
-import { FontManifest } from './font-utils';
 import { NextConfigComplete } from './config-shared';
+import type { FontManifest } from './font-utils';
 import type { FetchEventResult } from './web/types';
 import type { MiddlewareManifest } from '../build/webpack/plugins/middleware-plugin';
 import type { ParsedNextUrl } from '../shared/lib/router/utils/parse-next-url';
@@ -23,6 +23,7 @@ export declare type FindComponentsResult = {
 interface RoutingItem {
     page: string;
     match: ReturnType<typeof getRouteMatcher>;
+    ssr?: boolean;
 }
 export declare type ServerConstructor = {
     /**
@@ -110,8 +111,8 @@ export default class Server {
         };
         page: string;
     }[];
-    protected hasMiddleware(pathname: string): Promise<boolean>;
-    protected ensureMiddleware(_pathname: string): Promise<void>;
+    protected hasMiddleware(pathname: string, _isSSR?: boolean): Promise<boolean>;
+    protected ensureMiddleware(_pathname: string, _isSSR?: boolean): Promise<void>;
     private middlewareBetaWarning;
     protected runMiddleware(params: {
         request: IncomingMessage;

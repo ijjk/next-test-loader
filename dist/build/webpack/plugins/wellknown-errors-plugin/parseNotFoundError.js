@@ -78,7 +78,7 @@ async function getNotFoundError(compilation, input, fileName) {
         const errorMessage = input.error.message.replace(/ in '.*?'/, '').replace(/Can't resolve '(.*)'/, `Can't resolve '${chalk.green('$1')}'`);
         const importTrace = ()=>{
             const moduleTrace = getModuleTrace(input, compilation).map(({ origin  })=>origin.readableIdentifier(compilation.requestShortener)
-            ).filter((name)=>name && !/next-(middleware|client-pages)-loader\.js/.test(name)
+            ).filter((name)=>name && !/next-(middleware|client-pages|flight-(client|server))-loader\.js/.test(name)
             );
             if (moduleTrace.length === 0) return '';
             return `\nImport trace for requested module:\n${moduleTrace.join('\n')}\n\n`;

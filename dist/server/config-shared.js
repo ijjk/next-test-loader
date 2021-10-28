@@ -69,6 +69,7 @@ const defaultConfig = {
     httpAgentOptions: {
         keepAlive: true
     },
+    outputFileTracing: true,
     staticPageGenerationTimeout: 60,
     swcMinify: false,
     experimental: {
@@ -92,7 +93,6 @@ const defaultConfig = {
         esmExternals: true,
         // default to 50MB limit
         isrMemoryCacheSize: 50 * 1024 * 1024,
-        outputFileTracing: true,
         concurrentFeatures: false,
         serverComponents: false,
         fullySpecified: false

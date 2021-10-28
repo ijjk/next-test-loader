@@ -76,6 +76,7 @@ class BuildManifestPlugin {
         this.rewrites.beforeFiles = options.rewrites.beforeFiles.map(processRoute);
         this.rewrites.afterFiles = options.rewrites.afterFiles.map(processRoute);
         this.rewrites.fallback = options.rewrites.fallback.map(processRoute);
+        this.exportRuntime = !!options.exportRuntime;
     }
     createAssets(compiler, compilation, assets) {
         const compilationSpan = _profilingPlugin.spans.get(compilation) || _profilingPlugin.spans.get(compiler);
@@ -160,6 +161,9 @@ class BuildManifestPlugin {
                 buildManifestName = `fallback-${_constants.BUILD_MANIFEST}`;
             }
             assets[buildManifestName] = new _webpack.sources.RawSource(JSON.stringify(assetMap, null, 2));
+            if (this.exportRuntime) {
+                assets[`server/${_constants.MIDDLEWARE_BUILD_MANIFEST}.js`] = new _webpack.sources.RawSource(`self.__BUILD_MANIFEST=${JSON.stringify(assetMap)}`);
+            }
             if (!this.isDevFallback) {
                 const clientManifestPath = `${_constants.CLIENT_STATIC_FILES_PATH}/${this.buildId}/_buildManifest.js`;
                 assets[clientManifestPath] = new _webpack.sources.RawSource(`self.__BUILD_MANIFEST = ${generateClientManifest(compiler, compilation, assetMap, this.rewrites)};self.__BUILD_MANIFEST_CB && self.__BUILD_MANIFEST_CB()`);

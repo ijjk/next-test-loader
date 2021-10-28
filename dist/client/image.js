@@ -73,6 +73,8 @@ function _objectWithoutPropertiesLoose(source, excluded) {
     return target;
 }
 const loadedImageURLs = new Set();
+const allImgs = new Map();
+let perfObserver;
 const emptyDataURL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
 if (typeof window === 'undefined') {
     global.__NEXT_IMAGE_IMPORTED = true;
@@ -259,7 +261,7 @@ function handleLoading(img, src, layout, placeholder, onLoadingComplete) {
                         const parent = getComputedStyle(img.parentElement.parentElement);
                         if (layout === 'responsive' && parent.display === 'flex') {
                             console.warn(`Image with src "${src}" may not render properly as a child of a flex container. Consider wrapping the image with a div to configure the width.`);
-                        } else if (layout === 'fill' && parent.position !== 'relative') {
+                        } else if (layout === 'fill' && parent.position !== 'relative' && parent.position !== 'fixed') {
                             console.warn(`Image with src "${src}" may not render properly with a parent using position:"${parent.position}". Consider changing the parent style to position:"relative" with a width and height.`);
                         }
                     }
@@ -371,6 +373,24 @@ function Image(_param) {
             quality: 75
         }).includes(rand.toString())) {
             console.warn(`Image with src "${src}" has a "loader" property that does not implement width. Please implement it or use the "unoptimized" property instead.` + `\nRead more: https://nextjs.org/docs/messages/next-image-missing-loader-width`);
+        }
+        if (typeof window !== 'undefined' && !perfObserver && window.PerformanceObserver) {
+            perfObserver = new PerformanceObserver((entryList)=>{
+                for (const entry of entryList.getEntries()){
+                    var ref;
+                    // @ts-ignore - missing "LargestContentfulPaint" class with "element" prop
+                    const imgSrc = (entry === null || entry === void 0 ? void 0 : (ref = entry.element) === null || ref === void 0 ? void 0 : ref.src) || '';
+                    const lcpImage = allImgs.get(imgSrc);
+                    if (lcpImage && !lcpImage.priority && lcpImage.placeholder !== 'blur' && !lcpImage.src.startsWith('data:') && !lcpImage.src.startsWith('blob:')) {
+                        // https://web.dev/lcp/#measure-lcp-in-javascript
+                        console.warn(`Image with src "${lcpImage.src}" was detected as the Largest Contentful Paint (LCP). Please add the "priority" property if this image is above the fold.` + `\nRead more: https://nextjs.org/docs/api-reference/next/image#priority`);
+                    }
+                }
+            });
+            perfObserver.observe({
+                type: 'largest-contentful-paint',
+                buffered: true
+            });
         }
     }
     const [setRef, isIntersected] = (0, _useIntersection).useIntersection({
@@ -486,6 +506,21 @@ function Image(_param) {
         });
     }
     let srcString = src;
+    if (process.env.NODE_ENV !== 'production') {
+        if (typeof window !== 'undefined') {
+            let fullUrl;
+            try {
+                fullUrl = new URL(imgAttributes.src);
+            } catch (e) {
+                fullUrl = new URL(imgAttributes.src, window.location.href);
+            }
+            allImgs.set(fullUrl.href, {
+                src,
+                priority,
+                placeholder
+            });
+        }
+    }
     return(/*#__PURE__*/ _react.default.createElement("span", {
         style: wrapperStyle
     }, hasSizer ? /*#__PURE__*/ _react.default.createElement("span", {

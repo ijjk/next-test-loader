@@ -44,7 +44,7 @@ export declare class NextRequest extends Request {
     get ua(): UserAgent | null | undefined;
     get url(): string;
 }
-interface RequestInit extends globalThis.RequestInit {
+export interface RequestInit extends globalThis.RequestInit {
     geo?: {
         city?: string;
         country?: string;

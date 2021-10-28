@@ -30,13 +30,13 @@ function hasBabelConfig(dir) {
 }
 function eventCliSession(dir, nextConfig, event) {
     // This should be an invariant, if it fails our build tooling is broken.
-    if (typeof "11.1.3-canary.101" !== 'string') {
+    if (typeof "12.0.2-canary.2" !== 'string') {
         return [];
     }
     const { images , i18n  } = nextConfig || {
     };
     const payload = {
-        nextVersion: "11.1.3-canary.101",
+        nextVersion: "12.0.2-canary.2",
         nodeVersion: process.version,
         cliCommand: event.cliCommand,
         isSrcDir: event.isSrcDir,

@@ -4,23 +4,25 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.getMiddlewareRegex = getMiddlewareRegex;
 var _routeRegex = require("./route-regex");
-function getMiddlewareRegex(normalizedRoute) {
+function getMiddlewareRegex(normalizedRoute, catchAll = true) {
     const result = (0, _routeRegex).getParametrizedRoute(normalizedRoute);
+    let catchAllRegex = catchAll ? '(?!_next).*' : '';
+    let catchAllGroupedRegex = catchAll ? '(?:(/.*)?)' : '';
     if ('routeKeys' in result) {
         if (result.parameterizedRoute === '/') {
             return {
                 groups: {
                 },
-                namedRegex: `^/(?!_next).*$`,
-                re: new RegExp('^/(?!_next).*$'),
+                namedRegex: `^/${catchAllRegex}$`,
+                re: new RegExp(`^/${catchAllRegex}$`),
                 routeKeys: {
                 }
             };
         }
         return {
             groups: result.groups,
-            namedRegex: `^${result.namedParameterizedRoute}(?:(/.*)?)$`,
-            re: new RegExp(`^${result.parameterizedRoute}(?:(/.*)?)$`),
+            namedRegex: `^${result.namedParameterizedRoute}${catchAllGroupedRegex}$`,
+            re: new RegExp(`^${result.parameterizedRoute}${catchAllGroupedRegex}$`),
             routeKeys: result.routeKeys
         };
     }
@@ -28,13 +30,13 @@ function getMiddlewareRegex(normalizedRoute) {
         return {
             groups: {
             },
-            re: new RegExp('^/.*$')
+            re: new RegExp(`^/${catchAllRegex}$`)
         };
     }
     return {
         groups: {
         },
-        re: new RegExp(`^${result.parameterizedRoute}(?:(/.*)?)$`)
+        re: new RegExp(`^${result.parameterizedRoute}${catchAllGroupedRegex}$`)
     };
 }
 

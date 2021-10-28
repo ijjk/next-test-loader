@@ -21,27 +21,31 @@ function notImplemented(name, method) {
     throw new Error(`Failed to get the '${method}' property on '${name}': the property is not implemented`);
 }
 function fromNodeHeaders(object) {
-    const headers = {
-    };
-    for(let headerKey in object){
-        const headerValue = object[headerKey];
-        if (Array.isArray(headerValue)) {
-            headers[headerKey] = headerValue.join('; ');
-        } else if (headerValue) {
-            headers[headerKey] = String(headerValue);
+    const headers = new Headers();
+    for (let [key, value] of Object.entries(object)){
+        const values = Array.isArray(value) ? value : [
+            value
+        ];
+        for (let v of values){
+            if (v !== undefined) {
+                headers.append(key, v);
+            }
         }
     }
     return headers;
 }
 function toNodeHeaders(headers) {
-    const object = {
+    const result = {
     };
     if (headers) {
         for (const [key, value] of headers.entries()){
-            object[key] = value.includes(';') ? value.split(';') : value;
+            result[key] = value;
+            if (key.toLowerCase() === 'set-cookie') {
+                result[key] = value.split(', ');
+            }
         }
     }
-    return object;
+    return result;
 }
 
 //# sourceMappingURL=utils.js.map

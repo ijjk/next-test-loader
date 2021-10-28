@@ -67,11 +67,12 @@ class PageLoader {
    * @param {string} href the route href (file-system path)
    * @param {string} asPath the URL as shown in browser (virtual path); used for dynamic routes
    * @returns {string}
-   */ getDataHref(href, asPath, ssg, locale) {
+   */ getDataHref({ href , asPath , ssg , rsc , locale  }) {
         const { pathname: hrefPathname , query , search  } = (0, _parseRelativeUrl).parseRelativeUrl(href);
         const { pathname: asPathname  } = (0, _parseRelativeUrl).parseRelativeUrl(asPath);
         const route = normalizeRoute(hrefPathname);
         const getHrefForSlug = (path)=>{
+            if (rsc) return path + '?__flight__';
             const dataRoute = (0, _getAssetPathFromRoute).default((0, _normalizeTrailingSlash).removePathTrailingSlash((0, _router).addLocale(path, locale)), '.json');
             return (0, _router).addBasePath(`/_next/data/${this.buildId}${dataRoute}${ssg ? '' : search}`);
         };

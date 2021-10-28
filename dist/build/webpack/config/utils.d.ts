@@ -7,6 +7,8 @@ export declare type ConfigurationContext = {
     isProduction: boolean;
     isServer: boolean;
     isClient: boolean;
+    webServerRuntime: boolean;
+    targetWeb: boolean;
     assetPrefix: string;
     sassOptions: any;
     productionBrowserSourceMaps: boolean;

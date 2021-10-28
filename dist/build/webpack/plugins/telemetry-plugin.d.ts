@@ -1,5 +1,5 @@
 import type { webpack5 as webpack } from 'next/dist/compiled/webpack/webpack';
-declare type Feature = 'next/image' | 'next/script' | 'next/dynamic';
+declare type Feature = 'next/image' | 'next/script' | 'next/dynamic' | 'swcLoader' | 'swcMinify';
 interface FeatureUsage {
     featureName: Feature;
     invocationCount: number;
@@ -11,7 +11,7 @@ interface FeatureUsage {
  */
 export declare class TelemetryPlugin implements webpack.WebpackPluginInstance {
     private usageTracker;
-    constructor();
+    constructor(buildFeaturesMap: Map<Feature, boolean>);
     apply(compiler: webpack.Compiler): void;
     usages(): FeatureUsage[];
 }

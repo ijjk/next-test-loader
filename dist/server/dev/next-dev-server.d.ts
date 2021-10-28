@@ -47,8 +47,8 @@ export default class DevServer extends Server {
     private _devCachedPreviewProps;
     protected getPreviewProps(): __ApiPreviewProps;
     protected getMiddleware(): never[];
-    protected hasMiddleware(pathname: string): Promise<boolean>;
-    protected ensureMiddleware(pathname: string): Promise<any>;
+    protected hasMiddleware(pathname: string, isSSR?: boolean): Promise<boolean>;
+    protected ensureMiddleware(pathname: string, isSSR?: boolean): Promise<any>;
     generateRoutes(): {
         basePath: string;
         headers: import("../router").Route[];

@@ -18,13 +18,19 @@ export default class PageLoader {
     routeLoader: RouteLoader;
     constructor(buildId: string, assetPrefix: string);
     getPageList(): any;
-    getMiddlewareList(): Promise<string[]>;
+    getMiddlewareList(): Promise<[string, boolean][]>;
     /**
      * @param {string} href the route href (file-system path)
      * @param {string} asPath the URL as shown in browser (virtual path); used for dynamic routes
      * @returns {string}
      */
-    getDataHref(href: string, asPath: string, ssg: boolean, locale?: string | false): string;
+    getDataHref({ href, asPath, ssg, rsc, locale, }: {
+        href: string;
+        asPath: string;
+        ssg: boolean;
+        rsc?: boolean;
+        locale?: string | false;
+    }): string;
     /**
      * @param {string} route - the route (file-system path)
      */

@@ -2,9 +2,9 @@
 import { IncomingMessage, ServerResponse } from 'http';
 import { ParsedUrlQuery } from 'querystring';
 import React from 'react';
-import { __ApiPreviewProps } from './api-utils';
-import { FontManifest } from './font-utils';
-import { LoadComponentsReturnType } from './load-components';
+import type { __ApiPreviewProps } from './api-utils';
+import type { FontManifest } from './font-utils';
+import type { LoadComponentsReturnType } from './load-components';
 import { DomainLocale } from './config';
 import RenderResult from './render-result';
 export declare type RenderOptsPartial = {
@@ -39,6 +39,7 @@ export declare type RenderOptsPartial = {
     devOnlyCacheBusterQueryString?: string;
     resolvedUrl?: string;
     resolvedAsPath?: string;
+    renderServerComponent?: null | (() => Promise<string>);
     distDir?: string;
     locale?: string;
     locales?: string[];

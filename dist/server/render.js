@@ -4,11 +4,9 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.renderToHTML = renderToHTML;
 exports.useMaybeDeferContent = useMaybeDeferContent;
-var _stream = require("stream");
 var _react = _interopRequireDefault(require("react"));
 var ReactDOMServer = _interopRequireWildcard(require("react-dom/server"));
 var _styledJsx = require("styled-jsx");
-var _log = require("../build/output/log");
 var _constants = require("../lib/constants");
 var _isSerializableProps = require("../lib/is-serializable-props");
 var _amp = require("../shared/lib/amp");
@@ -18,15 +16,11 @@ var _head = require("../shared/lib/head");
 var _headManagerContext = require("../shared/lib/head-manager-context");
 var _loadable = _interopRequireDefault(require("../shared/lib/loadable"));
 var _loadableContext = require("../shared/lib/loadable-context");
-var _postProcess = _interopRequireDefault(require("../shared/lib/post-process"));
 var _routerContext = require("../shared/lib/router-context");
 var _isDynamic = require("../shared/lib/router/utils/is-dynamic");
 var _utils = require("../shared/lib/utils");
-var _apiUtils = require("./api-utils");
 var _denormalizePagePath = require("./denormalize-page-path");
-var _fontUtils = require("./font-utils");
 var _normalizePagePath = require("./normalize-page-path");
-var _optimizeAmp = _interopRequireDefault(require("./optimize-amp"));
 var _loadCustomRoutes = require("../lib/load-custom-routes");
 var _renderResult = _interopRequireDefault(require("./render-result"));
 var _isError = _interopRequireDefault(require("../lib/is-error"));
@@ -57,6 +51,24 @@ function _interopRequireWildcard(obj) {
         newObj.default = obj;
         return newObj;
     }
+}
+let Writable;
+let Buffer;
+let optimizeAmp;
+let getFontDefinitionFromManifest;
+let tryGetPreviewData;
+let warn;
+let postProcess;
+if (!process.browser) {
+    Writable = require('stream').Writable;
+    Buffer = require('buffer').Buffer;
+    optimizeAmp = require('./optimize-amp').default;
+    getFontDefinitionFromManifest = require('./font-utils').getFontDefinitionFromManifest;
+    tryGetPreviewData = require('./api-utils').tryGetPreviewData;
+    warn = require('../build/output/log').warn;
+    postProcess = require('../shared/lib/post-process').default;
+} else {
+    warn = console.warn.bind(console);
 }
 function noRouter() {
     const message = 'No router instance found. you should only use "next/router" inside the client side of your app. https://nextjs.org/docs/messages/no-router-instance';
@@ -148,10 +160,10 @@ async function renderToHTML(req, res, pathname, query, renderOpts) {
     query = Object.assign({
     }, query);
     const { err , dev =false , ampPath ='' , App , Document , pageConfig ={
-    } , Component , buildManifest , fontManifest , reactLoadableManifest , ErrorDebug , getStaticProps , getStaticPaths , getServerSideProps , isDataReq , params , previewProps , basePath , devOnlyCacheBusterQueryString , supportsDynamicHTML , concurrentFeatures ,  } = renderOpts;
+    } , Component , buildManifest , fontManifest , reactLoadableManifest , ErrorDebug , getStaticProps , getStaticPaths , getServerSideProps , renderServerComponent , isDataReq , params , previewProps , basePath , devOnlyCacheBusterQueryString , supportsDynamicHTML , concurrentFeatures ,  } = renderOpts;
     const getFontDefinition = (url)=>{
         if (fontManifest) {
-            return (0, _fontUtils).getFontDefinitionFromManifest(url, fontManifest);
+            return getFontDefinitionFromManifest(url, fontManifest);
         }
         return '';
     };
@@ -185,6 +197,7 @@ async function renderToHTML(req, res, pathname, query, renderOpts) {
     const isBuildTimeSSG = isSSG && renderOpts.nextExport;
     const defaultAppGetInitialProps = App.getInitialProps === App.origGetInitialProps;
     const hasPageGetInitialProps = !!Component.getInitialProps;
+    const isRSC = !!renderServerComponent;
     const pageIsDynamic = (0, _isDynamic).isDynamicRoute(pathname);
     const isAutoExport = !hasPageGetInitialProps && defaultAppGetInitialProps && !isSSG && !getServerSideProps;
     for (const methodName of [
@@ -249,11 +262,11 @@ async function renderToHTML(req, res, pathname, query, renderOpts) {
     ;
     let isPreview;
     let previewData;
-    if ((isSSG || getServerSideProps) && !isFallback) {
+    if ((isSSG || getServerSideProps) && !isFallback && !process.browser) {
         // Reads of this are cached on the `req` object, so this should resolve
         // instantly. There's no need to pass this data down from a previous
         // invoke, where we'd have to consider server & serverless.
-        previewData = (0, _apiUtils).tryGetPreviewData(req, res, previewProps);
+        previewData = tryGetPreviewData(req, res, previewProps);
         isPreview = previewData !== false;
     }
     // url will always be set
@@ -302,7 +315,8 @@ async function renderToHTML(req, res, pathname, query, renderOpts) {
         hasQuery: Boolean(query.amp),
         hybrid: pageConfig.amp === 'hybrid'
     };
-    const inAmpMode = (0, _amp).isInAmpMode(ampState);
+    // Disable AMP under the web environment
+    const inAmpMode = !process.browser && (0, _amp).isInAmpMode(ampState);
     const reactLoadableModules = [];
     let head = (0, _head).defaultHead(inAmpMode);
     let scriptLoader = {
@@ -445,11 +459,17 @@ async function renderToHTML(req, res, pathname, query, renderOpts) {
         let data;
         let canAccessRes = true;
         let resOrProxy = res;
+        let deferredContent = false;
         if (process.env.NODE_ENV !== 'production') {
             resOrProxy = new Proxy(res, {
                 get: function(obj, prop, receiver) {
                     if (!canAccessRes) {
-                        throw new Error(`You should not access 'res' after getServerSideProps resolves.` + `\nRead more: https://nextjs.org/docs/messages/gssp-no-mutating-res`);
+                        const message = `You should not access 'res' after getServerSideProps resolves.` + `\nRead more: https://nextjs.org/docs/messages/gssp-no-mutating-res`;
+                        if (deferredContent) {
+                            throw new Error(message);
+                        } else {
+                            warn(message);
+                        }
                     }
                     return Reflect.get(obj, prop, receiver);
                 }
@@ -484,6 +504,9 @@ async function renderToHTML(req, res, pathname, query, renderOpts) {
         if (data == null) {
             throw new Error(_constants.GSSP_NO_RETURNED_VALUE);
         }
+        if (data.props instanceof Promise) {
+            deferredContent = true;
+        }
         const invalidKeys = Object.keys(data).filter((key)=>key !== 'props' && key !== 'redirect' && key !== 'notFound'
         );
         if (data.unstable_notFound) {
@@ -513,7 +536,7 @@ async function renderToHTML(req, res, pathname, query, renderOpts) {
             }
             renderOpts.isRedirect = true;
         }
-        if (data.props instanceof Promise) {
+        if (deferredContent) {
             data.props = await data.props;
         }
         if ((dev || isBuildTimeSSG) && !(0, _isSerializableProps).isSerializableProps(pathname, 'getServerSideProps', data.props)) {
@@ -634,7 +657,7 @@ async function renderToHTML(req, res, pathname, query, renderOpts) {
                 Component: Component,
                 router: router
             })));
-            const bodyResult = concurrentFeatures ? await renderToStream(content, generateStaticHTML) : piperFromArray([
+            const bodyResult = concurrentFeatures ? process.browser ? await renderToReadableStream(content) : await renderToNodeStream(content, generateStaticHTML) : piperFromArray([
                 ReactDOMServer.renderToString(content)
             ]);
             return {
@@ -681,6 +704,7 @@ async function renderToHTML(req, res, pathname, query, renderOpts) {
             err: renderOpts.err ? serializeError(dev, renderOpts.err) : undefined,
             gsp: !!getStaticProps ? true : undefined,
             gssp: !!getServerSideProps ? true : undefined,
+            rsc: isRSC ? true : undefined,
             customServer,
             gip: hasPageGetInitialProps ? true : undefined,
             appGip: !defaultAppGetInitialProps ? true : undefined,
@@ -734,7 +758,7 @@ async function renderToHTML(req, res, pathname, query, renderOpts) {
         if (nonRenderedComponents.length) {
             const missingComponentList = nonRenderedComponents.map((e)=>`<${e} />`
             ).join(', ');
-            (0, _log).warn(`Your custom Document (pages/_document) did not render all the required subcomponent${plural}.\n` + `Missing component${plural}: ${missingComponentList}\n` + 'Read how to fix here: https://nextjs.org/docs/messages/missing-document-component');
+            warn(`Your custom Document (pages/_document) did not render all the required subcomponent${plural}.\n` + `Missing component${plural}: ${missingComponentList}\n` + 'Read how to fix here: https://nextjs.org/docs/messages/missing-document-component');
         }
     }
     const renderTargetIdx = documentHTML.indexOf(_constants1.BODY_RENDER_TARGET);
@@ -753,14 +777,14 @@ async function renderToHTML(req, res, pathname, query, renderOpts) {
     ];
     const postProcessors = (generateStaticHTML ? [
         inAmpMode ? async (html)=>{
-            html = await (0, _optimizeAmp).default(html, renderOpts.ampOptimizerConfig);
+            html = await optimizeAmp(html, renderOpts.ampOptimizerConfig);
             if (!renderOpts.ampSkipValidation && renderOpts.ampValidator) {
                 await renderOpts.ampValidator(html, pathname);
             }
             return html;
         } : null,
-        process.env.__NEXT_OPTIMIZE_FONTS || process.env.__NEXT_OPTIMIZE_IMAGES ? async (html)=>{
-            return await (0, _postProcess).default(html, {
+        !process.browser && (process.env.__NEXT_OPTIMIZE_FONTS || process.env.__NEXT_OPTIMIZE_IMAGES) ? async (html)=>{
+            return await postProcess(html, {
                 getFontDefinition
             }, {
                 optimizeFonts: renderOpts.optimizeFonts,
@@ -768,18 +792,23 @@ async function renderToHTML(req, res, pathname, query, renderOpts) {
             });
         } : null,
         renderOpts.optimizeCss ? async (html)=>{
-            // eslint-disable-next-line import/no-extraneous-dependencies
-            const Critters = require('critters');
-            const cssOptimizer = new Critters({
-                ssrMode: true,
-                reduceInlineStyles: false,
-                path: renderOpts.distDir,
-                publicPath: `${renderOpts.assetPrefix}/_next/`,
-                preload: 'media',
-                fonts: false,
-                ...renderOpts.optimizeCss
-            });
-            return await cssOptimizer.process(html);
+            if (process.browser) {
+                // Have to disable critters under the web environment.
+                return html;
+            } else {
+                // eslint-disable-next-line import/no-extraneous-dependencies
+                const Critters = require('critters');
+                const cssOptimizer = new Critters({
+                    ssrMode: true,
+                    reduceInlineStyles: false,
+                    path: renderOpts.distDir,
+                    publicPath: `${renderOpts.assetPrefix}/_next/`,
+                    preload: 'media',
+                    fonts: false,
+                    ...renderOpts.optimizeCss
+                });
+                return await cssOptimizer.process(html);
+            }
         } : null,
         inAmpMode || hybridAmp ? async (html)=>{
             return html.replace(/&amp;amp=1/g, '&amp=1');
@@ -814,17 +843,21 @@ function serializeError(dev, err) {
         statusCode: 500
     };
 }
-function renderToStream(element, generateStaticHTML) {
+function renderToNodeStream(element, generateStaticHTML) {
     return new Promise((resolve, reject)=>{
         let underlyingStream = null;
-        const stream = new _stream.Writable({
+        const stream = new Writable({
             // Use the buffer from the underlying stream
             highWaterMark: 0,
-            write (chunk, encoding, callback) {
+            writev (chunks, callback) {
+                let str = '';
+                for (let { chunk  } of chunks){
+                    str += chunk.toString();
+                }
                 if (!underlyingStream) {
                     throw new Error('invariant: write called without an underlying stream. This is a bug in Next.js');
                 }
-                if (!underlyingStream.writable.write(chunk, encoding)) {
+                if (!underlyingStream.writable.write(str)) {
                     underlyingStream.queuedCallbacks.push(()=>callback()
                     );
                 } else {
@@ -904,6 +937,24 @@ function renderToStream(element, generateStaticHTML) {
         });
     });
 }
+function renderToReadableStream(element) {
+    return (res, next)=>{
+        const readable = ReactDOMServer.renderToReadableStream(element);
+        const reader = readable.getReader();
+        const decoder = new TextDecoder();
+        const process = ()=>{
+            reader.read().then(({ done , value  })=>{
+                if (!done) {
+                    res.write(typeof value === 'string' ? value : decoder.decode(value));
+                    process();
+                } else {
+                    next();
+                }
+            });
+        };
+        process();
+    };
+}
 function chainPipers(pipers) {
     return pipers.reduceRight((lhs, rhs)=>(res, next)=>{
             rhs(res, (err)=>err ? next(err) : lhs(res, next)
@@ -930,7 +981,7 @@ function piperFromArray(chunks) {
 function piperToString(input) {
     return new Promise((resolve, reject)=>{
         const bufferedChunks = [];
-        const stream = new _stream.Writable({
+        const stream = new Writable({
             writev (chunks, callback) {
                 chunks.forEach((chunk)=>bufferedChunks.push(chunk.chunk)
                 );

@@ -68,11 +68,14 @@ class ReadableStream {
             start: (controller)=>{
                 transformController = controller;
             }
+        }, undefined, {
+            highWaterMark: 1
         });
         const writer = writable.getWriter();
+        const encoder = new TextEncoder();
         const controller = {
             get desiredSize () {
-                return writer.desiredSize;
+                return transformController.desiredSize;
             },
             close: ()=>{
                 if (!closed) {
@@ -81,7 +84,7 @@ class ReadableStream {
                 }
             },
             enqueue: (chunk)=>{
-                writer.write(chunk);
+                writer.write(typeof chunk === 'string' ? encoder.encode(chunk) : chunk);
                 pull();
             },
             error: (reason)=>{

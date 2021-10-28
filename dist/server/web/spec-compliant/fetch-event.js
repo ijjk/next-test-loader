@@ -11,10 +11,10 @@ exports.passThroughSymbol = passThroughSymbol;
 const waitUntilSymbol = Symbol('waitUntil');
 exports.waitUntilSymbol = waitUntilSymbol;
 class FetchEvent {
-    constructor(request){
+    // eslint-disable-next-line @typescript-eslint/no-useless-constructor
+    constructor(_request){
         this[_key] = [];
         this[_key1] = false;
-        this.request = request;
     }
     respondWith(response) {
         if (!this[responseSymbol]) {

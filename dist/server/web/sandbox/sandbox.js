@@ -6,8 +6,8 @@ exports.clearSandboxCache = clearSandboxCache;
 exports.run = run;
 var _formdataNode = require("next/dist/compiled/formdata-node");
 var _path = require("path");
-var _webStreamsPolyfill = require("next/dist/compiled/web-streams-polyfill");
 var _fs = require("fs");
+var _webStreamsPolyfill = require("next/dist/compiled/web-streams-polyfill");
 var polyfills = _interopRequireWildcard(require("./polyfills"));
 var _cookie = _interopRequireDefault(require("next/dist/compiled/cookie"));
 var _vm = _interopRequireDefault(require("vm"));
@@ -70,7 +70,21 @@ async function run(params) {
             },
             Crypto: polyfills.Crypto,
             crypto: new polyfills.Crypto(),
-            fetch,
+            fetch: (input, init = {
+            })=>{
+                const url = getFetchURL(input, params.request.headers);
+                init.headers = getFetchHeaders(params.name, init);
+                if (isRequestLike(input)) {
+                    return fetch(url, {
+                        ...init,
+                        headers: {
+                            ...Object.fromEntries(input.headers),
+                            ...Object.fromEntries(init.headers)
+                        }
+                    });
+                }
+                return fetch(url, init);
+            },
             File: _formdataNode.File,
             FormData: _formdataNode.FormData,
             process: {
@@ -78,7 +92,7 @@ async function run(params) {
                     ...process.env
                 }
             },
-            ReadableStream: _webStreamsPolyfill.ReadableStream,
+            ReadableStream: polyfills.ReadableStream,
             setInterval,
             setTimeout,
             TextDecoder: polyfills.TextDecoder,
@@ -137,6 +151,16 @@ async function run(params) {
         }
     }
     const entryPoint = cache.context._ENTRIES[`middleware_${params.name}`];
+    if (params.ssr) {
+        const rscManifest = cache.context._ENTRIES._middleware_rsc_manifest;
+        cache = undefined;
+        if (rscManifest && entryPoint) {
+            return entryPoint.default({
+                request: params.request,
+                rscManifest
+            });
+        }
+    }
     return entryPoint.default({
         request: params.request
     });
@@ -174,6 +198,30 @@ function sandboxRequire(referrer, specifier) {
     }
     module.loaded = true;
     return module.exports;
+}
+function getFetchHeaders(middleware, init) {
+    var _headers;
+    const headers = new Headers((_headers = init.headers) !== null && _headers !== void 0 ? _headers : {
+    });
+    const prevsub = headers.get(`x-middleware-subrequest`) || '';
+    const value = prevsub.split(':').concat(middleware).join(':');
+    headers.set(`x-middleware-subrequest`, value);
+    headers.set(`user-agent`, `Next.js Middleware`);
+    return headers;
+}
+function getFetchURL(input, headers = {
+}) {
+    const initurl = isRequestLike(input) ? input.url : input;
+    if (initurl.startsWith('/')) {
+        var ref;
+        const host = (ref = headers.host) === null || ref === void 0 ? void 0 : ref.toString();
+        const localhost = host === '127.0.0.1' || host === 'localhost' || (host === null || host === void 0 ? void 0 : host.startsWith('localhost:'));
+        return `${localhost ? 'http' : 'https'}://${host}${initurl}`;
+    }
+    return initurl;
+}
+function isRequestLike(obj) {
+    return Boolean(obj && typeof obj === 'object' && 'url' in obj);
 }
 
 //# sourceMappingURL=sandbox.js.map

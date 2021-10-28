@@ -25,7 +25,8 @@ function middlewareLoader() {
         export default function (opts) {
           return adapter({
               ...opts,
-              handler
+              page: ${JSON.stringify(page)},
+              handler,
           })
         }
     `;
