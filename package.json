@@ -135,6 +135,12 @@
       "optional": true
     }
   },
+  "optionalDependencies": {
+    "@next/swc-linux-x64-gnu": "canary",
+    "@next/swc-win32-x64-msvc": "canary",
+    "@next/swc-darwin-x64": "canary",
+    "@next/swc-darwin-arm64": "canary"
+  },
   "devDependencies": {
     "@ampproject/toolbox-optimizer": "2.7.1-alpha.0",
     "@babel/code-frame": "7.12.11",
