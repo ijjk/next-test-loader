@@ -11,7 +11,7 @@ export declare function imageOptimizer(server: Server, req: IncomingMessage, res
  * it matches the "magic number" of known file signatures.
  * https://en.wikipedia.org/wiki/List_of_file_signatures
  */
-export declare function detectContentType(buffer: Buffer): "image/svg+xml" | "image/avif" | "image/webp" | "image/png" | "image/jpeg" | "image/gif" | null;
+export declare function detectContentType(buffer: Buffer): "image/avif" | "image/webp" | "image/png" | "image/jpeg" | "image/gif" | "image/svg+xml" | null;
 export declare function getMaxAge(str: string | null): number;
 export declare function resizeImage(content: Buffer, dimension: 'width' | 'height', size: number, extension: 'avif' | 'webp' | 'png' | 'jpeg', quality: number): Promise<Buffer>;
 export declare function getImageSize(buffer: Buffer, extension: 'avif' | 'webp' | 'png' | 'jpeg'): Promise<{

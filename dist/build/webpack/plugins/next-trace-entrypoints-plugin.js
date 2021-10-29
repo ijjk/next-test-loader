@@ -21,8 +21,40 @@ const TRACE_IGNORES = [
     '**/*/next/dist/server/next.js',
     '**/*/next/dist/bin/next', 
 ];
+const root = _path.default.parse(process.cwd()).root;
 function getModuleFromDependency(compilation, dep) {
     return compilation.moduleGraph.getModule(dep);
+}
+function getFilesMapFromReasons(fileList, reasons) {
+    // this uses the reasons tree to collect files specific to a
+    // certain parent allowing us to not have to trace each parent
+    // separately
+    const parentFilesMap = new Map();
+    function propagateToParents(parents, file, seen = new Set()) {
+        for (const parent of parents || []){
+            if (!seen.has(parent)) {
+                seen.add(parent);
+                let parentFiles = parentFilesMap.get(parent);
+                if (!parentFiles) {
+                    parentFiles = new Set();
+                    parentFilesMap.set(parent, parentFiles);
+                }
+                parentFiles.add(file);
+                const parentReason = reasons.get(parent);
+                if (parentReason === null || parentReason === void 0 ? void 0 : parentReason.parents) {
+                    propagateToParents(parentReason.parents, file, seen);
+                }
+            }
+        }
+    }
+    for (const file of fileList){
+        const reason = reasons.get(file);
+        if (!reason || !reason.parents || reason.type === 'initial' && reason.parents.size === 0) {
+            continue;
+        }
+        propagateToParents(reason.parents, file);
+    }
+    return parentFilesMap;
 }
 class TraceEntryPointsPlugin {
     constructor({ appDir , excludeFiles , esmExternals , staticImageImports  }){
@@ -34,29 +66,86 @@ class TraceEntryPointsPlugin {
     }
     // Here we output all traced assets and webpack chunks to a
     // ${page}.js.nft.json file
-    createTraceAssets(compilation, assets, span) {
+    async createTraceAssets(compilation, assets, span, readlink, stat, doResolve) {
         const outputPath = compilation.outputOptions.path;
-        const nodeFileTraceSpan = span.traceChild('create-trace-assets');
-        nodeFileTraceSpan.traceFn(()=>{
+        await span.traceChild('create-trace-assets').traceAsyncFn(async ()=>{
+            const entryFilesMap = new Map();
+            const chunksToTrace = new Set();
             for (const entrypoint of compilation.entrypoints.values()){
                 const entryFiles = new Set();
                 for (const chunk of entrypoint.getEntrypointChunk().getAllReferencedChunks()){
                     for (const file of chunk.files){
-                        entryFiles.add(_path.default.join(outputPath, file));
+                        const filePath = _path.default.join(outputPath, file);
+                        chunksToTrace.add(filePath);
+                        entryFiles.add(filePath);
                     }
                     for (const file1 of chunk.auxiliaryFiles){
-                        entryFiles.add(_path.default.join(outputPath, file1));
+                        const filePath = _path.default.join(outputPath, file1);
+                        chunksToTrace.add(filePath);
+                        entryFiles.add(filePath);
                     }
                 }
-                // don't include the entry itself in the trace
-                entryFiles.delete(_path.default.join(outputPath, `../${entrypoint.name}.js`));
-                const traceOutputName = `../${entrypoint.name}.js.nft.json`;
+                entryFilesMap.set(entrypoint, entryFiles);
+            }
+            const result = await (0, _nft).nodeFileTrace([
+                ...chunksToTrace
+            ], {
+                base: root,
+                processCwd: this.appDir,
+                readFile: async (path)=>{
+                    if (chunksToTrace.has(path)) {
+                        var ref, ref1;
+                        const source = (ref = assets[_path.default.relative(outputPath, path).replace(/\\/g, '/')]) === null || ref === void 0 ? void 0 : (ref1 = ref.source) === null || ref1 === void 0 ? void 0 : ref1.call(ref);
+                        if (source) return source;
+                    }
+                    try {
+                        return await new Promise((resolve, reject)=>{
+                            compilation.inputFileSystem.readFile(path, (err, data)=>{
+                                if (err) return reject(err);
+                                resolve(data);
+                            });
+                        });
+                    } catch (e) {
+                        if ((0, _isError).default(e) && (e.code === 'ENOENT' || e.code === 'EISDIR')) {
+                            return null;
+                        }
+                        throw e;
+                    }
+                },
+                readlink,
+                stat,
+                resolve: doResolve ? (id, parent, job, isCjs)=>{
+                    return doResolve(id, parent, job, !isCjs);
+                } : undefined,
+                ignore: [
+                    ...TRACE_IGNORES,
+                    ...this.excludeFiles
+                ],
+                mixedModules: true
+            });
+            const reasons = result.reasons;
+            const fileList = result.fileList;
+            result.esmFileList.forEach((file)=>fileList.add(file)
+            );
+            const parentFilesMap = getFilesMapFromReasons(fileList, reasons);
+            for (const [entrypoint1, entryFiles] of entryFilesMap){
+                const traceOutputName = `../${entrypoint1.name}.js.nft.json`;
                 const traceOutputPath = _path.default.dirname(_path.default.join(outputPath, traceOutputName));
+                const allEntryFiles = new Set();
+                entryFiles.forEach((file)=>{
+                    var ref;
+                    (ref = parentFilesMap.get(_path.default.relative(root, file))) === null || ref === void 0 ? void 0 : ref.forEach((child)=>{
+                        allEntryFiles.add(_path.default.join(root, child));
+                    });
+                });
+                // don't include the entry itself in the trace
+                entryFiles.delete(_path.default.join(outputPath, `../${entrypoint1.name}.js`));
                 assets[traceOutputName] = new _webpack.sources.RawSource(JSON.stringify({
                     version: _constants.TRACE_OUTPUT_VERSION,
                     files: [
                         ...entryFiles,
-                        ...this.entryTraces.get(entrypoint.name) || [], 
+                        ...allEntryFiles,
+                        ...this.entryTraces.get(entrypoint1.name) || [], 
                     ].map((file)=>{
                         return _path.default.relative(traceOutputPath, file).replace(/\\/g, '/');
                     })
@@ -64,7 +153,7 @@ class TraceEntryPointsPlugin {
             }
         });
     }
-    tapfinishModules(compilation, traceEntrypointsPluginSpan, doResolve) {
+    tapfinishModules(compilation, traceEntrypointsPluginSpan, doResolve, readlink, stat) {
         compilation.hooks.finishModules.tapAsync(PLUGIN_NAME, async (_stats, callback)=>{
             const finishModulesSpan = traceEntrypointsPluginSpan.traceChild('finish-modules');
             await finishModulesSpan.traceAsyncFn(async ()=>{
@@ -108,49 +197,9 @@ class TraceEntryPointsPlugin {
                     if (source) {
                         return source.buffer();
                     }
-                    try {
-                        return await new Promise((resolve, reject)=>{
-                            compilation.inputFileSystem.readFile(path, (err, data)=>{
-                                if (err) return reject(err);
-                                resolve(data);
-                            });
-                        });
-                    } catch (e) {
-                        if ((0, _isError).default(e) && (e.code === 'ENOENT' || e.code === 'EISDIR')) {
-                            return null;
-                        }
-                        throw e;
-                    }
-                };
-                const readlink = async (path)=>{
-                    try {
-                        return await new Promise((resolve, reject)=>{
-                            compilation.inputFileSystem.readlink(path, (err, link)=>{
-                                if (err) return reject(err);
-                                resolve(link);
-                            });
-                        });
-                    } catch (e) {
-                        if ((0, _isError).default(e) && (e.code === 'EINVAL' || e.code === 'ENOENT' || e.code === 'UNKNOWN')) {
-                            return null;
-                        }
-                        throw e;
-                    }
-                };
-                const stat = async (path)=>{
-                    try {
-                        return await new Promise((resolve, reject)=>{
-                            compilation.inputFileSystem.stat(path, (err, stats)=>{
-                                if (err) return reject(err);
-                                resolve(stats);
-                            });
-                        });
-                    } catch (e) {
-                        if ((0, _isError).default(e) && (e.code === 'ENOENT' || e.code === 'ENOTDIR')) {
-                            return null;
-                        }
-                        throw e;
-                    }
+                    // we don't want to analyze non-transpiled
+                    // files here, that is done against webpack output
+                    return '';
                 };
                 const entryPaths = Array.from(entryModMap.keys());
                 const collectDependencies = (mod)=>{
@@ -176,7 +225,6 @@ class TraceEntryPointsPlugin {
                 });
                 let fileList;
                 let reasons;
-                const root = _path.default.parse(process.cwd()).root;
                 await finishModulesSpan.traceChild('node-file-trace', {
                     traceEntryCount: entriesToTrace.length + ''
                 }).traceAsyncFn(async ()=>{
@@ -186,12 +234,13 @@ class TraceEntryPointsPlugin {
                         readFile,
                         readlink,
                         stat,
-                        resolve: doResolve ? (id, parent, job, isCjs)=>// @ts-ignore
-                            doResolve(id, parent, job, !isCjs)
-                         : undefined,
+                        resolve: doResolve ? async (id, parent, job, isCjs)=>{
+                            return doResolve(id, parent, job, !isCjs);
+                        } : undefined,
                         ignore: [
                             ...TRACE_IGNORES,
-                            ...this.excludeFiles
+                            ...this.excludeFiles,
+                            '**/node_modules/**', 
                         ],
                         mixedModules: true
                     });
@@ -201,34 +250,8 @@ class TraceEntryPointsPlugin {
                     );
                     reasons = result.reasons;
                 });
-                // this uses the reasons tree to collect files specific to a certain
-                // parent allowing us to not have to trace each parent separately
-                const parentFilesMap = new Map();
-                function propagateToParents(parents, file, seen = new Set()) {
-                    for (const parent of parents || []){
-                        if (!seen.has(parent)) {
-                            seen.add(parent);
-                            let parentFiles = parentFilesMap.get(parent);
-                            if (!parentFiles) {
-                                parentFiles = new Set();
-                                parentFilesMap.set(parent, parentFiles);
-                            }
-                            parentFiles.add(file);
-                            const parentReason = reasons.get(parent);
-                            if (parentReason === null || parentReason === void 0 ? void 0 : parentReason.parents) {
-                                propagateToParents(parentReason.parents, file, seen);
-                            }
-                        }
-                    }
-                }
                 await finishModulesSpan.traceChild('collect-traced-files').traceAsyncFn(()=>{
-                    for (const file of fileList){
-                        const reason = reasons.get(file);
-                        if (!reason || !reason.parents || reason.type === 'initial' && reason.parents.size === 0) {
-                            continue;
-                        }
-                        propagateToParents(reason.parents, file);
-                    }
+                    const parentFilesMap = getFilesMapFromReasons(fileList, reasons);
                     entryPaths.forEach((entry)=>{
                         var ref;
                         const entryName = entryNameMap.get(entry);
@@ -240,10 +263,10 @@ class TraceEntryPointsPlugin {
                         });
                         if (curExtraEntries) {
                             for (const extraEntry of curExtraEntries.keys()){
-                                var ref1;
+                                var ref7;
                                 const normalizedExtraEntry = _path.default.relative(root, extraEntry);
                                 finalDeps.add(extraEntry);
-                                (ref1 = parentFilesMap.get(normalizedExtraEntry)) === null || ref1 === void 0 ? void 0 : ref1.forEach((dep)=>{
+                                (ref7 = parentFilesMap.get(normalizedExtraEntry)) === null || ref7 === void 0 ? void 0 : ref7.forEach((dep)=>{
                                     finalDeps.add(_path.default.join(root, dep));
                                 });
                             }
@@ -258,16 +281,48 @@ class TraceEntryPointsPlugin {
     }
     apply(compiler) {
         compiler.hooks.compilation.tap(PLUGIN_NAME, (compilation)=>{
+            const readlink = async (path)=>{
+                try {
+                    return await new Promise((resolve, reject)=>{
+                        compilation.inputFileSystem.readlink(path, (err, link)=>{
+                            if (err) return reject(err);
+                            resolve(link);
+                        });
+                    });
+                } catch (e) {
+                    if ((0, _isError).default(e) && (e.code === 'EINVAL' || e.code === 'ENOENT' || e.code === 'UNKNOWN')) {
+                        return null;
+                    }
+                    throw e;
+                }
+            };
+            const stat = async (path)=>{
+                try {
+                    return await new Promise((resolve, reject)=>{
+                        compilation.inputFileSystem.stat(path, (err, stats)=>{
+                            if (err) return reject(err);
+                            resolve(stats);
+                        });
+                    });
+                } catch (e) {
+                    if ((0, _isError).default(e) && (e.code === 'ENOENT' || e.code === 'ENOTDIR')) {
+                        return null;
+                    }
+                    throw e;
+                }
+            };
             const compilationSpan = _profilingPlugin.spans.get(compilation) || _profilingPlugin.spans.get(compiler);
             const traceEntrypointsPluginSpan = compilationSpan.traceChild('next-trace-entrypoint-plugin');
             traceEntrypointsPluginSpan.traceFn(()=>{
                 // @ts-ignore TODO: Remove ignore when webpack 5 is stable
-                compilation.hooks.processAssets.tap({
+                compilation.hooks.processAssets.tapAsync({
                     name: PLUGIN_NAME,
                     // @ts-ignore TODO: Remove ignore when webpack 5 is stable
                     stage: _webpack.webpack.Compilation.PROCESS_ASSETS_STAGE_SUMMARIZE
-                }, (assets)=>{
-                    this.createTraceAssets(compilation, assets, traceEntrypointsPluginSpan);
+                }, (assets, callback)=>{
+                    this.createTraceAssets(compilation, assets, traceEntrypointsPluginSpan, readlink, stat, doResolve).then(()=>callback()
+                    ).catch((err)=>callback(err)
+                    );
                 });
                 let resolver = compilation.resolverFactory.get('normal');
                 function getPkgName(name) {
@@ -359,7 +414,7 @@ class TraceEntryPointsPlugin {
                     }
                     return res.replace(/\0/g, '');
                 };
-                this.tapfinishModules(compilation, traceEntrypointsPluginSpan, doResolve);
+                this.tapfinishModules(compilation, traceEntrypointsPluginSpan, doResolve, readlink, stat);
             });
         });
     }

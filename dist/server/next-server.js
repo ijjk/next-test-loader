@@ -46,6 +46,7 @@ var _parseUrl = require("../shared/lib/router/utils/parse-url");
 var _constants1 = require("../lib/constants");
 var _response = require("./web/spec-extension/response");
 var _sandbox = require("./web/sandbox");
+var _utils4 = require("./web/utils");
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
         default: obj
@@ -810,13 +811,9 @@ class Server {
                         result.response.headers.set('x-middleware-refresh', '1');
                     }
                     result.response.headers.delete('x-middleware-next');
-                    for (const [key, value] of result.response.headers.entries()){
-                        if (key !== 'content-encoding') {
-                            if (key.toLowerCase() === 'set-cookie') {
-                                res.setHeader(key, value.split(', '));
-                            } else {
-                                res.setHeader(key, value);
-                            }
+                    for (const [key, value] of Object.entries((0, _utils4).toNodeHeaders(result.response.headers))){
+                        if (key !== 'content-encoding' && value !== undefined) {
+                            res.setHeader(key, value);
                         }
                     }
                     const preflight = req.method === 'HEAD' && req.headers['x-middleware-preflight'];

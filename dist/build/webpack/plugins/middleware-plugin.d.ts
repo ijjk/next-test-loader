@@ -18,10 +18,8 @@ export interface MiddlewareManifest {
 }
 export default class MiddlewarePlugin {
     dev: boolean;
-    hasServerComponents?: boolean;
-    constructor({ dev, hasServerComponents, }: {
+    constructor({ dev }: {
         dev: boolean;
-        hasServerComponents?: boolean;
     });
     createAssets(compilation: any, assets: any, envPerRoute: Map<string, string[]>): void;
     apply(compiler: webpack.Compiler): void;

@@ -22,11 +22,10 @@ function middlewareRSCLoader() {
         import { renderToHTML } from 'next/dist/server/web/render'
 
         import React, { createElement } from 'react'
-        import ReactDOMServer from 'react-dom/server.browser'
 
         ${isServerComponent ? `
-        import { renderToReadableStream } from 'react-server-dom-webpack/writer.browser.server'
-        import { createFromReadableStream } from 'react-server-dom-webpack'` : ''}
+        import { renderToReadableStream } from 'next/dist/compiled/react-server-dom-webpack/writer.browser.server'
+        import { createFromReadableStream } from 'next/dist/compiled/react-server-dom-webpack'` : ''}
 
         var {
           default: Page,

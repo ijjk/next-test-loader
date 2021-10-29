@@ -13,7 +13,7 @@ export declare class TraceEntryPointsPlugin implements webpack5.WebpackPluginIns
         staticImageImports: boolean;
         esmExternals?: NextConfigComplete['experimental']['esmExternals'];
     });
-    createTraceAssets(compilation: any, assets: any, span: Span): void;
-    tapfinishModules(compilation: webpack5.Compilation, traceEntrypointsPluginSpan: Span, doResolve?: (request: string, parent: string, job: import('@vercel/nft/out/node-file-trace').Job, isEsmRequested: boolean) => Promise<string>): void;
+    createTraceAssets(compilation: any, assets: any, span: Span, readlink: any, stat: any, doResolve: any): Promise<void>;
+    tapfinishModules(compilation: webpack5.Compilation, traceEntrypointsPluginSpan: Span, doResolve: (request: string, parent: string, job: import('@vercel/nft/out/node-file-trace').Job, isEsmRequested: boolean) => Promise<string>, readlink: any, stat: any): void;
     apply(compiler: webpack5.Compiler): void;
 }

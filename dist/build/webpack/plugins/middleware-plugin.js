@@ -13,9 +13,8 @@ const MIDDLEWARE_FULL_ROUTE_REGEX = /^pages[/\\]?(.*)\/_middleware$/;
 const ssrEntries = new Map();
 exports.ssrEntries = ssrEntries;
 class MiddlewarePlugin {
-    constructor({ dev , hasServerComponents  }){
+    constructor({ dev  }){
         this.dev = dev;
-        this.hasServerComponents = hasServerComponents;
     }
     createAssets(compilation, assets, envPerRoute) {
         const entrypoints = compilation.entrypoints;

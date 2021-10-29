@@ -114,7 +114,7 @@ function _objectSpread(target) {
 }
 const data = JSON.parse(document.getElementById('__NEXT_DATA__').textContent);
 window.__NEXT_DATA__ = data;
-const version = "12.0.2-canary.2";
+const version = "12.0.2-canary.9";
 exports.version = version;
 const looseToArray = (input)=>[].slice.call(input)
 ;
@@ -562,7 +562,7 @@ if (process.env.__NEXT_RSC) {
     }
     const rscCache = createResponseCache();
     const RSCWrapper = ({ cacheKey , serialized , _fresh  })=>{
-        const { createFromFetch  } = require('react-server-dom-webpack');
+        const { createFromFetch ,  } = require('next/dist/compiled/react-server-dom-webpack');
         let response = rscCache.get(cacheKey);
         // If there is no cache, or there is serialized data already
         if (!response) {

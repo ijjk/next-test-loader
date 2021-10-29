@@ -791,24 +791,19 @@ async function renderToHTML(req, res, pathname, query, renderOpts) {
                 optimizeImages: renderOpts.optimizeImages
             });
         } : null,
-        renderOpts.optimizeCss ? async (html)=>{
-            if (process.browser) {
-                // Have to disable critters under the web environment.
-                return html;
-            } else {
-                // eslint-disable-next-line import/no-extraneous-dependencies
-                const Critters = require('critters');
-                const cssOptimizer = new Critters({
-                    ssrMode: true,
-                    reduceInlineStyles: false,
-                    path: renderOpts.distDir,
-                    publicPath: `${renderOpts.assetPrefix}/_next/`,
-                    preload: 'media',
-                    fonts: false,
-                    ...renderOpts.optimizeCss
-                });
-                return await cssOptimizer.process(html);
-            }
+        !process.browser && renderOpts.optimizeCss ? async (html)=>{
+            // eslint-disable-next-line import/no-extraneous-dependencies
+            const Critters = require('critters');
+            const cssOptimizer = new Critters({
+                ssrMode: true,
+                reduceInlineStyles: false,
+                path: renderOpts.distDir,
+                publicPath: `${renderOpts.assetPrefix}/_next/`,
+                preload: 'media',
+                fonts: false,
+                ...renderOpts.optimizeCss
+            });
+            return await cssOptimizer.process(html);
         } : null,
         inAmpMode || hybridAmp ? async (html)=>{
             return html.replace(/&amp;amp=1/g, '&amp=1');
@@ -939,13 +934,28 @@ function renderToNodeStream(element, generateStaticHTML) {
 }
 function renderToReadableStream(element) {
     return (res, next)=>{
-        const readable = ReactDOMServer.renderToReadableStream(element);
+        let bufferedString = '';
+        let shellCompleted = false;
+        const readable = ReactDOMServer.renderToReadableStream(element, {
+            onCompleteShell () {
+                shellCompleted = true;
+                if (bufferedString) {
+                    res.write(bufferedString);
+                    bufferedString = '';
+                }
+            }
+        });
         const reader = readable.getReader();
         const decoder = new TextDecoder();
         const process = ()=>{
             reader.read().then(({ done , value  })=>{
                 if (!done) {
-                    res.write(typeof value === 'string' ? value : decoder.decode(value));
+                    const s = typeof value === 'string' ? value : decoder.decode(value);
+                    if (shellCompleted) {
+                        res.write(s);
+                    } else {
+                        bufferedString += s;
+                    }
                     process();
                 } else {
                     next();

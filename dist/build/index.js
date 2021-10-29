@@ -87,8 +87,8 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
         const distDir = _path.default.join(dir, config.distDir);
         (0, _trace).setGlobal('phase', _constants1.PHASE_PRODUCTION_BUILD);
         (0, _trace).setGlobal('distDir', distDir);
-        const webServerRuntime = !!config.experimental.concurrentFeatures;
-        const hasServerComponents = webServerRuntime && !!config.experimental.serverComponents;
+        const hasConcurrentFeatures = !!config.experimental.concurrentFeatures;
+        const hasServerComponents = hasConcurrentFeatures && !!config.experimental.serverComponents;
         const { target  } = config;
         const buildId = await nextBuildSpan.traceChild('generate-buildid').traceAsyncFn(()=>(0, _generateBuildId).generateBuildId(config.generateBuildId, _indexCjs.nanoid)
         );
@@ -335,7 +335,7 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
                     rewrites,
                     runWebpackSpan
                 }),
-                webServerRuntime ? (0, _webpackConfig).default(dir, {
+                hasConcurrentFeatures ? (0, _webpackConfig).default(dir, {
                     buildId,
                     reactProductionProfiling,
                     isServer: true,
@@ -530,7 +530,7 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
                     let isHybridAmp = false;
                     let ssgPageRoutes = null;
                     let isMiddlewareRoute = !!page.match(_constants.MIDDLEWARE_ROUTE);
-                    if (!isMiddlewareRoute && !page.match(RESERVED_PAGE) && !webServerRuntime) {
+                    if (!isMiddlewareRoute && !page.match(RESERVED_PAGE) && !hasConcurrentFeatures) {
                         try {
                             let isPageStaticSpan = checkPageSpan.traceChild('is-page-static');
                             let workerResult = await isPageStaticSpan.traceAsyncFn(()=>{
@@ -593,7 +593,7 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
                         totalSize: allSize,
                         static: isStatic,
                         isSsg,
-                        isWebSsr: webServerRuntime && !isMiddlewareRoute && !page.match(RESERVED_PAGE),
+                        isWebSsr: hasConcurrentFeatures && !isMiddlewareRoute && !page.match(RESERVED_PAGE),
                         isHybridAmp,
                         ssgPageRoutes,
                         initialRevalidateSeconds: false,
@@ -656,7 +656,7 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
                             for (const includeGlob of includeGlobs){
                                 const results = await glob(includeGlob);
                                 includes.push(...results.map((file)=>{
-                                    return(_path.default.relative(pageDir, _path.default.join(dir, file)));
+                                    return _path.default.relative(pageDir, _path.default.join(dir, file));
                                 }));
                             }
                         }
@@ -802,7 +802,6 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
             invocationCount: config.experimental.optimizeCss ? 1 : 0
         };
         telemetry.record({
-            // noop
             eventName: _events.EVENT_BUILD_FEATURE_USAGE,
             payload: optimizeCss
         });

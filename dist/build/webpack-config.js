@@ -289,11 +289,19 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
         cwd: dir,
         name: 'react-dom'
     });
+    const isReactExperimental = Boolean(reactDomVersion && /0\.0\.0-experimental/.test(reactDomVersion));
     const hasReact18 = Boolean(reactDomVersion) && (_semver.default.gte(reactDomVersion, '18.0.0') || ((ref27 = _semver.default.coerce(reactDomVersion)) === null || ref27 === void 0 ? void 0 : ref27.version) === '18.0.0');
-    const hasReactPrerelease = Boolean(reactDomVersion) && _semver.default.prerelease(reactDomVersion) != null;
-    const hasReactRoot = config.experimental.reactRoot || hasReact18;
+    const hasReactPrerelease = Boolean(reactDomVersion) && _semver.default.prerelease(reactDomVersion) != null || isReactExperimental;
+    const hasReactRoot = config.experimental.reactRoot || hasReact18 || isReactExperimental;
+    if (config.experimental.reactRoot && !(hasReact18 || isReactExperimental)) {
+        // It's fine to only mention React 18 here as we don't recommend people to try experimental.
+        Log.warn('You have to use React 18 to use `experimental.reactRoot`.');
+    }
+    if (config.experimental.concurrentFeatures && !hasReactRoot) {
+        throw new Error('`experimental.concurrentFeatures` requires `experimental.reactRoot` to be enabled along with React 18.');
+    }
     if (config.experimental.serverComponents && !config.experimental.concurrentFeatures) {
-        throw new Error(`Flag \`experimental.concurrentFeatures\` is required to be enabled along with \`experimental.serverComponents\`.`);
+        throw new Error('`experimental.concurrentFeatures` is required to be enabled along with `experimental.serverComponents`.');
     }
     const hasConcurrentFeatures = config.experimental.concurrentFeatures && hasReactRoot;
     const hasServerComponents = hasConcurrentFeatures && !!config.experimental.serverComponents;
@@ -1131,8 +1139,7 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
             // MiddlewarePlugin should be after DefinePlugin so  NEXT_PUBLIC_*
             // replacement is done before its process.env.* handling
             !isServer && new _middlewarePlugin.default({
-                dev,
-                hasServerComponents
+                dev
             }),
             isServer && new _nextjsSsrImport.default(),
             !isServer && new _buildManifestPlugin.default({
@@ -1153,7 +1160,7 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
             new _wellknownErrorsPlugin.WellKnownErrorsPlugin(),
             !isServer && new _copyFilePlugin.CopyFilePlugin({
                 filePath: require.resolve('./polyfills/polyfill-nomodule'),
-                cacheKey: "12.0.2-canary.2",
+                cacheKey: "12.0.2-canary.9",
                 name: `static/chunks/polyfills${dev ? '' : '-[hash]'}.js`,
                 minimize: false,
                 info: {
@@ -1281,7 +1288,7 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
         // Includes:
         //  - Next.js version
         //  - next.config.js keys that affect compilation
-        version: `${"12.0.2-canary.2"}|${configVars}`,
+        version: `${"12.0.2-canary.9"}|${configVars}`,
         cacheDirectory: _path.default.join(distDir, 'cache', 'webpack')
     };
     // Adds `next.config.js` as a buildDependency when custom webpack config is provided

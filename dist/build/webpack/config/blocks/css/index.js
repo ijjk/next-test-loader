@@ -32,9 +32,9 @@ _postcss.default.plugin = function postcssPlugin(name, initializer) {
         }
     });
     creator.process = function(css, processOpts, pluginOpts) {
-        return (0, _postcss).default([
+        return((0, _postcss).default([
             creator(pluginOpts)
-        ]).process(css, processOpts);
+        ]).process(css, processOpts));
     };
     return creator;
 };
