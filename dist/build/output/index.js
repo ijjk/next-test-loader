@@ -87,7 +87,7 @@ function formatAmpMessages(amp) {
             'l'
         ],
         stringLength (str) {
-            return (0, _stripAnsi).default(str).length;
+            return((0, _stripAnsi).default(str).length);
         }
     });
     return output;
