@@ -124,7 +124,8 @@ buildStore.subscribe((state)=>{
         loading: false,
         typeChecking: false,
         partial: clientWasLoading && !serverWasLoading && !serverWebWasLoading ? 'client' : serverWasLoading && !clientWasLoading && !serverWebWasLoading ? 'server' : serverWebWasLoading && !clientWasLoading && !serverWasLoading ? 'serverWeb' : undefined,
-        modules: (clientWasLoading ? client.modules : 0) + (serverWasLoading ? server.modules : 0) + (serverWebWasLoading ? (serverWeb === null || serverWeb === void 0 ? void 0 : serverWeb.modules) || 0 : 0)
+        modules: (clientWasLoading ? client.modules : 0) + (serverWasLoading ? server.modules : 0) + (serverWebWasLoading ? (serverWeb === null || serverWeb === void 0 ? void 0 : serverWeb.modules) || 0 : 0),
+        hasServerWeb: !!serverWeb
     };
     if (client.errors) {
         // Show only client errors

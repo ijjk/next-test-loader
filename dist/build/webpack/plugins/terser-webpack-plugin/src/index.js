@@ -94,10 +94,10 @@ class TerserPlugin {
                 }
                 // don't minify _middleware as it can break in some cases
                 // and doesn't provide too much of a benefit as it's server-side
-                if (name.match(/(middleware-chunks|_middleware\.js$)/)) {
-                    hasMiddleware = true;
-                    return false;
-                }
+                // if (name.match(/(middleware-chunks|_middleware\.js$)/)) {
+                //   hasMiddleware = true
+                //   return false
+                // }
                 const { info  } = res;
                 // Skip double minimize assets from child compilation
                 if (info.minimized) {

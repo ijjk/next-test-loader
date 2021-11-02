@@ -92,7 +92,7 @@ const SERVER_PROPS_ID = '__N_SSP';
 exports.SERVER_PROPS_ID = SERVER_PROPS_ID;
 const FLIGHT_PROPS_ID = '__N_RSC';
 exports.FLIGHT_PROPS_ID = FLIGHT_PROPS_ID;
-const GOOGLE_FONT_PROVIDER = 'https://fonts.googleapis.com/css';
+const GOOGLE_FONT_PROVIDER = 'https://fonts.googleapis.com/';
 exports.GOOGLE_FONT_PROVIDER = GOOGLE_FONT_PROVIDER;
 const OPTIMIZED_FONT_PROVIDERS = [
     {

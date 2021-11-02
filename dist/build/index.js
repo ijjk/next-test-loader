@@ -416,6 +416,12 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
             }
             console.error(error);
             console.error();
+            // When using the web runtime, common Node.js native APIs are not available.
+            if (hasConcurrentFeatures && error.indexOf("Module not found: Can't resolve 'fs'") > -1) {
+                const err = new Error(`Native Node.js APIs are not supported in the Edge Runtime with \`concurrentFeatures\` enabled. Found \`fs\` imported.\n\n`);
+                err.code = 'EDGE_RUNTIME_UNSUPPORTED_API';
+                throw err;
+            }
             if (error.indexOf('private-next-pages') > -1 || error.indexOf('__next_polyfill__') > -1) {
                 const err = new Error('webpack config.resolve.alias was incorrectly overridden. https://nextjs.org/docs/messages/invalid-resolve-alias');
                 err.code = 'INVALID_RESOLVE_ALIAS';

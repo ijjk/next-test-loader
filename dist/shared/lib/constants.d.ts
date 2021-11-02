@@ -39,7 +39,7 @@ export declare const PERMANENT_REDIRECT_STATUS = 308;
 export declare const STATIC_PROPS_ID = "__N_SSG";
 export declare const SERVER_PROPS_ID = "__N_SSP";
 export declare const FLIGHT_PROPS_ID = "__N_RSC";
-export declare const GOOGLE_FONT_PROVIDER = "https://fonts.googleapis.com/css";
+export declare const GOOGLE_FONT_PROVIDER = "https://fonts.googleapis.com/";
 export declare const OPTIMIZED_FONT_PROVIDERS: {
     url: string;
     preconnect: string;

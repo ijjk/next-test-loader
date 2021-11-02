@@ -915,7 +915,7 @@ class Router {
                     locale: this.locale
                 });
             }
-            const props = await this._getData(()=>__N_SSG || __N_SSP ? fetchNextData(dataHref, this.isSsr, false, __N_SSG ? this.sdc : this.sdr, !!__N_SSG) : this.getInitialProps(Component, // we provide AppTree later so this needs to be `any`
+            const props = await this._getData(()=>__N_SSG || __N_SSP ? fetchNextData(dataHref, this.isSsr, false, __N_SSG ? this.sdc : this.sdr, !!__N_SSG && !this.isPreview) : this.getInitialProps(Component, // we provide AppTree later so this needs to be `any`
                 {
                     pathname,
                     query,

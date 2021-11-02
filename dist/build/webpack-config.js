@@ -293,11 +293,12 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
     const hasReact18 = Boolean(reactDomVersion) && (_semver.default.gte(reactDomVersion, '18.0.0') || ((ref27 = _semver.default.coerce(reactDomVersion)) === null || ref27 === void 0 ? void 0 : ref27.version) === '18.0.0');
     const hasReactPrerelease = Boolean(reactDomVersion) && _semver.default.prerelease(reactDomVersion) != null || isReactExperimental;
     const hasReactRoot = config.experimental.reactRoot || hasReact18 || isReactExperimental;
-    if (config.experimental.reactRoot && !(hasReact18 || isReactExperimental)) {
+    // Only inform during one of the builds
+    if (!isServer && config.experimental.reactRoot && !(hasReact18 || isReactExperimental)) {
         // It's fine to only mention React 18 here as we don't recommend people to try experimental.
         Log.warn('You have to use React 18 to use `experimental.reactRoot`.');
     }
-    if (config.experimental.concurrentFeatures && !hasReactRoot) {
+    if (!isServer && config.experimental.concurrentFeatures && !hasReactRoot) {
         throw new Error('`experimental.concurrentFeatures` requires `experimental.reactRoot` to be enabled along with React 18.');
     }
     if (config.experimental.serverComponents && !config.experimental.concurrentFeatures) {
@@ -316,9 +317,9 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
         }
     }
     if (webServerRuntime) {
-        Log.info('Using the experimental web runtime.');
+        Log.warn('You are using the experimental Edge Runtime with `concurrentFeatures`.');
         if (hasServerComponents) {
-            Log.info('You have experimental React Server Components enabled.');
+            Log.warn('You have experimental React Server Components enabled. Continue at your own risk.');
         }
     }
     const babelConfigFile = await [
@@ -1160,7 +1161,7 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
             new _wellknownErrorsPlugin.WellKnownErrorsPlugin(),
             !isServer && new _copyFilePlugin.CopyFilePlugin({
                 filePath: require.resolve('./polyfills/polyfill-nomodule'),
-                cacheKey: "12.0.2-canary.9",
+                cacheKey: "12.0.3-canary.1",
                 name: `static/chunks/polyfills${dev ? '' : '-[hash]'}.js`,
                 minimize: false,
                 info: {
@@ -1288,7 +1289,7 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
         // Includes:
         //  - Next.js version
         //  - next.config.js keys that affect compilation
-        version: `${"12.0.2-canary.9"}|${configVars}`,
+        version: `${"12.0.3-canary.1"}|${configVars}`,
         cacheDirectory: _path.default.join(distDir, 'cache', 'webpack')
     };
     // Adds `next.config.js` as a buildDependency when custom webpack config is provided
