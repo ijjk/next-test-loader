@@ -417,8 +417,9 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
             console.error(error);
             console.error();
             // When using the web runtime, common Node.js native APIs are not available.
-            if (hasConcurrentFeatures && error.indexOf("Module not found: Can't resolve 'fs'") > -1) {
-                const err = new Error(`Native Node.js APIs are not supported in the Edge Runtime with \`concurrentFeatures\` enabled. Found \`fs\` imported.\n\n`);
+            const moduleName = (0, _utils1).getUnresolvedModuleFromError(error);
+            if (hasConcurrentFeatures && moduleName) {
+                const err = new Error(`Native Node.js APIs are not supported in the Edge Runtime with \`concurrentFeatures\` enabled. Found \`${moduleName}\` imported.\n\n`);
                 err.code = 'EDGE_RUNTIME_UNSUPPORTED_API';
                 throw err;
             }
@@ -662,7 +663,7 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
                             for (const includeGlob of includeGlobs){
                                 const results = await glob(includeGlob);
                                 includes.push(...results.map((file)=>{
-                                    return _path.default.relative(pageDir, _path.default.join(dir, file));
+                                    return(_path.default.relative(pageDir, _path.default.join(dir, file)));
                                 }));
                             }
                         }
@@ -733,9 +734,6 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
                         '**/next/dist/compiled/@ampproject/toolbox-optimizer/**/*',
                         '**/next/dist/server/lib/squoosh/**/*.wasm',
                         '**/next/dist/compiled/webpack/(bundle4|bundle5).js',
-                        '**/node_modules/react/**/*.development.js',
-                        '**/node_modules/react-dom/**/*.development.js',
-                        '**/node_modules/use-subscription/**/*.development.js',
                         '**/node_modules/sharp/**/*',
                         '**/node_modules/webpack5/**/*', 
                     ]
@@ -808,6 +806,7 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
             invocationCount: config.experimental.optimizeCss ? 1 : 0
         };
         telemetry.record({
+            // noop
             eventName: _events.EVENT_BUILD_FEATURE_USAGE,
             payload: optimizeCss
         });

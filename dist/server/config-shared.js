@@ -95,7 +95,8 @@ const defaultConfig = {
         isrMemoryCacheSize: 50 * 1024 * 1024,
         concurrentFeatures: false,
         serverComponents: false,
-        fullySpecified: false
+        fullySpecified: false,
+        outputFileTracingRoot: process.env.NEXT_PRIVATE_OUTPUT_TRACE_ROOT || ''
     },
     future: {
         strictPostcssConfiguration: false

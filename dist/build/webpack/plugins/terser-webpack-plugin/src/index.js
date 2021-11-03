@@ -96,7 +96,6 @@ class TerserPlugin {
                 // and doesn't provide too much of a benefit as it's server-side
                 if (name.match(/(middleware-chunks|_middleware\.js$)/)) {
                     hasMiddleware = true;
-                // return false
                 }
                 const { info  } = res;
                 // Skip double minimize assets from child compilation
@@ -120,7 +119,7 @@ class TerserPlugin {
                 };
             }));
             if (hasMiddleware && webpackAsset) {
-                // emit a separate un-minified version of the webpack
+                // emit a separate version of the webpack
                 // runtime for the middleware
                 const asset = compilation.getAsset(webpackAsset);
                 compilation.emitAsset(webpackAsset.replace('webpack-', 'webpack-middleware-'), asset.source, {

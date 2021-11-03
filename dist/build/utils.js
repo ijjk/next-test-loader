@@ -16,6 +16,7 @@ exports.detectConflictingPaths = detectConflictingPaths;
 exports.getCssFilePaths = getCssFilePaths;
 exports.getRawPageExtensions = getRawPageExtensions;
 exports.isFlightPage = isFlightPage;
+exports.getUnresolvedModuleFromError = getUnresolvedModuleFromError;
 require("../server/node-polyfill-fetch");
 var _chalk = _interopRequireDefault(require("chalk"));
 var _gzipSize = _interopRequireDefault(require("next/dist/compiled/gzip-size"));
@@ -67,6 +68,7 @@ function _interopRequireWildcard(obj) {
         return newObj;
     }
 }
+const { builtinModules  } = require('module');
 const fileGzipStats = {
 };
 const fsStatGzip = (file)=>{
@@ -84,27 +86,27 @@ const fsStat = (file)=>{
     return fileStats[file] = fileSize(file);
 };
 function collectPages(directory, pageExtensions) {
-    return((0, _recursiveReaddir).recursiveReadDir(directory, new RegExp(`\\.(?:${pageExtensions.join('|')})$`)));
+    return (0, _recursiveReaddir).recursiveReadDir(directory, new RegExp(`\\.(?:${pageExtensions.join('|')})$`));
 }
 async function printTreeView(list, pageInfos, serverless, { distPath , buildId , pagesDir , pageExtensions , buildManifest , useStatic404 , gzipSize =true  }) {
     const getPrettySize = (_size)=>{
         const size = (0, _prettyBytes).default(_size);
         // green for 0-130kb
-        if (_size < 130 * 1000) return(_chalk.default.green(size));
+        if (_size < 130 * 1000) return _chalk.default.green(size);
         // yellow for 130-170kb
-        if (_size < 170 * 1000) return(_chalk.default.yellow(size));
+        if (_size < 170 * 1000) return _chalk.default.yellow(size);
         // red for >= 170kb
-        return(_chalk.default.red.bold(size));
+        return _chalk.default.red.bold(size);
     };
     const MIN_DURATION = 300;
     const getPrettyDuration = (_duration)=>{
         const duration = `${_duration} ms`;
         // green for 300-1000ms
-        if (_duration < 1000) return(_chalk.default.green(duration));
+        if (_duration < 1000) return _chalk.default.green(duration);
         // yellow for 1000-2000ms
-        if (_duration < 2000) return(_chalk.default.yellow(duration));
+        if (_duration < 2000) return _chalk.default.yellow(duration);
         // red for >= 2000ms
-        return(_chalk.default.red.bold(duration));
+        return _chalk.default.red.bold(duration);
     };
     const getCleanName = (fileName)=>fileName// Trim off `static/`
         .replace(/^static\//, '')// Re-add `static/` for root files
@@ -759,6 +761,12 @@ function isFlightPage(nextConfig, pagePath) {
         return new RegExp(`\\.server\\.${ext}$`).test(pagePath);
     });
     return isRscPage;
+}
+function getUnresolvedModuleFromError(error) {
+    const moduleErrorRegex = new RegExp(`Module not found: Can't resolve '(\\w+)'`);
+    const [, moduleName] = error.match(moduleErrorRegex) || [];
+    return builtinModules.find((item)=>item === moduleName
+    );
 }
 
 //# sourceMappingURL=utils.js.map

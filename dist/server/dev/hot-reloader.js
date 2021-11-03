@@ -19,7 +19,7 @@ var _findPageFile = require("../lib/find-page-file");
 var _onDemandEntryHandler = _interopRequireWildcard(require("./on-demand-entry-handler"));
 var _normalizePagePath = require("../normalize-page-path");
 var _getRouteFromEntrypoint = _interopRequireDefault(require("../get-route-from-entrypoint"));
-var _isWriteable = require("../../build/is-writeable");
+var _fileExists = require("../../lib/file-exists");
 var _middlewarePlugin = require("../../build/webpack/plugins/middleware-plugin");
 var _querystring = require("querystring");
 var _utils = require("../../build/utils");
@@ -340,7 +340,7 @@ class HotReloader {
                         return;
                     }
                     const { bundlePath , absolutePagePath , dispose  } = _onDemandEntryHandler.entries[pageKey];
-                    const pageExists = !dispose && await (0, _isWriteable).isWriteable(absolutePagePath);
+                    const pageExists = !dispose && await (0, _fileExists).fileExists(absolutePagePath);
                     if (!pageExists) {
                         // page was removed or disposed
                         delete _onDemandEntryHandler.entries[pageKey];

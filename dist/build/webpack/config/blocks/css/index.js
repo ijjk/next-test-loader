@@ -361,7 +361,6 @@ const css = (0, _lodashCurry).default(async function css(ctx, config) {
         // Extract CSS as CSS file(s) in the client-side production bundle.
         fns.push((0, _helpers).plugin(// @ts-ignore webpack 5 compat
         new _miniCssExtractPlugin.default({
-            experimentalUseImportModule: true,
             filename: 'static/css/[contenthash].css',
             chunkFilename: 'static/css/[contenthash].css',
             // Next.js guarantees that CSS order "doesn't matter", due to imposed

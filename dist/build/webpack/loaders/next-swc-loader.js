@@ -3,7 +3,6 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 exports.default = swcLoader;
-var _loaderUtils = require("next/dist/compiled/loader-utils");
 var _swc = require("../../swc");
 const nextDistPath = /(next[\\/]dist[\\/]shared[\\/]lib)|(next[\\/]dist[\\/]client)|(next[\\/]dist[\\/]pages)/;
 function getSWCOptions({ filename , isServer , development , isPageFile , pagesDir , isNextDist , hasReactRefresh ,  }) {
@@ -77,7 +76,7 @@ function getSWCOptions({ filename , isServer , development , isPageFile , pagesD
 async function loaderTransform(parentTrace, source, inputSourceMap) {
     // Make the loader async
     const filename = this.resourcePath;
-    let loaderOptions = (0, _loaderUtils).getOptions(this) || {
+    let loaderOptions = this.getOptions() || {
     };
     const { isServer , pagesDir , hasReactRefresh  } = loaderOptions;
     const isPageFile = filename.startsWith(pagesDir);

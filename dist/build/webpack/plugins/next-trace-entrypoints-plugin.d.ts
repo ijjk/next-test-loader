@@ -3,14 +3,16 @@ import type { webpack5 } from 'next/dist/compiled/webpack/webpack';
 import { NextConfigComplete } from '../../../server/config-shared';
 export declare class TraceEntryPointsPlugin implements webpack5.WebpackPluginInstance {
     private appDir;
+    private tracingRoot;
     private entryTraces;
     private excludeFiles;
     private esmExternals?;
     private staticImageImports?;
-    constructor({ appDir, excludeFiles, esmExternals, staticImageImports, }: {
+    constructor({ appDir, excludeFiles, esmExternals, staticImageImports, outputFileTracingRoot }: {
         appDir: string;
         excludeFiles?: string[];
         staticImageImports: boolean;
+        outputFileTracingRoot?: string;
         esmExternals?: NextConfigComplete['experimental']['esmExternals'];
     });
     createTraceAssets(compilation: any, assets: any, span: Span, readlink: any, stat: any, doResolve: any): Promise<void>;

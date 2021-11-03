@@ -3,13 +3,8 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 exports.default = middlewareRSCLoader;
-var _loaderUtils = _interopRequireDefault(require("next/dist/compiled/loader-utils"));
 var _utils = require("./utils");
-function _interopRequireDefault(obj) {
-    return obj && obj.__esModule ? obj : {
-        default: obj
-    };
-}
+var _stringifyRequest = require("../../stringify-request");
 const fallbackDocumentPage = `
 import { Html, Head, Main, NextScript } from 'next/document'
 
@@ -35,12 +30,13 @@ function hasModule(path) {
     return has;
 }
 async function middlewareRSCLoader() {
-    const { absolutePagePath , basePath , isServerComponent , assetPrefix , buildId ,  } = _loaderUtils.default.getOptions(this);
-    const stringifiedAbsolutePagePath = _loaderUtils.default.stringifyRequest(this, absolutePagePath);
+    const { absolutePagePath , basePath , isServerComponent: isServerComponentQuery , assetPrefix , buildId ,  } = this.getOptions();
+    const isServerComponent = isServerComponentQuery === 'true';
+    const stringifiedAbsolutePagePath = (0, _stringifyRequest).stringifyRequest(this, absolutePagePath);
     const stringifiedAbsoluteDocumentPath = (0, _utils).getStringifiedAbsolutePath(this, './pages/_document');
     const stringifiedAbsoluteAppPath = (0, _utils).getStringifiedAbsolutePath(this, './pages/_app');
-    const hasProvidedAppPage = hasModule(JSON.parse(stringifiedAbsoluteAppPath));
-    const hasProvidedDocumentPage = hasModule(JSON.parse(stringifiedAbsoluteDocumentPath));
+    const hasProvidedAppPage = hasModule(this.utils.absolutify(this.rootContext, './pages/_app'));
+    const hasProvidedDocumentPage = hasModule(this.utils.absolutify(this.rootContext, './pages/_document'));
     let appDefinition = `const App = require(${hasProvidedAppPage ? stringifiedAbsoluteAppPath : JSON.stringify('next/dist/pages/_app')}).default`;
     let documentDefinition = hasProvidedDocumentPage ? `const Document = require(${stringifiedAbsoluteDocumentPath}).default` : fallbackDocumentPage;
     const transformed = `

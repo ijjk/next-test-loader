@@ -22,7 +22,7 @@ const VALID_BLUR_EXT = [
 function nextImageLoader(content) {
     const imageLoaderSpan = this.currentTraceSpan.traceChild('next-image-loader');
     return imageLoaderSpan.traceAsyncFn(async ()=>{
-        const { isServer , isDev , assetPrefix , basePath  } = _loaderUtils.default.getOptions(this);
+        const { isServer , isDev , assetPrefix , basePath  } = this.getOptions();
         const context = this.rootContext;
         const opts = {
             context,

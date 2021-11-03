@@ -497,7 +497,6 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
             ...nodePathList
         ],
         alias: {
-            // noop
             next: _constants.NEXT_PROJECT_ROOT,
             ...customAppAliases,
             ...customErrorAlias,
@@ -930,7 +929,7 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
                         }
                     }, 
                 ] : [],
-                ...webServerRuntime && hasServerComponents ? [
+                ...hasServerComponents && webServerRuntime ? [
                     {
                         ...codeCondition,
                         test: serverComponentsRegex,
@@ -1107,7 +1106,8 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
             config.outputFileTracing && !isLikeServerless && isServer && !dev && new _nextTraceEntrypointsPlugin.TraceEntryPointsPlugin({
                 appDir: dir,
                 esmExternals: config.experimental.esmExternals,
-                staticImageImports: !config.images.disableStaticImages
+                staticImageImports: !config.images.disableStaticImages,
+                outputFileTracingRoot: config.experimental.outputFileTracingRoot
             }),
             // Moment.js is an extremely popular library that bundles large locale files
             // by default due to how Webpack interprets its code. This is a practical
@@ -1162,7 +1162,7 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
             new _wellknownErrorsPlugin.WellKnownErrorsPlugin(),
             !isServer && new _copyFilePlugin.CopyFilePlugin({
                 filePath: require.resolve('./polyfills/polyfill-nomodule'),
-                cacheKey: "12.0.3-canary.1",
+                cacheKey: "12.0.3-canary.2",
                 name: `static/chunks/polyfills${dev ? '' : '-[hash]'}.js`,
                 minimize: false,
                 info: {
@@ -1290,7 +1290,7 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
         // Includes:
         //  - Next.js version
         //  - next.config.js keys that affect compilation
-        version: `${"12.0.3-canary.1"}|${configVars}`,
+        version: `${"12.0.3-canary.2"}|${configVars}`,
         cacheDirectory: _path.default.join(distDir, 'cache', 'webpack')
     };
     // Adds `next.config.js` as a buildDependency when custom webpack config is provided
@@ -1356,7 +1356,8 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
         sassOptions: config.sassOptions,
         productionBrowserSourceMaps: config.productionBrowserSourceMaps,
         future: config.future,
-        experimental: config.experimental
+        experimental: config.experimental,
+        disableStaticImages: config.images.disableStaticImages
     });
     // @ts-ignore Cache exists
     webpackConfig.cache.name = `${webpackConfig.name}-${webpackConfig.mode}${isDevFallback ? '-fallback' : ''}`;

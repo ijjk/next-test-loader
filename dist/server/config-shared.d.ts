@@ -140,6 +140,7 @@ export declare type NextConfig = {
         serverComponents?: boolean;
         fullySpecified?: boolean;
         urlImports?: NonNullable<webpack5.Configuration['experiments']>['buildHttp'];
+        outputFileTracingRoot?: string;
     };
 };
 export declare const defaultConfig: NextConfig;

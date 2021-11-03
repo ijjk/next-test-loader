@@ -7,7 +7,7 @@ var _base = require("./blocks/base");
 var _css = require("./blocks/css");
 var _images = require("./blocks/images");
 var _utils = require("./utils");
-async function build(config, { rootDirectory , customAppFile , isDevelopment , isServer , webServerRuntime , targetWeb , assetPrefix , sassOptions , productionBrowserSourceMaps , future , experimental  }) {
+async function build(config, { rootDirectory , customAppFile , isDevelopment , isServer , webServerRuntime , targetWeb , assetPrefix , sassOptions , productionBrowserSourceMaps , future , experimental , disableStaticImages  }) {
     const ctx = {
         rootDirectory,
         customAppFile,
@@ -23,7 +23,14 @@ async function build(config, { rootDirectory , customAppFile , isDevelopment , i
         future,
         experimental
     };
-    const fn = (0, _utils).pipe((0, _base).base(ctx), (0, _css).css(ctx), (0, _images).images(ctx));
+    let fns = [
+        (0, _base).base(ctx),
+        (0, _css).css(ctx)
+    ];
+    if (!disableStaticImages) {
+        fns.push((0, _images).images(ctx));
+    }
+    const fn = (0, _utils).pipe(...fns);
     return fn(config);
 }
 
