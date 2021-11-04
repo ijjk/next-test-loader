@@ -43,7 +43,8 @@ const defaultConfig = {
     analyticsId: process.env.VERCEL_ANALYTICS_ID || '',
     images: _imageConfig.imageConfigDefault,
     devIndicators: {
-        buildActivity: true
+        buildActivity: true,
+        buildActivityPosition: 'bottom-right'
     },
     onDemandEntries: {
         maxInactiveAge: 15 * 1000,
@@ -96,7 +97,8 @@ const defaultConfig = {
         concurrentFeatures: false,
         serverComponents: false,
         fullySpecified: false,
-        outputFileTracingRoot: process.env.NEXT_PRIVATE_OUTPUT_TRACE_ROOT || ''
+        outputFileTracingRoot: process.env.NEXT_PRIVATE_OUTPUT_TRACE_ROOT || '',
+        outputStandalone: !!process.env.NEXT_PRIVATE_STANDALONE
     },
     future: {
         strictPostcssConfiguration: false

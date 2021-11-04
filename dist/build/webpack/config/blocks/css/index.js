@@ -32,9 +32,9 @@ _postcss.default.plugin = function postcssPlugin(name, initializer) {
         }
     });
     creator.process = function(css, processOpts, pluginOpts) {
-        return((0, _postcss).default([
+        return (0, _postcss).default([
             creator(pluginOpts)
-        ]).process(css, processOpts));
+        ]).process(css, processOpts);
     };
     return creator;
 };
@@ -121,7 +121,7 @@ const css = (0, _lodashCurry).default(async function css(ctx, config) {
             ]
         }), 
     ];
-    const postCssPlugins = await (0, _plugins).getPostCssPlugins(ctx.rootDirectory, ctx.isProduction, !ctx.future.strictPostcssConfiguration);
+    const postCssPlugins = await (0, _plugins).getPostCssPlugins(ctx.rootDirectory, ctx.supportedBrowsers, !ctx.future.strictPostcssConfiguration);
     // CSS cannot be imported in _document. This comes before everything because
     // global CSS nor CSS modules work in said file.
     fns.push((0, _helpers).loader({

@@ -43,6 +43,7 @@ var _flightManifestPlugin = require("./webpack/plugins/flight-manifest-plugin");
 var _telemetryPlugin = require("./webpack/plugins/telemetry-plugin");
 var _isError = _interopRequireDefault(require("../lib/is-error"));
 var _utils1 = require("./utils");
+var _browserslist = _interopRequireDefault(require("browserslist"));
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
         default: obj
@@ -70,6 +71,17 @@ function _interopRequireWildcard(obj) {
         newObj.default = obj;
         return newObj;
     }
+}
+function getSupportedBrowsers(dir, isDevelopment) {
+    let browsers;
+    try {
+        browsers = _browserslist.default.loadConfig({
+            path: dir,
+            env: isDevelopment ? 'development' : 'production'
+        });
+    } catch  {
+    }
+    return browsers;
 }
 const devtoolRevertWarning = (0, _utils).execOnce((devtool)=>{
     console.warn(_chalk.default.yellow.bold('Warning: ') + _chalk.default.bold(`Reverting webpack devtool to '${devtool}'.\n`) + 'Changing the webpack devtool in development mode will cause severe performance regressions.\n' + 'Read more: https://nextjs.org/docs/messages/improper-devtool');
@@ -283,6 +295,7 @@ async function resolveExternal(appDir, esmExternalsConfig, context, request, isE
 }
 async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isServer =false , webServerRuntime =false , pagesDir , target ='server' , reactProductionProfiling =false , entrypoints , rewrites , isDevFallback =false , runWebpackSpan  }) {
     var ref27, ref1, ref2, ref3, ref4, ref5, ref6;
+    const supportedBrowsers = await getSupportedBrowsers(dir, dev);
     const hasRewrites = rewrites.beforeFiles.length > 0 || rewrites.afterFiles.length > 0 || rewrites.fallback.length > 0;
     const hasReactRefresh = dev && !isServer;
     const reactDomVersion = await (0, _getPackageVersion).getPackageVersion({
@@ -1050,6 +1063,7 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
                 },
                 'process.env.__NEXT_TRAILING_SLASH': JSON.stringify(config.trailingSlash),
                 'process.env.__NEXT_BUILD_INDICATOR': JSON.stringify(config.devIndicators.buildActivity),
+                'process.env.__NEXT_BUILD_INDICATOR_POSITION': JSON.stringify(config.devIndicators.buildActivityPosition),
                 'process.env.__NEXT_PLUGINS': JSON.stringify(config.experimental.plugins),
                 'process.env.__NEXT_STRICT_MODE': JSON.stringify(config.reactStrictMode),
                 'process.env.__NEXT_REACT_ROOT': JSON.stringify(hasReactRoot),
@@ -1162,7 +1176,7 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
             new _wellknownErrorsPlugin.WellKnownErrorsPlugin(),
             !isServer && new _copyFilePlugin.CopyFilePlugin({
                 filePath: require.resolve('./polyfills/polyfill-nomodule'),
-                cacheKey: "12.0.3-canary.2",
+                cacheKey: "12.0.3-canary.8",
                 name: `static/chunks/polyfills${dev ? '' : '-[hash]'}.js`,
                 minimize: false,
                 info: {
@@ -1262,6 +1276,7 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
         pageExtensions: config.pageExtensions,
         trailingSlash: config.trailingSlash,
         buildActivity: config.devIndicators.buildActivity,
+        buildActivityPosition: config.devIndicators.buildActivityPosition,
         productionBrowserSourceMaps: !!config.productionBrowserSourceMaps,
         plugins: config.experimental.plugins,
         reactStrictMode: config.reactStrictMode,
@@ -1290,7 +1305,7 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
         // Includes:
         //  - Next.js version
         //  - next.config.js keys that affect compilation
-        version: `${"12.0.3-canary.2"}|${configVars}`,
+        version: `${"12.0.3-canary.8"}|${configVars}`,
         cacheDirectory: _path.default.join(distDir, 'cache', 'webpack')
     };
     // Adds `next.config.js` as a buildDependency when custom webpack config is provided
@@ -1346,6 +1361,7 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
         }
     }
     webpackConfig = await (0, _config).build(webpackConfig, {
+        supportedBrowsers,
         rootDirectory: dir,
         customAppFile: new RegExp((0, _escapeStringRegexp).default(_path.default.join(pagesDir, `_app`))),
         isDevelopment: dev,
@@ -1506,7 +1522,7 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
             );
         }
     } else if (!config.future.strictPostcssConfiguration) {
-        await (0, _overrideCssConfiguration).__overrideCssConfiguration(dir, !dev, webpackConfig);
+        await (0, _overrideCssConfiguration).__overrideCssConfiguration(dir, supportedBrowsers, webpackConfig);
     }
     // Inject missing React Refresh loaders so that development mode is fast:
     if (hasReactRefresh) {

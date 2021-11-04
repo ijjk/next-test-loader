@@ -76,7 +76,11 @@ function _interopRequireWildcard(obj) {
 }
 const RESERVED_PAGE = /^\/(_app|_error|_document|api(\/|$))/;
 async function build(dir, conf = null, reactProductionProfiling = false, debugOutput = false, runLint = true) {
-    const nextBuildSpan = (0, _trace).trace('next-build');
+    const nextBuildSpan = (0, _trace).trace('next-build', undefined, {
+        attrs: {
+            version: "12.0.3-canary.8"
+        }
+    });
     const buildResult = await nextBuildSpan.traceAsyncFn(async ()=>{
         var ref5;
         // attempt to load global env values so they are available in next.config.js
@@ -663,7 +667,7 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
                             for (const includeGlob of includeGlobs){
                                 const results = await glob(includeGlob);
                                 includes.push(...results.map((file)=>{
-                                    return(_path.default.relative(pageDir, _path.default.join(dir, file)));
+                                    return _path.default.relative(pageDir, _path.default.join(dir, file));
                                 }));
                             }
                         }
@@ -806,11 +810,15 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
             invocationCount: config.experimental.optimizeCss ? 1 : 0
         };
         telemetry.record({
-            // noop
             eventName: _events.EVENT_BUILD_FEATURE_USAGE,
             payload: optimizeCss
         });
         await _fs.promises.writeFile(_path.default.join(distDir, _constants1.SERVER_FILES_MANIFEST), JSON.stringify(requiredServerFiles), 'utf8');
+        if (config.experimental.outputStandalone) {
+            await nextBuildSpan.traceChild('copy-traced-files').traceAsyncFn(async ()=>{
+                await (0, _utils1).copyTracedFiles(distDir, pageKeys, config.experimental.outputFileTracingRoot || dir);
+            });
+        }
         const finalPrerenderRoutes = {
         };
         const tbdPrerenderRoutes = [];

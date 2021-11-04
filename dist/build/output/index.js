@@ -217,7 +217,7 @@ function watchCompilers(client, server, serverWeb) {
                 }
             });
             const { errors , warnings  } = (0, _formatWebpackMessages).default(stats.toJson({
-                preset: 'error-warnings',
+                preset: 'errors-warnings',
                 moduleTrace: true
             }));
             const hasErrors = !!(errors === null || errors === void 0 ? void 0 : errors.length);

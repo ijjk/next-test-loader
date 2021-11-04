@@ -17,6 +17,7 @@ exports.getCssFilePaths = getCssFilePaths;
 exports.getRawPageExtensions = getRawPageExtensions;
 exports.isFlightPage = isFlightPage;
 exports.getUnresolvedModuleFromError = getUnresolvedModuleFromError;
+exports.copyTracedFiles = copyTracedFiles;
 require("../server/node-polyfill-fetch");
 var _chalk = _interopRequireDefault(require("chalk"));
 var _gzipSize = _interopRequireDefault(require("next/dist/compiled/gzip-size"));
@@ -40,6 +41,8 @@ var _loadComponents = require("../server/load-components");
 var _trace = require("../trace");
 var _config = require("../server/config");
 var _isError = _interopRequireDefault(require("../lib/is-error"));
+var _recursiveDelete = require("../lib/recursive-delete");
+var _asyncSema = require("next/dist/compiled/async-sema");
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
         default: obj
@@ -86,27 +89,27 @@ const fsStat = (file)=>{
     return fileStats[file] = fileSize(file);
 };
 function collectPages(directory, pageExtensions) {
-    return (0, _recursiveReaddir).recursiveReadDir(directory, new RegExp(`\\.(?:${pageExtensions.join('|')})$`));
+    return((0, _recursiveReaddir).recursiveReadDir(directory, new RegExp(`\\.(?:${pageExtensions.join('|')})$`)));
 }
 async function printTreeView(list, pageInfos, serverless, { distPath , buildId , pagesDir , pageExtensions , buildManifest , useStatic404 , gzipSize =true  }) {
     const getPrettySize = (_size)=>{
         const size = (0, _prettyBytes).default(_size);
         // green for 0-130kb
-        if (_size < 130 * 1000) return _chalk.default.green(size);
+        if (_size < 130 * 1000) return(_chalk.default.green(size));
         // yellow for 130-170kb
-        if (_size < 170 * 1000) return _chalk.default.yellow(size);
+        if (_size < 170 * 1000) return(_chalk.default.yellow(size));
         // red for >= 170kb
-        return _chalk.default.red.bold(size);
+        return(_chalk.default.red.bold(size));
     };
     const MIN_DURATION = 300;
     const getPrettyDuration = (_duration)=>{
         const duration = `${_duration} ms`;
         // green for 300-1000ms
-        if (_duration < 1000) return _chalk.default.green(duration);
+        if (_duration < 1000) return(_chalk.default.green(duration));
         // yellow for 1000-2000ms
-        if (_duration < 2000) return _chalk.default.yellow(duration);
+        if (_duration < 2000) return(_chalk.default.yellow(duration));
         // red for >= 2000ms
-        return _chalk.default.red.bold(duration);
+        return(_chalk.default.red.bold(duration));
     };
     const getCleanName = (fileName)=>fileName// Trim off `static/`
         .replace(/^static\//, '')// Re-add `static/` for root files
@@ -767,6 +770,45 @@ function getUnresolvedModuleFromError(error) {
     const [, moduleName] = error.match(moduleErrorRegex) || [];
     return builtinModules.find((item)=>item === moduleName
     );
+}
+async function copyTracedFiles(distDir, pageKeys, tracingRoot) {
+    const outputPath = _path.default.join(distDir, 'standalone');
+    const copiedFiles = new Set();
+    await (0, _recursiveDelete).recursiveDelete(outputPath);
+    for (const page of pageKeys){
+        const pageFile = _path.default.join(distDir, 'server/pages', `${(0, _normalizePagePath).normalizePagePath(page)}.js`);
+        const pageTraceFile = `${pageFile}.nft.json`;
+        const pageFileOutput = _path.default.join(outputPath, _path.default.relative(tracingRoot, pageFile));
+        const pageTrace = JSON.parse(await _fs.promises.readFile(pageTraceFile, 'utf8'));
+        await _fs.promises.mkdir(_path.default.dirname(pageFileOutput), {
+            recursive: true
+        });
+        await _fs.promises.copyFile(pageFile, pageFileOutput);
+        const copySema = new _asyncSema.Sema(10, {
+            capacity: pageTrace.files.length
+        });
+        const pageDir = _path.default.dirname(pageFile);
+        await Promise.all(pageTrace.files.map(async (relativeFile)=>{
+            await copySema.acquire();
+            const tracedFilePath = _path.default.join(pageDir, relativeFile);
+            const fileOutputPath = _path.default.join(outputPath, _path.default.relative(tracingRoot, tracedFilePath));
+            if (!copiedFiles.has(fileOutputPath)) {
+                copiedFiles.add(fileOutputPath);
+                await _fs.promises.mkdir(_path.default.dirname(fileOutputPath), {
+                    recursive: true
+                });
+                const symlink = await _fs.promises.readlink(tracedFilePath).catch(()=>null
+                );
+                if (symlink) {
+                    console.log('symlink', _path.default.relative(tracingRoot, symlink));
+                    await _fs.promises.symlink(_path.default.relative(tracingRoot, symlink), fileOutputPath);
+                } else {
+                    await _fs.promises.copyFile(tracedFilePath, fileOutputPath);
+                }
+            }
+            await copySema.release();
+        }));
+    }
 }
 
 //# sourceMappingURL=utils.js.map

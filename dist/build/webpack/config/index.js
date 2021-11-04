@@ -7,8 +7,9 @@ var _base = require("./blocks/base");
 var _css = require("./blocks/css");
 var _images = require("./blocks/images");
 var _utils = require("./utils");
-async function build(config, { rootDirectory , customAppFile , isDevelopment , isServer , webServerRuntime , targetWeb , assetPrefix , sassOptions , productionBrowserSourceMaps , future , experimental , disableStaticImages  }) {
+async function build(config, { supportedBrowsers , rootDirectory , customAppFile , isDevelopment , isServer , webServerRuntime , targetWeb , assetPrefix , sassOptions , productionBrowserSourceMaps , future , experimental , disableStaticImages  }) {
     const ctx = {
+        supportedBrowsers,
         rootDirectory,
         customAppFile,
         isDevelopment,

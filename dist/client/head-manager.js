@@ -46,7 +46,8 @@ function updateElements(type, components) {
     const headCount = Number(headCountEl.content);
     const oldTags = [];
     for(let i = 0, j = headCountEl.previousElementSibling; i < headCount; i++, j = j.previousElementSibling){
-        if (j.tagName.toLowerCase() === type) {
+        var ref;
+        if ((j === null || j === void 0 ? void 0 : (ref = j.tagName) === null || ref === void 0 ? void 0 : ref.toLowerCase()) === type) {
             oldTags.push(j);
         }
     }

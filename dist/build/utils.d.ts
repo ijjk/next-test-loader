@@ -66,4 +66,5 @@ export declare function getCssFilePaths(buildManifest: BuildManifest): string[];
 export declare function getRawPageExtensions(pageExtensions: string[]): string[];
 export declare function isFlightPage(nextConfig: NextConfigComplete, pagePath: string): boolean;
 export declare function getUnresolvedModuleFromError(error: string): string | undefined;
+export declare function copyTracedFiles(distDir: string, pageKeys: string[], tracingRoot: string): Promise<void>;
 export {};

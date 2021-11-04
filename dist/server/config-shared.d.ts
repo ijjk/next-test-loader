@@ -75,6 +75,7 @@ export declare type NextConfig = {
     images?: ImageConfig;
     devIndicators?: {
         buildActivity?: boolean;
+        buildActivityPosition?: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
     };
     onDemandEntries?: {
         maxInactiveAge?: number;
@@ -141,6 +142,7 @@ export declare type NextConfig = {
         fullySpecified?: boolean;
         urlImports?: NonNullable<webpack5.Configuration['experiments']>['buildHttp'];
         outputFileTracingRoot?: string;
+        outputStandalone?: boolean;
     };
 };
 export declare const defaultConfig: NextConfig;

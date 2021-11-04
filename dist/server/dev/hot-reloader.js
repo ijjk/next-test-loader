@@ -151,7 +151,11 @@ class HotReloader {
         this.hasServerComponents = !!(config.experimental.concurrentFeatures && config.experimental.serverComponents);
         this.previewProps = previewProps;
         this.rewrites = rewrites;
-        this.hotReloaderSpan = (0, _trace).trace('hot-reloader');
+        this.hotReloaderSpan = (0, _trace).trace('hot-reloader', undefined, {
+            attrs: {
+                version: "12.0.3-canary.8"
+            }
+        });
         // Ensure the hotReloaderSpan is flushed immediately as it's the parentSpan for all processing
         // of the current `next dev` invocation.
         this.hotReloaderSpan.stop();

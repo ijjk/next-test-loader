@@ -102,6 +102,7 @@ async function run(params) {
             URLSearchParams
         };
         context.self = context;
+        context.globalThis = context;
         cache = {
             context,
             require: new Map([

@@ -112,9 +112,11 @@ class TraceEntryPointsPlugin {
                 },
                 readlink,
                 stat,
-                resolve: doResolve ? (id, parent, job, isCjs)=>{
-                    return doResolve(id, parent, job, !isCjs);
-                } : undefined,
+                // resolve: doResolve
+                //   ? (id, parent, job, isCjs) => {
+                //       return doResolve(id, parent, job, !isCjs)
+                //     }
+                //   : undefined,
                 ignore: [
                     ...TRACE_IGNORES,
                     ...this.excludeFiles

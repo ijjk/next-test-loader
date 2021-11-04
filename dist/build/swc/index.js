@@ -4,6 +4,7 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.minify = minify;
 exports.minifySync = minifySync;
+exports.bundle = bundle;
 const fs = require('fs');
 const { platform , arch  } = require('os');
 const path = require('path');
@@ -75,6 +76,9 @@ async function minify(src, opts) {
 function minifySync(src, opts) {
     return bindings.minifySync(toBuffer(src), toBuffer(opts !== null && opts !== void 0 ? opts : {
     }));
+}
+async function bundle(options) {
+    return bindings.bundle(toBuffer(options));
 }
 module.exports.transform = transform;
 module.exports.transformSync = transformSync;
