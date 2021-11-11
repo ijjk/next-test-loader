@@ -3,42 +3,15 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 exports.default = middlewareRSCLoader;
-var _utils = require("./utils");
 var _stringifyRequest = require("../../stringify-request");
-const fallbackDocumentPage = `
-import { Html, Head, Main, NextScript } from 'next/document'
-
-function Document() {
-  return (
-    createElement(Html, null, 
-      createElement(Head),
-      createElement('body', null,
-        createElement(Main),
-        createElement(NextScript),
-      )
-    )
-  )
-}
-`;
-function hasModule(path) {
-    let has;
-    try {
-        has = !!require.resolve(path);
-    } catch (_) {
-        has = false;
-    }
-    return has;
-}
 async function middlewareRSCLoader() {
-    const { absolutePagePath , basePath , isServerComponent: isServerComponentQuery , assetPrefix , buildId ,  } = this.getOptions();
+    const { absolutePagePath , absoluteAppPath , absoluteDocumentPath , basePath , isServerComponent: isServerComponentQuery , assetPrefix , buildId ,  } = this.getOptions();
     const isServerComponent = isServerComponentQuery === 'true';
     const stringifiedAbsolutePagePath = (0, _stringifyRequest).stringifyRequest(this, absolutePagePath);
-    const stringifiedAbsoluteDocumentPath = (0, _utils).getStringifiedAbsolutePath(this, './pages/_document');
-    const stringifiedAbsoluteAppPath = (0, _utils).getStringifiedAbsolutePath(this, './pages/_app');
-    const hasProvidedAppPage = hasModule(this.utils.absolutify(this.rootContext, './pages/_app'));
-    const hasProvidedDocumentPage = hasModule(this.utils.absolutify(this.rootContext, './pages/_document'));
-    let appDefinition = `const App = require(${hasProvidedAppPage ? stringifiedAbsoluteAppPath : JSON.stringify('next/dist/pages/_app')}).default`;
-    let documentDefinition = hasProvidedDocumentPage ? `const Document = require(${stringifiedAbsoluteDocumentPath}).default` : fallbackDocumentPage;
+    const stringifiedAbsoluteAppPath = (0, _stringifyRequest).stringifyRequest(this, absoluteAppPath);
+    const stringifiedAbsoluteDocumentPath = (0, _stringifyRequest).stringifyRequest(this, absoluteDocumentPath);
+    let appDefinition = `const App = require(${stringifiedAbsoluteAppPath}).default`;
+    let documentDefinition = `const Document = require(${stringifiedAbsoluteDocumentPath}).default`;
     const transformed = `
         import { adapter } from 'next/dist/server/web/adapter'
 
@@ -51,9 +24,9 @@ async function middlewareRSCLoader() {
         import { renderToReadableStream } from 'next/dist/compiled/react-server-dom-webpack/writer.browser.server'
         import { createFromReadableStream } from 'next/dist/compiled/react-server-dom-webpack'` : ''}
 
-        ${documentDefinition}
         ${appDefinition}
-
+        ${documentDefinition}
+        
         const {
           default: Page,
           config,
@@ -64,14 +37,10 @@ async function middlewareRSCLoader() {
 
         const buildManifest = self.__BUILD_MANIFEST
         const reactLoadableManifest = self.__REACT_LOADABLE_MANIFEST
-        const rscManifest = self._middleware_rsc_manifest
+        const rscManifest = self.__RSC_MANIFEST
 
         if (typeof Page !== 'function') {
           throw new Error('Your page must export a \`default\` component')
-        }
-
-        function renderError(err, status) {
-          return new Response(err.toString(), {status})
         }
 
         function wrapReadable(readable) {
@@ -110,17 +79,12 @@ async function middlewareRSCLoader() {
             { fallback: null },
             createElement(FlightWrapper, props)
           )
-        }` : `
-        const Component = Page`}
+        }` : `const Component = Page`}
 
-        function render(request) {
+        async function render(request) {
           const url = request.nextUrl
-          const query = Object.fromEntries(url.searchParams)
-
-          if (Document.getInitialProps) {
-            const err = new Error('Document.getInitialProps is not supported with server components, please remove it from pages/_document')
-            return renderError(err, 500)
-          }
+          const { pathname, searchParams } = url
+          const query = Object.fromEntries(searchParams)
 
           // Preflight request
           if (request.method === 'HEAD') {
@@ -138,9 +102,9 @@ async function middlewareRSCLoader() {
               wrapReadable(
                 renderFlight({
                   router: {
-                    route: url.pathname,
-                    asPath: url.pathname,
-                    pathname: url.pathname,
+                    route: pathname,
+                    asPath: pathname,
+                    pathname: pathname,
                     query,
                   }
                 })
@@ -177,18 +141,27 @@ async function middlewareRSCLoader() {
           const writer = transformStream.writable.getWriter()
           const encoder = new TextEncoder()
 
-          renderToHTML(
-            { url: url.pathname },
-            {},
-            url.pathname,
-            query,
-            renderOpts
-          ).then(result => {
+          try {
+            const result = await renderToHTML(
+              { url: pathname },
+              {},
+              pathname,
+              query,
+              renderOpts
+            )
             result.pipe({
               write: str => writer.write(encoder.encode(str)),
               end: () => writer.close()
             })
-          })
+          } catch (err) {
+            return new Response(
+              (err || 'An error occurred while rendering ' + pathname + '.').toString(),
+              {
+                status: 500,
+                headers: { 'x-middleware-ssr': '1' }
+              }
+            )
+          }
 
           return new Response(transformStream.readable, {
             headers: { 'x-middleware-ssr': '1' }

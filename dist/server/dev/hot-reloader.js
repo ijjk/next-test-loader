@@ -139,6 +139,8 @@ class HotReloader {
     constructor(dir, { config , pagesDir , buildId , previewProps , rewrites  }){
         this.clientError = null;
         this.serverError = null;
+        this.pagesMapping = {
+        };
         this.buildId = buildId;
         this.dir = dir;
         this.middlewares = [];
@@ -152,9 +154,7 @@ class HotReloader {
         this.previewProps = previewProps;
         this.rewrites = rewrites;
         this.hotReloaderSpan = (0, _trace).trace('hot-reloader', undefined, {
-            attrs: {
-                version: "12.0.3-canary.8"
-            }
+            version: "12.0.4-canary.4"
         });
         // Ensure the hotReloaderSpan is flushed immediately as it's the parentSpan for all processing
         // of the current `next dev` invocation.
@@ -243,10 +243,10 @@ class HotReloader {
                     (0, _findPageFile).findPageFile(this.pagesDir, '/_document', this.config.pageExtensions), 
                 ])
             );
-            const pages = webpackConfigSpan.traceChild('create-pages-mapping').traceFn(()=>(0, _entries).createPagesMapping(pagePaths.filter((i)=>i !== null
+            this.pagesMapping = webpackConfigSpan.traceChild('create-pages-mapping').traceFn(()=>(0, _entries).createPagesMapping(pagePaths.filter((i)=>i !== null
                 ), this.config.pageExtensions, true, this.hasServerComponents)
             );
-            const entrypoints = webpackConfigSpan.traceChild('create-entrypoints').traceFn(()=>(0, _entries).createEntrypoints(pages, 'server', this.buildId, this.previewProps, this.config, [])
+            const entrypoints = webpackConfigSpan.traceChild('create-entrypoints').traceFn(()=>(0, _entries).createEntrypoints(this.pagesMapping, 'server', this.buildId, this.previewProps, this.config, [])
             );
             return webpackConfigSpan.traceChild('generate-webpack-config').traceAsyncFn(()=>Promise.all([
                     (0, _webpackConfig).default(this.dir, {
@@ -333,9 +333,11 @@ class HotReloader {
                 const isServerWebCompilation = config.name === 'server-web';
                 await Promise.all(Object.keys(_onDemandEntryHandler.entries).map(async (pageKey)=>{
                     const isClientKey = pageKey.startsWith('client');
+                    const isServerWebKey = pageKey.startsWith('server-web');
                     if (isClientKey !== isClientCompilation) return;
-                    const page = pageKey.slice(isClientKey ? 'client'.length : 'server'.length);
-                    const isMiddleware = page.match(_constants.MIDDLEWARE_ROUTE);
+                    if (isServerWebKey !== isServerWebCompilation) return;
+                    const page = pageKey.slice(isClientKey ? 'client'.length : isServerWebKey ? 'server-web'.length : 'server'.length);
+                    const isMiddleware = !!page.match(_constants.MIDDLEWARE_ROUTE);
                     if (isClientCompilation && page.match(_constants.API_ROUTE) && !isMiddleware) {
                         return;
                     }
@@ -350,8 +352,10 @@ class HotReloader {
                         delete _onDemandEntryHandler.entries[pageKey];
                         return;
                     }
+                    const isCustomError = (0, _utils).isCustomErrorPage(page);
+                    const isReserved = (0, _utils).isReservedPage(page);
                     const isServerComponent = this.hasServerComponents && (0, _utils).isFlightPage(this.config, absolutePagePath);
-                    if (isServerCompilation && this.webServerRuntime && !isApiRoute) {
+                    if (isServerCompilation && this.webServerRuntime && !isApiRoute && !isCustomError) {
                         return;
                     }
                     _onDemandEntryHandler.entries[pageKey].status = _onDemandEntryHandler.BUILDING;
@@ -376,17 +380,19 @@ class HotReloader {
                             _middlewarePlugin.ssrEntries.set(bundlePath, {
                                 requireFlightManifest: true
                             });
-                        } else if (this.webServerRuntime && !(page === '/_app' || page === '/_error' || page === '/_document')) {
+                        } else if (this.webServerRuntime && !isReserved && !isCustomError) {
                             _middlewarePlugin.ssrEntries.set(bundlePath, {
                                 requireFlightManifest: false
                             });
                         }
                     } else if (isServerWebCompilation) {
-                        if (!(page === '/_app' || page === '/_error' || page === '/_document')) {
+                        if (!isReserved) {
                             entrypoints[bundlePath] = (0, _entries).finalizeEntrypoint({
                                 name: '[name].js',
                                 value: `next-middleware-ssr-loader?${(0, _querystring).stringify({
                                     page,
+                                    absoluteAppPath: this.pagesMapping['/_app'],
+                                    absoluteDocumentPath: this.pagesMapping['/_document'],
                                     absolutePagePath,
                                     isServerComponent,
                                     buildId: this.buildId,

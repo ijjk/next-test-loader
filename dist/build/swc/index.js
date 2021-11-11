@@ -46,7 +46,7 @@ if (!bindings) {
 }
 async function transform(src, options) {
     var ref;
-    const isModule = typeof src !== 'string';
+    const isModule = typeof src !== 'string' && !Buffer.isBuffer(src);
     options = options || {
     };
     if (options === null || options === void 0 ? void 0 : (ref = options.jsc) === null || ref === void 0 ? void 0 : ref.parser) {
@@ -57,7 +57,7 @@ async function transform(src, options) {
 }
 function transformSync(src, options) {
     var ref;
-    const isModule = typeof src !== 'string';
+    const isModule = typeof src !== 'string' && !Buffer.isBuffer(src);
     options = options || {
     };
     if (options === null || options === void 0 ? void 0 : (ref = options.jsc) === null || ref === void 0 ? void 0 : ref.parser) {

@@ -18,6 +18,8 @@ exports.getRawPageExtensions = getRawPageExtensions;
 exports.isFlightPage = isFlightPage;
 exports.getUnresolvedModuleFromError = getUnresolvedModuleFromError;
 exports.copyTracedFiles = copyTracedFiles;
+exports.isReservedPage = isReservedPage;
+exports.isCustomErrorPage = isCustomErrorPage;
 require("../server/node-polyfill-fetch");
 var _chalk = _interopRequireDefault(require("chalk"));
 var _gzipSize = _interopRequireDefault(require("next/dist/compiled/gzip-size"));
@@ -72,6 +74,7 @@ function _interopRequireWildcard(obj) {
     }
 }
 const { builtinModules  } = require('module');
+const RESERVED_PAGE = /^\/(_app|_error|_document|api(\/|$))/;
 const fileGzipStats = {
 };
 const fsStatGzip = (file)=>{
@@ -89,27 +92,27 @@ const fsStat = (file)=>{
     return fileStats[file] = fileSize(file);
 };
 function collectPages(directory, pageExtensions) {
-    return((0, _recursiveReaddir).recursiveReadDir(directory, new RegExp(`\\.(?:${pageExtensions.join('|')})$`)));
+    return (0, _recursiveReaddir).recursiveReadDir(directory, new RegExp(`\\.(?:${pageExtensions.join('|')})$`));
 }
 async function printTreeView(list, pageInfos, serverless, { distPath , buildId , pagesDir , pageExtensions , buildManifest , useStatic404 , gzipSize =true  }) {
     const getPrettySize = (_size)=>{
         const size = (0, _prettyBytes).default(_size);
         // green for 0-130kb
-        if (_size < 130 * 1000) return(_chalk.default.green(size));
+        if (_size < 130 * 1000) return _chalk.default.green(size);
         // yellow for 130-170kb
-        if (_size < 170 * 1000) return(_chalk.default.yellow(size));
+        if (_size < 170 * 1000) return _chalk.default.yellow(size);
         // red for >= 170kb
-        return(_chalk.default.red.bold(size));
+        return _chalk.default.red.bold(size);
     };
     const MIN_DURATION = 300;
     const getPrettyDuration = (_duration)=>{
         const duration = `${_duration} ms`;
         // green for 300-1000ms
-        if (_duration < 1000) return(_chalk.default.green(duration));
+        if (_duration < 1000) return _chalk.default.green(duration);
         // yellow for 1000-2000ms
-        if (_duration < 2000) return(_chalk.default.yellow(duration));
+        if (_duration < 2000) return _chalk.default.yellow(duration);
         // red for >= 2000ms
-        return(_chalk.default.red.bold(duration));
+        return _chalk.default.red.bold(duration);
     };
     const getCleanName = (fileName)=>fileName// Trim off `static/`
         .replace(/^static\//, '')// Re-add `static/` for root files
@@ -771,26 +774,19 @@ function getUnresolvedModuleFromError(error) {
     return builtinModules.find((item)=>item === moduleName
     );
 }
-async function copyTracedFiles(distDir, pageKeys, tracingRoot) {
+async function copyTracedFiles(dir, distDir, pageKeys, tracingRoot, serverConfig) {
     const outputPath = _path.default.join(distDir, 'standalone');
     const copiedFiles = new Set();
     await (0, _recursiveDelete).recursiveDelete(outputPath);
-    for (const page of pageKeys){
-        const pageFile = _path.default.join(distDir, 'server/pages', `${(0, _normalizePagePath).normalizePagePath(page)}.js`);
-        const pageTraceFile = `${pageFile}.nft.json`;
-        const pageFileOutput = _path.default.join(outputPath, _path.default.relative(tracingRoot, pageFile));
-        const pageTrace = JSON.parse(await _fs.promises.readFile(pageTraceFile, 'utf8'));
-        await _fs.promises.mkdir(_path.default.dirname(pageFileOutput), {
-            recursive: true
-        });
-        await _fs.promises.copyFile(pageFile, pageFileOutput);
+    async function handleTraceFiles(traceFilePath) {
+        const traceData = JSON.parse(await _fs.promises.readFile(traceFilePath, 'utf8'));
         const copySema = new _asyncSema.Sema(10, {
-            capacity: pageTrace.files.length
+            capacity: traceData.files.length
         });
-        const pageDir = _path.default.dirname(pageFile);
-        await Promise.all(pageTrace.files.map(async (relativeFile)=>{
+        const traceFileDir = _path.default.dirname(traceFilePath);
+        await Promise.all(traceData.files.map(async (relativeFile)=>{
             await copySema.acquire();
-            const tracedFilePath = _path.default.join(pageDir, relativeFile);
+            const tracedFilePath = _path.default.join(traceFileDir, relativeFile);
             const fileOutputPath = _path.default.join(outputPath, _path.default.relative(tracingRoot, tracedFilePath));
             if (!copiedFiles.has(fileOutputPath)) {
                 copiedFiles.add(fileOutputPath);
@@ -809,6 +805,55 @@ async function copyTracedFiles(distDir, pageKeys, tracingRoot) {
             await copySema.release();
         }));
     }
+    for (const page of pageKeys){
+        const pageFile = _path.default.join(distDir, 'server', 'pages', `${(0, _normalizePagePath).normalizePagePath(page)}.js`);
+        const pageTraceFile = `${pageFile}.nft.json`;
+        await handleTraceFiles(pageTraceFile);
+    }
+    await handleTraceFiles(_path.default.join(distDir, 'next-server.js.nft.json'));
+    const serverOutputPath = _path.default.join(outputPath, _path.default.relative(tracingRoot, dir), 'server.js');
+    await _fs.promises.writeFile(serverOutputPath, `
+process.env.NODE_ENV = 'production'
+process.chdir(__dirname)
+const NextServer = require('next/dist/server/next-server').default
+const http = require('http')
+const path = require('path')
+
+const nextServer = new NextServer({
+  dir: path.join(__dirname),
+  dev: false,
+  conf: ${JSON.stringify({
+        ...serverConfig,
+        distDir: `./${_path.default.relative(dir, distDir)}`
+    })},
+})
+
+const handler = nextServer.getRequestHandler()
+
+const server = http.createServer(async (req, res) => {
+  try {
+    await handler(req, res)
+  } catch (err) {
+    console.error(err);
+    res.statusCode = 500
+    res.end('internal server error')
+  }
+})
+const currentPort = process.env.PORT || 3000
+server.listen(currentPort, (err) => {
+  if (err) {
+    console.error("Failed to start server", err)
+    process.exit(1)
+  }
+  console.log("Listening on port", currentPort)
+})
+    `);
+}
+function isReservedPage(page) {
+    return RESERVED_PAGE.test(page);
+}
+function isCustomErrorPage(page) {
+    return page === '/404' || page === '/500';
 }
 
 //# sourceMappingURL=utils.js.map

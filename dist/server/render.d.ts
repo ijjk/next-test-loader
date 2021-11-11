@@ -5,6 +5,7 @@ import React from 'react';
 import type { __ApiPreviewProps } from './api-utils';
 import type { FontManifest } from './font-utils';
 import type { LoadComponentsReturnType } from './load-components';
+import { NextParsedUrlQuery } from './request-meta';
 import { DomainLocale } from './config';
 import RenderResult from './render-result';
 export declare type RenderOptsPartial = {
@@ -51,5 +52,5 @@ export declare type RenderOptsPartial = {
     customServer?: boolean;
 };
 export declare type RenderOpts = LoadComponentsReturnType & RenderOptsPartial;
-export declare function renderToHTML(req: IncomingMessage, res: ServerResponse, pathname: string, query: ParsedUrlQuery, renderOpts: RenderOpts): Promise<RenderResult | null>;
+export declare function renderToHTML(req: IncomingMessage, res: ServerResponse, pathname: string, query: NextParsedUrlQuery, renderOpts: RenderOpts): Promise<RenderResult | null>;
 export declare function useMaybeDeferContent(_name: string, contentFn: () => JSX.Element): [boolean, JSX.Element];

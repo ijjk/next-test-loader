@@ -112,6 +112,7 @@ export declare type NextConfig = {
     crossOrigin?: false | 'anonymous' | 'use-credentials';
     swcMinify?: boolean;
     experimental?: {
+        styledComponents?: boolean;
         swcMinify?: boolean;
         cpus?: number;
         sharedPool?: boolean;

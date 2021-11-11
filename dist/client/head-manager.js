@@ -45,7 +45,7 @@ function updateElements(type, components) {
     }
     const headCount = Number(headCountEl.content);
     const oldTags = [];
-    for(let i = 0, j = headCountEl.previousElementSibling; i < headCount; i++, j = j.previousElementSibling){
+    for(let i = 0, j = headCountEl.previousElementSibling; i < headCount; i++, j = (j === null || j === void 0 ? void 0 : j.previousElementSibling) || null){
         var ref;
         if ((j === null || j === void 0 ? void 0 : (ref = j.tagName) === null || ref === void 0 ? void 0 : ref.toLowerCase()) === type) {
             oldTags.push(j);
@@ -61,8 +61,10 @@ function updateElements(type, components) {
         }
         return true;
     });
-    oldTags.forEach((t)=>t.parentNode.removeChild(t)
-    );
+    oldTags.forEach((t)=>{
+        var ref;
+        return (ref = t.parentNode) === null || ref === void 0 ? void 0 : ref.removeChild(t);
+    });
     newTags.forEach((t)=>headEl.insertBefore(t, headCountEl)
     );
     headCountEl.content = (headCount - oldTags.length + newTags.length).toString();

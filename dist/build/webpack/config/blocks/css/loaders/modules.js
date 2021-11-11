@@ -41,7 +41,6 @@ function getCssModuleLoader(ctx, postCssPlugins, preProcessors = []) {
                 // Disallow global style exports so we can code-split CSS and
                 // not worry about loading order.
                 mode: 'pure',
-                // noop
                 // Generate a friendly production-ready name so it's
                 // reasonably understandable. The same name is used for
                 // development.

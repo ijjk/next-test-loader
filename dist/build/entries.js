@@ -44,6 +44,7 @@ function createPagesMapping(pagePaths, extensions, isDev, hasServerComponents) {
     // we alias these in development and allow webpack to
     // allow falling back to the correct source file so
     // that HMR can work properly when a file is added/removed
+    const documentPage = `_document${hasServerComponents ? '-web' : ''}`;
     if (isDev) {
         pages['/_app'] = `${_constants.PAGES_DIR_ALIAS}/_app`;
         pages['/_error'] = `${_constants.PAGES_DIR_ALIAS}/_error`;
@@ -51,7 +52,7 @@ function createPagesMapping(pagePaths, extensions, isDev, hasServerComponents) {
     } else {
         pages['/_app'] = pages['/_app'] || 'next/dist/pages/_app';
         pages['/_error'] = pages['/_error'] || 'next/dist/pages/_error';
-        pages['/_document'] = pages['/_document'] || 'next/dist/pages/_document';
+        pages['/_document'] = pages['/_document'] || `next/dist/pages/${documentPage}`;
     }
     return pages;
 }
@@ -91,6 +92,8 @@ function createEntrypoints(pages, target, buildId, previewMode, config, loadedEn
         const clientBundlePath = _path.posix.join('pages', bundleFile);
         const serverBundlePath = _path.posix.join('pages', bundleFile);
         const isLikeServerless = (0, _config).isTargetLikeServerless(target);
+        const isReserved = (0, _utils).isReservedPage(page);
+        const isCustomError = (0, _utils).isCustomErrorPage(page);
         const isFlight = (0, _utils).isFlightPage(config, absolutePagePath);
         const webServerRuntime = !!config.experimental.concurrentFeatures;
         if (page.match(_constants.MIDDLEWARE_ROUTE)) {
@@ -101,7 +104,7 @@ function createEntrypoints(pages, target, buildId, previewMode, config, loadedEn
             client[clientBundlePath] = `next-middleware-loader?${(0, _querystring).stringify(loaderOpts)}!`;
             return;
         }
-        if (webServerRuntime && !(page === '/_app' || page === '/_error' || page === '/_document') && !isApiRoute) {
+        if (webServerRuntime && !isReserved && !isCustomError && !isApiRoute) {
             _middlewarePlugin.ssrEntries.set(clientBundlePath, {
                 requireFlightManifest: isFlight
             });
@@ -109,6 +112,8 @@ function createEntrypoints(pages, target, buildId, previewMode, config, loadedEn
                 name: '[name].js',
                 value: `next-middleware-ssr-loader?${(0, _querystring).stringify({
                     page,
+                    absoluteAppPath: pages['/_app'],
+                    absoluteDocumentPath: pages['/_document'],
                     absolutePagePath,
                     isServerComponent: isFlight,
                     buildId,
@@ -127,7 +132,7 @@ function createEntrypoints(pages, target, buildId, previewMode, config, loadedEn
             };
             server[serverBundlePath] = `next-serverless-loader?${(0, _querystring).stringify(serverlessLoaderOptions)}!`;
         } else if (isApiRoute || target === 'server') {
-            if (!webServerRuntime || page === '/_document' || page === '/_app' || page === '/_error') {
+            if (!webServerRuntime || isReserved || isCustomError) {
                 server[serverBundlePath] = [
                     absolutePagePath
                 ];

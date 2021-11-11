@@ -64,7 +64,7 @@ class TraceEntryPointsPlugin {
     }
     // Here we output all traced assets and webpack chunks to a
     // ${page}.js.nft.json file
-    async createTraceAssets(compilation, assets, span, readlink, stat, doResolve) {
+    async createTraceAssets(compilation, assets, span, readlink, stat) {
         const outputPath = compilation.outputOptions.path;
         await span.traceChild('create-trace-assets').traceAsyncFn(async ()=>{
             const entryFilesMap = new Map();
@@ -112,11 +112,6 @@ class TraceEntryPointsPlugin {
                 },
                 readlink,
                 stat,
-                // resolve: doResolve
-                //   ? (id, parent, job, isCjs) => {
-                //       return doResolve(id, parent, job, !isCjs)
-                //     }
-                //   : undefined,
                 ignore: [
                     ...TRACE_IGNORES,
                     ...this.excludeFiles
@@ -320,7 +315,7 @@ class TraceEntryPointsPlugin {
                     // @ts-ignore TODO: Remove ignore when webpack 5 is stable
                     stage: _webpack.webpack.Compilation.PROCESS_ASSETS_STAGE_SUMMARIZE
                 }, (assets, callback)=>{
-                    this.createTraceAssets(compilation, assets, traceEntrypointsPluginSpan, readlink, stat, doResolve).then(()=>callback()
+                    this.createTraceAssets(compilation, assets, traceEntrypointsPluginSpan, readlink, stat).then(()=>callback()
                     ).catch((err)=>callback(err)
                     );
                 });

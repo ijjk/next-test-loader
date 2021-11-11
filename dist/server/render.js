@@ -5,7 +5,7 @@ Object.defineProperty(exports, "__esModule", {
 exports.renderToHTML = renderToHTML;
 exports.useMaybeDeferContent = useMaybeDeferContent;
 var _react = _interopRequireDefault(require("react"));
-var ReactDOMServer = _interopRequireWildcard(require("react-dom/server"));
+var _server = _interopRequireDefault(require("react-dom/server"));
 var _styledJsx = require("styled-jsx");
 var _constants = require("../lib/constants");
 var _isSerializableProps = require("../lib/is-serializable-props");
@@ -21,6 +21,7 @@ var _isDynamic = require("../shared/lib/router/utils/is-dynamic");
 var _utils = require("../shared/lib/utils");
 var _denormalizePagePath = require("./denormalize-page-path");
 var _normalizePagePath = require("./normalize-page-path");
+var _requestMeta = require("./request-meta");
 var _loadCustomRoutes = require("../lib/load-custom-routes");
 var _renderResult = _interopRequireDefault(require("./render-result"));
 var _isError = _interopRequireDefault(require("../lib/is-error"));
@@ -28,29 +29,6 @@ function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
         default: obj
     };
-}
-function _interopRequireWildcard(obj) {
-    if (obj && obj.__esModule) {
-        return obj;
-    } else {
-        var newObj = {
-        };
-        if (obj != null) {
-            for(var key in obj){
-                if (Object.prototype.hasOwnProperty.call(obj, key)) {
-                    var desc = Object.defineProperty && Object.getOwnPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : {
-                    };
-                    if (desc.get || desc.set) {
-                        Object.defineProperty(newObj, key, desc);
-                    } else {
-                        newObj[key] = obj[key];
-                    }
-                }
-            }
-        }
-        newObj.default = obj;
-        return newObj;
-    }
 }
 let Writable;
 let Buffer;
@@ -273,7 +251,7 @@ async function renderToHTML(req, res, pathname, query, renderOpts) {
     const routerIsReady = !!(getServerSideProps || hasPageGetInitialProps || !defaultAppGetInitialProps && !isSSG);
     const router = new ServerRouter(pathname, query, asPath, {
         isFallback: isFallback
-    }, routerIsReady, basePath, renderOpts.locale, renderOpts.locales, renderOpts.defaultLocale, renderOpts.domainLocales, isPreview, req.__nextIsLocaleDomain);
+    }, routerIsReady, basePath, renderOpts.locale, renderOpts.locales, renderOpts.defaultLocale, renderOpts.domainLocales, isPreview, (0, _requestMeta).getRequestMeta(req, '__nextIsLocaleDomain'));
     const jsxStyleRegistry = (0, _styledJsx).createStyleRegistry();
     const ctx = {
         err,
@@ -286,7 +264,7 @@ async function renderToHTML(req, res, pathname, query, renderOpts) {
         locales: renderOpts.locales,
         defaultLocale: renderOpts.defaultLocale,
         AppTree: (props)=>{
-            return(/*#__PURE__*/ _react.default.createElement(AppContainer, null, /*#__PURE__*/ _react.default.createElement(App, Object.assign({
+            return(/*#__PURE__*/ _react.default.createElement(AppContainerWithIsomorphicFiberStructure, null, /*#__PURE__*/ _react.default.createElement(App, Object.assign({
             }, props, {
                 Component: Component,
                 router: router
@@ -344,6 +322,17 @@ async function renderToHTML(req, res, pathname, query, renderOpts) {
             registry: jsxStyleRegistry
         }, children)))))
     ;
+    // The `useId` API uses the path indexes to generate an ID for each node.
+    // To guarantee the match of hydration, we need to ensure that the structure
+    // of wrapper nodes is isomorphic in server and client.
+    // TODO: With `enhanceApp` and `enhanceComponents` options, this approach may
+    // not be useful.
+    // https://github.com/facebook/react/pull/22644
+    const Noop = ()=>null
+    ;
+    const AppContainerWithIsomorphicFiberStructure = ({ children  })=>{
+        return(/*#__PURE__*/ _react.default.createElement(_react.default.Fragment, null, /*#__PURE__*/ _react.default.createElement(Noop, null), /*#__PURE__*/ _react.default.createElement(AppContainer, null, /*#__PURE__*/ _react.default.createElement(_react.default.Fragment, null, dev ? /*#__PURE__*/ _react.default.createElement(_react.default.Fragment, null, children, /*#__PURE__*/ _react.default.createElement(Noop, null)) : children, /*#__PURE__*/ _react.default.createElement(Noop, null)))));
+    };
     props = await (0, _utils).loadGetInitialProps(App, {
         AppTree: ctx.AppTree,
         Component,
@@ -588,6 +577,16 @@ async function renderToHTML(req, res, pathname, query, renderOpts) {
             };
         }
     }
+    const appWrappers = [];
+    const getWrappedApp = (app)=>{
+        // Prevent wrappers from reading/writing props by rendering inside an
+        // opaque component. Wrappers should use context instead.
+        const InnerApp = ()=>app
+        ;
+        return(/*#__PURE__*/ _react.default.createElement(AppContainerWithIsomorphicFiberStructure, null, appWrappers.reduce((innerContent, fn)=>{
+            return fn(innerContent);
+        }, /*#__PURE__*/ _react.default.createElement(InnerApp, null))));
+    };
     /**
    * Rules of Static & Dynamic HTML:
    *
@@ -602,11 +601,14 @@ async function renderToHTML(req, res, pathname, query, renderOpts) {
    * coalescing, and ISR continue working as intended.
    */ const generateStaticHTML = supportsDynamicHTML !== true;
     const renderDocument = async ()=>{
-        if (Document.getInitialProps) {
+        if (process.browser && Document.getInitialProps) {
+            throw new Error('`getInitialProps` in Document component is not supported with `concurrentFeatures` enabled.');
+        }
+        if (!process.browser && Document.getInitialProps) {
             const renderPage = (options = {
             })=>{
                 if (ctx.err && ErrorDebug) {
-                    const html = ReactDOMServer.renderToString(/*#__PURE__*/ _react.default.createElement(ErrorDebug, {
+                    const html = _server.default.renderToString(/*#__PURE__*/ _react.default.createElement(ErrorDebug, {
                         error: ctx.err
                     }));
                     return {
@@ -618,7 +620,7 @@ async function renderToHTML(req, res, pathname, query, renderOpts) {
                     throw new Error(`'router' and 'Component' can not be returned in getInitialProps from _app.js https://nextjs.org/docs/messages/cant-override-next-props`);
                 }
                 const { App: EnhancedApp , Component: EnhancedComponent  } = enhanceComponents(options, App, Component);
-                const html = ReactDOMServer.renderToString(/*#__PURE__*/ _react.default.createElement(AppContainer, null, /*#__PURE__*/ _react.default.createElement(EnhancedApp, Object.assign({
+                const html = _server.default.renderToString(getWrappedApp(/*#__PURE__*/ _react.default.createElement(EnhancedApp, Object.assign({
                     Component: EnhancedComponent,
                     router: router
                 }, props))));
@@ -639,31 +641,48 @@ async function renderToHTML(req, res, pathname, query, renderOpts) {
                 throw new Error(message);
             }
             return {
-                bodyResult: piperFromArray([
-                    docProps.html
-                ]),
+                bodyResult: ()=>piperFromArray([
+                        docProps.html
+                    ])
+                ,
                 documentElement: (htmlProps)=>/*#__PURE__*/ _react.default.createElement(Document, Object.assign({
                     }, htmlProps, docProps))
                 ,
+                useMainContent: (fn)=>{
+                    if (fn) {
+                        throw new Error('The `children` property is not supported by non-functional custom Document components');
+                    }
+                    // @ts-ignore
+                    return(/*#__PURE__*/ _react.default.createElement("next-js-internal-body-render-target", null));
+                },
                 head: docProps.head,
                 headTags: await headTags(documentCtx),
                 styles: docProps.styles
             };
         } else {
-            const content = ctx.err && ErrorDebug ? /*#__PURE__*/ _react.default.createElement(ErrorDebug, {
-                error: ctx.err
-            }) : /*#__PURE__*/ _react.default.createElement(AppContainer, null, /*#__PURE__*/ _react.default.createElement(App, Object.assign({
-            }, props, {
-                Component: Component,
-                router: router
-            })));
-            const bodyResult = concurrentFeatures ? process.browser ? await renderToReadableStream(content) : await renderToNodeStream(content, generateStaticHTML) : piperFromArray([
-                ReactDOMServer.renderToString(content)
-            ]);
+            const bodyResult = async ()=>{
+                const content = ctx.err && ErrorDebug ? /*#__PURE__*/ _react.default.createElement(ErrorDebug, {
+                    error: ctx.err
+                }) : getWrappedApp(/*#__PURE__*/ _react.default.createElement(App, Object.assign({
+                }, props, {
+                    Component: Component,
+                    router: router
+                })));
+                return concurrentFeatures ? process.browser ? await renderToReadableStream(content) : await renderToNodeStream(content, generateStaticHTML) : piperFromArray([
+                    _server.default.renderToString(content)
+                ]);
+            };
             return {
                 bodyResult,
                 documentElement: ()=>Document()
                 ,
+                useMainContent: (fn)=>{
+                    if (fn) {
+                        appWrappers.push(fn);
+                    }
+                    // @ts-ignore
+                    return(/*#__PURE__*/ _react.default.createElement("next-js-internal-body-render-target", null));
+                },
                 head,
                 headTags: [],
                 styles: jsxStyleRegistry.styles()
@@ -717,7 +736,7 @@ async function renderToHTML(req, res, pathname, query, renderOpts) {
         buildManifest: filteredBuildManifest,
         docComponentsRendered,
         dangerousAsPath: router.asPath,
-        canonicalBase: !renderOpts.ampPath && req.__nextStrippedLocale ? `${renderOpts.canonicalBase || ''}/${renderOpts.locale}` : renderOpts.canonicalBase,
+        canonicalBase: !renderOpts.ampPath && (0, _requestMeta).getRequestMeta(req, '__nextStrippedLocale') ? `${renderOpts.canonicalBase || ''}/${renderOpts.locale}` : renderOpts.canonicalBase,
         ampPath,
         inAmpMode,
         isDevelopment: !!dev,
@@ -734,13 +753,37 @@ async function renderToHTML(req, res, pathname, query, renderOpts) {
         head: documentResult.head,
         headTags: documentResult.headTags,
         styles: documentResult.styles,
+        useMainContent: documentResult.useMainContent,
         useMaybeDeferContent
     };
-    const documentHTML = ReactDOMServer.renderToStaticMarkup(/*#__PURE__*/ _react.default.createElement(_ampContext.AmpStateContext.Provider, {
+    const document = /*#__PURE__*/ _react.default.createElement(_ampContext.AmpStateContext.Provider, {
         value: ampState
     }, /*#__PURE__*/ _react.default.createElement(_utils.HtmlContext.Provider, {
         value: htmlProps
-    }, documentResult.documentElement(htmlProps))));
+    }, documentResult.documentElement(htmlProps)));
+    let documentHTML;
+    if (process.browser) {
+        // There is no `renderToStaticMarkup` exposed in the web environment, use
+        // blocking `renderToReadableStream` to get the similar result.
+        let result = '';
+        const readable = _server.default.renderToReadableStream(document, {
+            onError: (e)=>{
+                throw e;
+            }
+        });
+        const reader = readable.getReader();
+        const decoder = new TextDecoder();
+        while(true){
+            const { done , value  } = await reader.read();
+            if (done) {
+                break;
+            }
+            result += typeof value === 'string' ? value : decoder.decode(value);
+        }
+        documentHTML = result;
+    } else {
+        documentHTML = _server.default.renderToStaticMarkup(document);
+    }
     if (process.env.NODE_ENV !== 'production') {
         const nonRenderedComponents = [];
         const expectedDocComponents = [
@@ -761,18 +804,18 @@ async function renderToHTML(req, res, pathname, query, renderOpts) {
             warn(`Your custom Document (pages/_document) did not render all the required subcomponent${plural}.\n` + `Missing component${plural}: ${missingComponentList}\n` + 'Read how to fix here: https://nextjs.org/docs/messages/missing-document-component');
         }
     }
-    const renderTargetIdx = documentHTML.indexOf(_constants1.BODY_RENDER_TARGET);
+    const [renderTargetPrefix, renderTargetSuffix] = documentHTML.split(/<next-js-internal-body-render-target><\/next-js-internal-body-render-target>/);
     const prefix = [];
     prefix.push('<!DOCTYPE html>');
-    prefix.push(documentHTML.substring(0, renderTargetIdx));
+    prefix.push(renderTargetPrefix);
     if (inAmpMode) {
         prefix.push('<!-- __NEXT_DATA__ -->');
     }
     let pipers = [
         piperFromArray(prefix),
-        documentResult.bodyResult,
+        await documentResult.bodyResult(),
         piperFromArray([
-            documentHTML.substring(renderTargetIdx + _constants1.BODY_RENDER_TARGET.length), 
+            renderTargetSuffix
         ]), 
     ];
     const postProcessors = (generateStaticHTML ? [
@@ -911,7 +954,7 @@ function renderToNodeStream(element, generateStaticHTML) {
                 });
             }
         };
-        const { abort , pipe  } = ReactDOMServer.renderToPipeableStream(element, {
+        const { abort , pipe  } = _server.default.renderToPipeableStream(element, {
             onError (error) {
                 if (!resolved) {
                     resolved = true;
@@ -936,7 +979,7 @@ function renderToReadableStream(element) {
     return (res, next)=>{
         let bufferedString = '';
         let shellCompleted = false;
-        const readable = ReactDOMServer.renderToReadableStream(element, {
+        const readable = _server.default.renderToReadableStream(element, {
             onCompleteShell () {
                 shellCompleted = true;
                 if (bufferedString) {

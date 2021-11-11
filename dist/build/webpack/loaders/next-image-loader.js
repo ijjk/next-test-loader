@@ -3,7 +3,7 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 exports.default = exports.raw = void 0;
-var _loaderUtils = _interopRequireDefault(require("next/dist/compiled/loader-utils"));
+var _loaderUtils3 = _interopRequireDefault(require("next/dist/compiled/loader-utils3"));
 var _imageOptimizer = require("../../../server/image-optimizer");
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
@@ -28,9 +28,9 @@ function nextImageLoader(content) {
             context,
             content
         };
-        const interpolatedName = _loaderUtils.default.interpolateName(this, '/static/media/[name].[hash:8].[ext]', opts);
+        const interpolatedName = _loaderUtils3.default.interpolateName(this, '/static/media/[name].[hash:8].[ext]', opts);
         const outputPath = assetPrefix + '/_next' + interpolatedName;
-        let extension = _loaderUtils.default.interpolateName(this, '[ext]', opts);
+        let extension = _loaderUtils3.default.interpolateName(this, '[ext]', opts);
         if (extension === 'jpg') {
             extension = 'jpeg';
         }

@@ -7,6 +7,7 @@ var _pathMatch = _interopRequireDefault(require("../shared/lib/router/utils/path
 var _normalizeTrailingSlash = require("../client/normalize-trailing-slash");
 var _normalizeLocalePath = require("../shared/lib/i18n/normalize-locale-path");
 var _prepareDestination = require("../shared/lib/router/utils/prepare-destination");
+var _requestMeta = require("./request-meta");
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
         default: obj
@@ -154,7 +155,7 @@ class Router {
                 this.catchAllRoute
             ] : [], 
         ];
-        const originallyHadBasePath = !this.basePath || req._nextHadBasePath;
+        const originallyHadBasePath = !this.basePath || (0, _requestMeta).getRequestMeta(req, '_nextHadBasePath');
         for (const testRoute of allRoutes){
             // if basePath is being used, the basePath will still be included
             // in the pathname here to allow custom-routes to require containing
@@ -178,11 +179,11 @@ class Router {
                 if (!testRoute.internal && parsedUrl.query.__nextLocale && !localePathResult.detectedLocale) {
                     currentPathname = `${activeBasePath}/${parsedUrl.query.__nextLocale}${currentPathnameNoBasePath === '/' ? '' : currentPathnameNoBasePath}`;
                 }
-                if (req.__nextHadTrailingSlash && !currentPathname.endsWith('/')) {
+                if ((0, _requestMeta).getRequestMeta(req, '__nextHadTrailingSlash') && !currentPathname.endsWith('/')) {
                     currentPathname += '/';
                 }
             } else {
-                currentPathname = `${req._nextHadBasePath ? activeBasePath : ''}${activeBasePath && localePathResult.pathname === '/' ? '' : localePathResult.pathname}`;
+                currentPathname = `${(0, _requestMeta).getRequestMeta(req, '_nextHadBasePath') ? activeBasePath : ''}${activeBasePath && localePathResult.pathname === '/' ? '' : localePathResult.pathname}`;
             }
             let newParams = testRoute.match(currentPathname);
             if (testRoute.has && newParams) {
@@ -198,7 +199,7 @@ class Router {
                 // since we require basePath be present for non-custom-routes we
                 // 404 here when we matched an fs route
                 if (!keepBasePath) {
-                    if (!originallyHadBasePath && !req._nextDidRewrite) {
+                    if (!originallyHadBasePath && !(0, _requestMeta).getRequestMeta(req, '_nextDidRewrite')) {
                         if (requireBasePath) {
                             // consider this a non-match so the 404 renders
                             return false;
@@ -212,8 +213,8 @@ class Router {
                 if (result.finished) {
                     return true;
                 }
-                // since the fs route didn't match we need to re-add the basePath
-                // to continue checking rewrites with the basePath present
+                // since the fs route didn't finish routing we need to re-add the
+                // basePath to continue checking with the basePath present
                 if (!keepBasePath) {
                     parsedUrlUpdated.pathname = originalPathname;
                 }

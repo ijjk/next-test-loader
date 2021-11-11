@@ -46,6 +46,7 @@ var _writeBuildId = require("./write-build-id");
 var _normalizeLocalePath = require("../shared/lib/i18n/normalize-locale-path");
 var _isError = _interopRequireDefault(require("../lib/is-error"));
 var _telemetryPlugin = require("./webpack/plugins/telemetry-plugin");
+var _recursiveCopy = require("../lib/recursive-copy");
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
         default: obj
@@ -74,12 +75,9 @@ function _interopRequireWildcard(obj) {
         return newObj;
     }
 }
-const RESERVED_PAGE = /^\/(_app|_error|_document|api(\/|$))/;
 async function build(dir, conf = null, reactProductionProfiling = false, debugOutput = false, runLint = true) {
     const nextBuildSpan = (0, _trace).trace('next-build', undefined, {
-        attrs: {
-            version: "12.0.3-canary.8"
-        }
+        version: "12.0.4-canary.4"
     });
     const buildResult = await nextBuildSpan.traceAsyncFn(async ()=>{
         var ref5;
@@ -245,7 +243,7 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
                 ),
                 dynamicRoutes: (0, _utils).getSortedRoutes(pageKeys).filter((page)=>(0, _utils).isDynamicRoute(page) && !page.match(_constants.MIDDLEWARE_ROUTE)
                 ).map(pageToRoute),
-                staticRoutes: (0, _utils).getSortedRoutes(pageKeys).filter((page)=>!(0, _utils).isDynamicRoute(page) && !page.match(_constants.MIDDLEWARE_ROUTE) && !page.match(RESERVED_PAGE)
+                staticRoutes: (0, _utils).getSortedRoutes(pageKeys).filter((page)=>!(0, _utils).isDynamicRoute(page) && !page.match(_constants.MIDDLEWARE_ROUTE) && !(0, _utils1).isReservedPage(page)
                 ).map(pageToRoute),
                 dataRoutes: [],
                 i18n: config.i18n || undefined
@@ -306,6 +304,7 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
                     _path.default.relative(distDir, manifestPath),
                     _constants1.BUILD_MANIFEST,
                     _constants1.PRERENDER_MANIFEST,
+                    _path.default.join(_constants1.SERVER_DIRECTORY, _constants1.MIDDLEWARE_MANIFEST),
                     hasServerComponents ? _path.default.join(_constants1.SERVER_DIRECTORY, _constants1.MIDDLEWARE_FLIGHT_MANIFEST + '.js') : null,
                     _constants1.REACT_LOADABLE_MANIFEST,
                     config.optimizeFonts ? _path.default.join(isLikeServerless ? _constants1.SERVERLESS_DIRECTORY : _constants1.SERVER_DIRECTORY, _constants1.FONT_MANIFEST) : null,
@@ -541,7 +540,7 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
                     let isHybridAmp = false;
                     let ssgPageRoutes = null;
                     let isMiddlewareRoute = !!page.match(_constants.MIDDLEWARE_ROUTE);
-                    if (!isMiddlewareRoute && !page.match(RESERVED_PAGE) && !hasConcurrentFeatures) {
+                    if (!isMiddlewareRoute && !(0, _utils1).isReservedPage(page) && !hasConcurrentFeatures) {
                         try {
                             let isPageStaticSpan = checkPageSpan.traceChild('is-page-static');
                             let workerResult = await isPageStaticSpan.traceAsyncFn(()=>{
@@ -604,7 +603,7 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
                         totalSize: allSize,
                         static: isStatic,
                         isSsg,
-                        isWebSsr: hasConcurrentFeatures && !isMiddlewareRoute && !page.match(RESERVED_PAGE),
+                        isWebSsr: hasConcurrentFeatures && !isMiddlewareRoute && !(0, _utils1).isReservedPage(page) && !(0, _utils1).isCustomErrorPage(page),
                         isHybridAmp,
                         ssgPageRoutes,
                         initialRevalidateSeconds: false,
@@ -790,7 +789,7 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
         }
         // Since custom _app.js can wrap the 404 page we have to opt-out of static optimization if it has getInitialProps
         // Only export the static 404 when there is no /_error present
-        const useStatic404 = !customAppGetInitialProps && (!hasNonStaticErrorPage || hasPages404);
+        const useStatic404 = !hasConcurrentFeatures && !customAppGetInitialProps && (!hasNonStaticErrorPage || hasPages404);
         if (invalidPages.size > 0) {
             const err = new Error(`Build optimization failed: found page${invalidPages.size === 1 ? '' : 's'} without a React Component as default export in \n${[
                 ...invalidPages
@@ -814,9 +813,10 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
             payload: optimizeCss
         });
         await _fs.promises.writeFile(_path.default.join(distDir, _constants1.SERVER_FILES_MANIFEST), JSON.stringify(requiredServerFiles), 'utf8');
+        const outputFileTracingRoot = config.experimental.outputFileTracingRoot || dir;
         if (config.experimental.outputStandalone) {
             await nextBuildSpan.traceChild('copy-traced-files').traceAsyncFn(async ()=>{
-                await (0, _utils1).copyTracedFiles(distDir, pageKeys, config.experimental.outputFileTracingRoot || dir);
+                await (0, _utils1).copyTracedFiles(dir, distDir, pageKeys, outputFileTracingRoot, requiredServerFiles.config);
             });
         }
         const finalPrerenderRoutes = {
@@ -838,7 +838,7 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
             ...staticPages,
             ...ssgPages
         ];
-        if (combinedPages.length > 0 || useStatic404 || useDefaultStatic500) {
+        if (!hasConcurrentFeatures && (combinedPages.length > 0 || useStatic404 || useDefaultStatic500)) {
             const staticGenerationSpan = nextBuildSpan.traceChild('static-generation');
             await staticGenerationSpan.traceAsyncFn(async ()=>{
                 (0, _utils1).detectConflictingPaths([
@@ -1222,6 +1222,16 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
             }
             return Promise.reject(err);
         });
+        if (config.experimental.outputStandalone) {
+            for (const file of [
+                ...requiredServerFiles.files,
+                _path.default.join(config.distDir, _constants1.SERVER_FILES_MANIFEST), 
+            ]){
+                const filePath = _path.default.join(dir, file);
+                await _fs.promises.copyFile(filePath, _path.default.join(distDir, 'standalone', _path.default.relative(outputFileTracingRoot, filePath)));
+            }
+            await (0, _recursiveCopy).recursiveCopy(_path.default.join(distDir, _constants1.SERVER_DIRECTORY, 'pages'), _path.default.join(distDir, 'standalone', _path.default.relative(outputFileTracingRoot, distDir), _constants1.SERVER_DIRECTORY, 'pages'));
+        }
         staticPages.forEach((pg)=>allStaticPages.add(pg)
         );
         pageInfos.forEach((info, key)=>{

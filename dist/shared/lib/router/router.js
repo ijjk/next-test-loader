@@ -1045,7 +1045,7 @@ class Router {
             return;
         }
         const effects = await this._preflightRequest({
-            as: asPath,
+            as: addBasePath(asPath),
             cache: true,
             pages,
             pathname,

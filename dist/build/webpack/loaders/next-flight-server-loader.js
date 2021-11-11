@@ -49,7 +49,7 @@ function isImageImport(importSource) {
 }
 async function parseImportsInfo(source, imports, isClientCompilation, pageExtensions) {
     const { body  } = acorn.parse(source, {
-        ecmaVersion: 2019,
+        ecmaVersion: 11,
         sourceType: 'module'
     });
     let transformedSource = '';

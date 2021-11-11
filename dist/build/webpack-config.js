@@ -9,9 +9,7 @@ exports.nextImageLoaderRegex = exports.NODE_BASE_ESM_RESOLVE_OPTIONS = exports.N
 var _reactRefreshWebpackPlugin = _interopRequireDefault(require("@next/react-refresh-utils/ReactRefreshWebpackPlugin"));
 var _chalk = _interopRequireDefault(require("chalk"));
 var _crypto = _interopRequireDefault(require("crypto"));
-var _fs = require("fs");
 var _querystring = require("querystring");
-var _codeFrame = require("next/dist/compiled/babel/code-frame");
 var _semver = _interopRequireDefault(require("next/dist/compiled/semver"));
 var _webpack = require("next/dist/compiled/webpack/webpack");
 var _path = _interopRequireWildcard(require("path"));
@@ -19,7 +17,6 @@ var _escapeStringRegexp = _interopRequireDefault(require("next/dist/compiled/esc
 var _constants = require("../lib/constants");
 var _fileExists = require("../lib/file-exists");
 var _getPackageVersion = require("../lib/get-package-version");
-var _getTypeScriptConfiguration = require("../lib/typescript/getTypeScriptConfiguration");
 var _constants1 = require("../shared/lib/constants");
 var _utils = require("../shared/lib/utils");
 var _entries = require("./entries");
@@ -41,9 +38,9 @@ var _css = require("./webpack/config/blocks/css");
 var _copyFilePlugin = require("./webpack/plugins/copy-file-plugin");
 var _flightManifestPlugin = require("./webpack/plugins/flight-manifest-plugin");
 var _telemetryPlugin = require("./webpack/plugins/telemetry-plugin");
-var _isError = _interopRequireDefault(require("../lib/is-error"));
 var _utils1 = require("./utils");
 var _browserslist = _interopRequireDefault(require("browserslist"));
+var _loadJsconfig = _interopRequireDefault(require("./load-jsconfig"));
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
         default: obj
@@ -87,30 +84,6 @@ const devtoolRevertWarning = (0, _utils).execOnce((devtool)=>{
     console.warn(_chalk.default.yellow.bold('Warning: ') + _chalk.default.bold(`Reverting webpack devtool to '${devtool}'.\n`) + 'Changing the webpack devtool in development mode will cause severe performance regressions.\n' + 'Read more: https://nextjs.org/docs/messages/improper-devtool');
 });
 let loggedSwcDisabled = false;
-function parseJsonFile(filePath) {
-    const JSON5 = require('next/dist/compiled/json5');
-    const contents = (0, _fs).readFileSync(filePath, 'utf8');
-    // Special case an empty file
-    if (contents.trim() === '') {
-        return {
-        };
-    }
-    try {
-        return JSON5.parse(contents);
-    } catch (err) {
-        if (!(0, _isError).default(err)) throw err;
-        const codeFrame = (0, _codeFrame).codeFrameColumns(String(contents), {
-            start: {
-                line: err.lineNumber || 0,
-                column: err.columnNumber || 0
-            }
-        }, {
-            message: err.message,
-            highlightCode: true
-        });
-        throw new Error(`Failed to parse "${filePath}":\n${codeFrame}`);
-    }
-}
 function getOptimizedAliases() {
     const stubWindowFetch = _path.default.join(__dirname, 'polyfills', 'fetch', 'index.js');
     const stubObjectAssign = _path.default.join(__dirname, 'polyfills', 'object-assign.js');
@@ -225,7 +198,6 @@ const NODE_BASE_ESM_RESOLVE_OPTIONS = {
     alias: false
 };
 exports.NODE_BASE_ESM_RESOLVE_OPTIONS = NODE_BASE_ESM_RESOLVE_OPTIONS;
-let TSCONFIG_WARNED = false;
 const nextImageLoaderRegex = /\.(png|jpg|jpeg|gif|webp|avif|ico|bmp|svg)$/i;
 exports.nextImageLoaderRegex = nextImageLoaderRegex;
 async function resolveExternal(appDir, esmExternalsConfig, context, request, isEsmRequested, getResolve, isLocalCallback, baseResolveCheck = true, esmResolveOptions = NODE_ESM_RESOLVE_OPTIONS, nodeResolveOptions = NODE_RESOLVE_OPTIONS, baseEsmResolveOptions = NODE_BASE_ESM_RESOLVE_OPTIONS, baseResolveOptions = NODE_BASE_RESOLVE_OPTIONS) {
@@ -294,7 +266,7 @@ async function resolveExternal(appDir, esmExternalsConfig, context, request, isE
     };
 }
 async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isServer =false , webServerRuntime =false , pagesDir , target ='server' , reactProductionProfiling =false , entrypoints , rewrites , isDevFallback =false , runWebpackSpan  }) {
-    var ref27, ref1, ref2, ref3, ref4, ref5, ref6;
+    var ref23, ref1, ref2, ref3, ref4, ref5;
     const supportedBrowsers = await getSupportedBrowsers(dir, dev);
     const hasRewrites = rewrites.beforeFiles.length > 0 || rewrites.afterFiles.length > 0 || rewrites.fallback.length > 0;
     const hasReactRefresh = dev && !isServer;
@@ -303,7 +275,7 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
         name: 'react-dom'
     });
     const isReactExperimental = Boolean(reactDomVersion && /0\.0\.0-experimental/.test(reactDomVersion));
-    const hasReact18 = Boolean(reactDomVersion) && (_semver.default.gte(reactDomVersion, '18.0.0') || ((ref27 = _semver.default.coerce(reactDomVersion)) === null || ref27 === void 0 ? void 0 : ref27.version) === '18.0.0');
+    const hasReact18 = Boolean(reactDomVersion) && (_semver.default.gte(reactDomVersion, '18.0.0') || ((ref23 = _semver.default.coerce(reactDomVersion)) === null || ref23 === void 0 ? void 0 : ref23.version) === '18.0.0');
     const hasReactPrerelease = Boolean(reactDomVersion) && _semver.default.prerelease(reactDomVersion) != null || isReactExperimental;
     const hasReactRoot = config.experimental.reactRoot || hasReact18 || isReactExperimental;
     // Only inform during one of the builds
@@ -352,7 +324,7 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
     const distDir = _path.default.join(dir, config.distDir);
     let useSWCLoader = !babelConfigFile;
     if (!loggedSwcDisabled && !useSWCLoader && babelConfigFile) {
-        Log.warn(`Disabled SWC as replacement for Babel because of custom Babel configuration "${_path.default.relative(dir, babelConfigFile)}" https://nextjs.org/docs/messages/swc-disabled`);
+        Log.info(`Disabled SWC as replacement for Babel because of custom Babel configuration "${_path.default.relative(dir, babelConfigFile)}" https://nextjs.org/docs/messages/swc-disabled`);
         loggedSwcDisabled = true;
     }
     const getBabelOrSwcLoader = (isMiddleware)=>{
@@ -361,7 +333,8 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
             options: {
                 isServer: isMiddleware || isServer,
                 pagesDir,
-                hasReactRefresh: !isMiddleware && hasReactRefresh
+                hasReactRefresh: !isMiddleware && hasReactRefresh,
+                styledComponents: config.experimental.styledComponents
             }
         } : {
             loader: require.resolve('./babel/loader/index'),
@@ -409,38 +382,7 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
         },
         [_constants1.CLIENT_STATIC_FILES_RUNTIME_MAIN]: `./` + _path.default.relative(dir, _path.default.join(_constants.NEXT_PROJECT_ROOT_DIST_CLIENT, dev ? `next-dev.js` : 'next.js')).replace(/\\/g, '/')
     } : undefined;
-    let typeScriptPath;
-    try {
-        typeScriptPath = require.resolve('typescript', {
-            paths: [
-                dir
-            ]
-        });
-    } catch (_) {
-    }
-    const tsConfigPath = _path.default.join(dir, config.typescript.tsconfigPath);
-    const useTypeScript = Boolean(typeScriptPath && await (0, _fileExists).fileExists(tsConfigPath));
-    let jsConfig;
-    // jsconfig is a subset of tsconfig
-    if (useTypeScript) {
-        if (config.typescript.tsconfigPath !== 'tsconfig.json' && TSCONFIG_WARNED === false) {
-            TSCONFIG_WARNED = true;
-            Log.info(`Using tsconfig file: ${config.typescript.tsconfigPath}`);
-        }
-        const ts = await Promise.resolve(require(typeScriptPath));
-        const tsConfig = await (0, _getTypeScriptConfiguration).getTypeScriptConfiguration(ts, tsConfigPath, true);
-        jsConfig = {
-            compilerOptions: tsConfig.options
-        };
-    }
-    const jsConfigPath = _path.default.join(dir, 'jsconfig.json');
-    if (!useTypeScript && await (0, _fileExists).fileExists(jsConfigPath)) {
-        jsConfig = parseJsonFile(jsConfigPath);
-    }
-    let resolvedBaseUrl;
-    if (jsConfig === null || jsConfig === void 0 ? void 0 : (ref1 = jsConfig.compilerOptions) === null || ref1 === void 0 ? void 0 : ref1.baseUrl) {
-        resolvedBaseUrl = _path.default.resolve(dir, jsConfig.compilerOptions.baseUrl);
-    }
+    const { useTypeScript , jsConfig , resolvedBaseUrl  } = await (0, _loadJsconfig).default(dir, config);
     function getReactProfilingInProduction() {
         if (reactProductionProfiling) {
             return {
@@ -479,7 +421,7 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
                 prev.push(_path.default.join(pagesDir, `_document.${ext}`));
                 return prev;
             }, []),
-            'next/dist/pages/_document.js', 
+            `next/dist/pages/_document${hasServerComponents ? '-web' : ''}.js`, 
         ];
     }
     const resolveConfig = {
@@ -510,6 +452,7 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
             ...nodePathList
         ],
         alias: {
+            // noop
             next: _constants.NEXT_PROJECT_ROOT,
             ...customAppAliases,
             ...customErrorAlias,
@@ -521,6 +464,10 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
             ...getReactProfilingInProduction(),
             ...targetWeb ? {
                 [clientResolveRewrites]: hasRewrites ? clientResolveRewrites : false
+            } : {
+            },
+            ...webServerRuntime ? {
+                'react-dom/server': dev ? 'react-dom/cjs/react-dom-server.browser.development' : 'react-dom/cjs/react-dom-server.browser.production.min'
             } : {
             }
         },
@@ -592,6 +539,46 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
         module.type === `css/extract-chunks` || // extract-css-chunks-webpack-plugin (new)
         module.type === `css/extract-css-chunks`);
     };
+    const getPackagePath = (name, relativeToPath)=>{
+        const packageJsonPath = require.resolve(`${name}/package.json`, {
+            paths: [
+                relativeToPath
+            ]
+        });
+        // Include a trailing slash so that a `.startsWith(packagePath)` check avoids false positives
+        // when one package name starts with the full name of a different package.
+        // For example:
+        //   "node_modules/react-slider".startsWith("node_modules/react")  // true
+        //   "node_modules/react-slider".startsWith("node_modules/react/") // false
+        return _path.default.join(packageJsonPath, '../');
+    };
+    // Packages which will be split into the 'framework' chunk.
+    // Only top-level packages are included, e.g. nested copies like
+    // 'node_modules/meow/node_modules/object-assign' are not included.
+    const topLevelFrameworkPaths = [
+        getPackagePath('react', dir),
+        getPackagePath('react-dom', dir),
+        getPackagePath('scheduler', require.resolve('react-dom', {
+            paths: [
+                dir
+            ]
+        })),
+        getPackagePath('object-assign', require.resolve('react', {
+            paths: [
+                dir
+            ]
+        })),
+        getPackagePath('object-assign', require.resolve('react-dom', {
+            paths: [
+                dir
+            ]
+        })),
+        getPackagePath('use-subscription', require.resolve('next', {
+            paths: [
+                dir
+            ]
+        })), 
+    ];
     // Select appropriate SplitChunksPlugin config for this build
     const splitChunksConfig = dev ? false : {
         // Keep main and _app chunks unsplitted in webpack 5
@@ -607,10 +594,14 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
                     return !((ref = chunk.name) === null || ref === void 0 ? void 0 : ref.match(_constants.MIDDLEWARE_ROUTE));
                 },
                 name: 'framework',
-                // This regex ignores nested copies of framework libraries so they're
-                // bundled with their issuer.
-                // https://github.com/vercel/next.js/pull/9012
-                test: /(?<!node_modules.*)[\\/]node_modules[\\/](react|react-dom|scheduler|prop-types|use-subscription)[\\/]/,
+                test (module) {
+                    const resource = module.nameForCondition && module.nameForCondition();
+                    if (!resource) {
+                        return false;
+                    }
+                    return topLevelFrameworkPaths.some((packagePath)=>resource.startsWith(packagePath)
+                    );
+                },
                 priority: 40,
                 // Don't let webpack eliminate this chunk (prevents this chunk from
                 // becoming a part of the commons chunk)
@@ -657,7 +648,7 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
         minSize: 20000
     };
     const crossOrigin = config.crossOrigin;
-    const looseEsmExternals = ((ref2 = config.experimental) === null || ref2 === void 0 ? void 0 : ref2.esmExternals) === 'loose';
+    const looseEsmExternals = ((ref1 = config.experimental) === null || ref1 === void 0 ? void 0 : ref1.esmExternals) === 'loose';
     async function handleExternals(context, request, dependencyType, getResolve) {
         // We need to externalize internal requests for files intended to
         // not be bundled.
@@ -761,9 +752,10 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
             ...webServerRuntime ? [
                 {
                     etag: '{}',
-                    chalk: '{}'
+                    chalk: '{}',
+                    'react-dom': '{}'
                 }
-            ] : []
+            ] : [], 
         ] : !isServerless ? [
             ({ context , request , dependencyType , getResolve  })=>{
                 return handleExternals(context, request, dependencyType, (options)=>{
@@ -807,8 +799,8 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
                 moduleIds: 'named'
             } : {
             },
-            splitChunks: isServer ? dev || webServerRuntime ? false : {
-                filename: '[name].js',
+            splitChunks: isServer ? dev ? false : {
+                filename: webServerRuntime ? 'chunks/[name].js' : '[name].js',
                 // allow to split entrypoints
                 chunks: ({ name  })=>{
                     return !(name === null || name === void 0 ? void 0 : name.match(_constants.MIDDLEWARE_ROUTE));
@@ -1025,13 +1017,17 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
             hasReactRefresh && new _reactRefreshWebpackPlugin.default(_webpack.webpack),
             // Makes sure `Buffer` and `process` are polyfilled in client and flight bundles (same behavior as webpack 4)
             targetWeb && new _webpack.webpack.ProvidePlugin({
+                // Buffer is used by getInlineScriptSource
                 Buffer: [
                     require.resolve('buffer'),
                     'Buffer'
                 ],
-                process: [
-                    require.resolve('process')
-                ]
+                // Avoid process being overridden when in web run time
+                ...!isServer && {
+                    process: [
+                        require.resolve('process')
+                    ]
+                }
             }),
             new _webpack.webpack.DefinePlugin({
                 ...Object.keys(process.env).reduce((prev, key)=>{
@@ -1087,7 +1083,7 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
                 'process.env.__NEXT_ROUTER_BASEPATH': JSON.stringify(config.basePath),
                 'process.env.__NEXT_HAS_REWRITES': JSON.stringify(hasRewrites),
                 'process.env.__NEXT_I18N_SUPPORT': JSON.stringify(!!config.i18n),
-                'process.env.__NEXT_I18N_DOMAINS': JSON.stringify((ref3 = config.i18n) === null || ref3 === void 0 ? void 0 : ref3.domains),
+                'process.env.__NEXT_I18N_DOMAINS': JSON.stringify((ref2 = config.i18n) === null || ref2 === void 0 ? void 0 : ref2.domains),
                 'process.env.__NEXT_ANALYTICS_ID': JSON.stringify(config.analyticsId),
                 ...isServer ? {
                     // Fix bad-actors in the npm ecosystem (e.g. `node-formidable`)
@@ -1147,15 +1143,16 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
                 resourceRegExp: /react-is/,
                 contextRegExp: /next[\\/]dist[\\/]/
             }),
-            isServerless && isServer && !webServerRuntime && new _serverlessPlugin.ServerlessPlugin(),
+            (isServerless && isServer || webServerRuntime) && new _serverlessPlugin.ServerlessPlugin(),
             isServer && !webServerRuntime && new _pagesManifestPlugin.default({
                 serverless: isLikeServerless,
                 dev
             }),
             // MiddlewarePlugin should be after DefinePlugin so  NEXT_PUBLIC_*
             // replacement is done before its process.env.* handling
-            !isServer && new _middlewarePlugin.default({
-                dev
+            (!isServer || webServerRuntime) && new _middlewarePlugin.default({
+                dev,
+                webServerRuntime
             }),
             isServer && new _nextjsSsrImport.default(),
             !isServer && new _buildManifestPlugin.default({
@@ -1176,7 +1173,7 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
             new _wellknownErrorsPlugin.WellKnownErrorsPlugin(),
             !isServer && new _copyFilePlugin.CopyFilePlugin({
                 filePath: require.resolve('./polyfills/polyfill-nomodule'),
-                cacheKey: "12.0.3-canary.8",
+                cacheKey: "12.0.4-canary.4",
                 name: `static/chunks/polyfills${dev ? '' : '-[hash]'}.js`,
                 minimize: false,
                 info: {
@@ -1203,12 +1200,12 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
     };
     // Support tsconfig and jsconfig baseUrl
     if (resolvedBaseUrl) {
-        var ref, ref25;
-        (ref = webpackConfig.resolve) === null || ref === void 0 ? void 0 : (ref25 = ref.modules) === null || ref25 === void 0 ? void 0 : ref25.push(resolvedBaseUrl);
+        var ref, ref21;
+        (ref = webpackConfig.resolve) === null || ref === void 0 ? void 0 : (ref21 = ref.modules) === null || ref21 === void 0 ? void 0 : ref21.push(resolvedBaseUrl);
     }
-    if ((jsConfig === null || jsConfig === void 0 ? void 0 : (ref4 = jsConfig.compilerOptions) === null || ref4 === void 0 ? void 0 : ref4.paths) && resolvedBaseUrl) {
-        var ref, ref51;
-        (ref = webpackConfig.resolve) === null || ref === void 0 ? void 0 : (ref51 = ref.plugins) === null || ref51 === void 0 ? void 0 : ref51.unshift(new _jsconfigPathsPlugin.JsConfigPathsPlugin(jsConfig.compilerOptions.paths, resolvedBaseUrl));
+    if ((jsConfig === null || jsConfig === void 0 ? void 0 : (ref3 = jsConfig.compilerOptions) === null || ref3 === void 0 ? void 0 : ref3.paths) && resolvedBaseUrl) {
+        var ref, ref44;
+        (ref = webpackConfig.resolve) === null || ref === void 0 ? void 0 : (ref44 = ref.plugins) === null || ref44 === void 0 ? void 0 : ref44.unshift(new _jsconfigPathsPlugin.JsConfigPathsPlugin(jsConfig.compilerOptions.paths, resolvedBaseUrl));
     }
     const webpack5Config = webpackConfig;
     webpack5Config.experiments = {
@@ -1305,7 +1302,7 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
         // Includes:
         //  - Next.js version
         //  - next.config.js keys that affect compilation
-        version: `${"12.0.3-canary.8"}|${configVars}`,
+        version: `${"12.0.4-canary.4"}|${configVars}`,
         cacheDirectory: _path.default.join(distDir, 'cache', 'webpack')
     };
     // Adds `next.config.js` as a buildDependency when custom webpack config is provided
@@ -1414,7 +1411,7 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
             nextImageRule.test = /\.(png|jpg|jpeg|gif|webp|avif|ico|bmp)$/i;
         }
     }
-    if (config.experimental.craCompat && ((ref5 = webpackConfig.module) === null || ref5 === void 0 ? void 0 : ref5.rules) && webpackConfig.plugins) {
+    if (config.experimental.craCompat && ((ref4 = webpackConfig.module) === null || ref4 === void 0 ? void 0 : ref4.rules) && webpackConfig.plugins) {
         // CRA prevents loading all locales by default
         // https://github.com/facebook/create-react-app/blob/fddce8a9e21bf68f37054586deb0c8636a45f50b/packages/react-scripts/config/webpack.config.js#L721
         webpackConfig.plugins.push(new _webpack.webpack.IgnorePlugin(/^\.\/locale$/, /moment$/));
@@ -1495,28 +1492,28 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
         }
         return false;
     }
-    var ref77;
-    const hasUserCssConfig = (ref77 = (ref6 = webpackConfig.module) === null || ref6 === void 0 ? void 0 : ref6.rules.some((rule)=>canMatchCss(rule.test) || canMatchCss(rule.include)
-    )) !== null && ref77 !== void 0 ? ref77 : false;
+    var ref67;
+    const hasUserCssConfig = (ref67 = (ref5 = webpackConfig.module) === null || ref5 === void 0 ? void 0 : ref5.rules.some((rule)=>canMatchCss(rule.test) || canMatchCss(rule.include)
+    )) !== null && ref67 !== void 0 ? ref67 : false;
     if (hasUserCssConfig) {
-        var ref116, ref78, ref79, ref80;
+        var ref103, ref68, ref69, ref70;
         // only show warning for one build
         if (isServer) {
             console.warn(_chalk.default.yellow.bold('Warning: ') + _chalk.default.bold('Built-in CSS support is being disabled due to custom CSS configuration being detected.\n') + 'See here for more info: https://nextjs.org/docs/messages/built-in-css-disabled\n');
         }
-        if ((ref116 = webpackConfig.module) === null || ref116 === void 0 ? void 0 : ref116.rules.length) {
+        if ((ref103 = webpackConfig.module) === null || ref103 === void 0 ? void 0 : ref103.rules.length) {
             // Remove default CSS Loader
             webpackConfig.module.rules = webpackConfig.module.rules.filter((r)=>{
-                var ref, ref114;
-                return !(typeof ((ref = r.oneOf) === null || ref === void 0 ? void 0 : (ref114 = ref[0]) === null || ref114 === void 0 ? void 0 : ref114.options) === 'object' && r.oneOf[0].options.__next_css_remove === true);
+                var ref, ref101;
+                return !(typeof ((ref = r.oneOf) === null || ref === void 0 ? void 0 : (ref101 = ref[0]) === null || ref101 === void 0 ? void 0 : ref101.options) === 'object' && r.oneOf[0].options.__next_css_remove === true);
             });
         }
-        if ((ref78 = webpackConfig.plugins) === null || ref78 === void 0 ? void 0 : ref78.length) {
+        if ((ref68 = webpackConfig.plugins) === null || ref68 === void 0 ? void 0 : ref68.length) {
             // Disable CSS Extraction Plugin
             webpackConfig.plugins = webpackConfig.plugins.filter((p)=>p.__next_css_remove !== true
             );
         }
-        if ((ref79 = webpackConfig.optimization) === null || ref79 === void 0 ? void 0 : (ref80 = ref79.minimizer) === null || ref80 === void 0 ? void 0 : ref80.length) {
+        if ((ref69 = webpackConfig.optimization) === null || ref69 === void 0 ? void 0 : (ref70 = ref69.minimizer) === null || ref70 === void 0 ? void 0 : ref70.length) {
             // Disable CSS Minifier
             webpackConfig.optimization.minimizer = webpackConfig.optimization.minimizer.filter((e)=>e.__next_css_remove !== true
             );

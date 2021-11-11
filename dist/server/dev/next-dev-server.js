@@ -37,6 +37,7 @@ var _middleware = require("@next/react-dev-overlay/lib/middleware");
 var Log = _interopRequireWildcard(require("../../build/output/log"));
 var _isError = _interopRequireDefault(require("../../lib/is-error"));
 var _getMiddlewareRegex = require("../../shared/lib/router/utils/get-middleware-regex");
+var _utils3 = require("../../build/utils");
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
         default: obj
@@ -213,7 +214,7 @@ class DevServer extends _nextServer.default {
                     if (hasServerComponents && pageName.endsWith('.server')) {
                         routedMiddleware.push(pageName);
                         ssrMiddleware.add(pageName);
-                    } else if (isWebServerRuntime && !(pageName === '/_app' || pageName === '/_error' || pageName === '/_document')) {
+                    } else if (isWebServerRuntime && !((0, _utils3).isReservedPage(pageName) || (0, _utils3).isCustomErrorPage(pageName))) {
                         routedMiddleware.push(pageName);
                         ssrMiddleware.add(pageName);
                     }
@@ -390,7 +391,12 @@ class DevServer extends _nextServer.default {
     }
     async runMiddleware(params) {
         try {
-            const result = await super.runMiddleware(params);
+            const result = await super.runMiddleware({
+                ...params,
+                onWarning: (warn)=>{
+                    this.logErrorWithOriginalStack(warn, 'warning', 'client');
+                }
+            });
             result === null || result === void 0 ? void 0 : result.waitUntil.catch((error)=>this.logErrorWithOriginalStack(error, 'unhandledRejection', 'client')
             );
             return result;
@@ -469,8 +475,8 @@ class DevServer extends _nextServer.default {
                     if (originalFrame) {
                         const { originalCodeFrame , originalStackFrame  } = originalFrame;
                         const { file , lineNumber , column , methodName  } = originalStackFrame;
-                        console.error(_chalk.default.red('error') + ' - ' + `${file} (${lineNumber}:${column}) @ ${methodName}`);
-                        console.error(`${_chalk.default.red(err.name)}: ${err.message}`);
+                        console.error((type === 'warning' ? _chalk.default.yellow('warn') : _chalk.default.red('error')) + ' - ' + `${file} (${lineNumber}:${column}) @ ${methodName}`);
+                        console.error(`${(type === 'warning' ? _chalk.default.yellow : _chalk.default.red)(err.name)}: ${err.message}`);
                         console.error(originalCodeFrame);
                         usedOriginalStack = true;
                     }
@@ -482,7 +488,9 @@ class DevServer extends _nextServer.default {
             }
         }
         if (!usedOriginalStack) {
-            if (type) {
+            if (type === 'warning') {
+                Log.warn(err + '');
+            } else if (type) {
                 Log.error(`${type}:`, err + '');
             } else {
                 Log.error(err + '');
