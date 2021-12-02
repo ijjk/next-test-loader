@@ -2,6 +2,8 @@
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
+exports.hasBasePath = hasBasePath;
+exports.replaceBasePath = replaceBasePath;
 exports.default = exports.route = void 0;
 var _pathMatch = _interopRequireDefault(require("../shared/lib/router/utils/path-match"));
 var _normalizeTrailingSlash = require("../client/normalize-trailing-slash");
@@ -20,9 +22,18 @@ const customRouteTypes = new Set([
     'redirect',
     'header'
 ]);
-function replaceBasePath(basePath, pathname) {
-    // If replace ends up replacing the full url it'll be `undefined`, meaning we have to default it to `/`
-    return pathname.replace(basePath, '') || '/';
+function hasBasePath(pathname, basePath) {
+    return typeof pathname === 'string' && (pathname === basePath || pathname.startsWith(basePath + '/'));
+}
+function replaceBasePath(pathname, basePath) {
+    // ensure basePath is only stripped if it matches exactly
+    // and doesn't contain extra chars e.g. basePath /docs
+    // should replace for /docs, /docs/, /docs/a but not /docsss
+    if (hasBasePath(pathname, basePath)) {
+        pathname = pathname.substr(basePath.length);
+        if (!pathname.startsWith('/')) pathname = `/${pathname}`;
+    }
+    return pathname;
 }
 class Router {
     constructor({ basePath ='' , headers =[] , fsRoutes =[] , rewrites ={
@@ -64,7 +75,7 @@ class Router {
         let parsedUrlUpdated = parsedUrl;
         const applyCheckTrue = async (checkParsedUrl)=>{
             const originalFsPathname = checkParsedUrl.pathname;
-            const fsPathname = replaceBasePath(this.basePath, originalFsPathname);
+            const fsPathname = replaceBasePath(originalFsPathname, this.basePath);
             for (const fsRoute of this.fsRoutes){
                 const fsParams = fsRoute.match(fsPathname);
                 if (fsParams) {
@@ -169,7 +180,7 @@ class Router {
             const isMiddlewareCatchall = testRoute.name === 'middleware catchall';
             const keepBasePath = isCustomRoute || isPublicFolderCatchall || isMiddlewareCatchall;
             const keepLocale = isCustomRoute;
-            const currentPathnameNoBasePath = replaceBasePath(this.basePath, currentPathname);
+            const currentPathnameNoBasePath = replaceBasePath(currentPathname, this.basePath);
             if (!keepBasePath) {
                 currentPathname = currentPathnameNoBasePath;
             }
@@ -183,7 +194,7 @@ class Router {
                     currentPathname += '/';
                 }
             } else {
-                currentPathname = `${(0, _requestMeta).getRequestMeta(req, '_nextHadBasePath') ? activeBasePath : ''}${activeBasePath && localePathResult.pathname === '/' ? '' : localePathResult.pathname}`;
+                currentPathname = `${(0, _requestMeta).getRequestMeta(req, '_nextHadBasePath') ? activeBasePath : ''}${activeBasePath && currentPathnameNoBasePath === '/' ? '' : currentPathnameNoBasePath}`;
             }
             let newParams = testRoute.match(currentPathname);
             if (testRoute.has && newParams) {

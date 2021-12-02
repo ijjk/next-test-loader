@@ -77,7 +77,7 @@ function _interopRequireWildcard(obj) {
 }
 const getCustomRouteMatcher = (0, _pathMatch).default(true);
 class Server {
-    constructor({ dir ='.' , quiet =false , conf , dev =false , minimalMode =false , customServer =true  }){
+    constructor({ dir ='.' , quiet =false , conf , dev =false , minimalMode =false , customServer =true , hostname , port  }){
         var ref, ref1, ref2;
         this.middlewareBetaWarning = (0, _utils1).execOnce(()=>{
             Log.warn(`using beta Middleware (not covered by semver) - https://nextjs.org/docs/messages/beta-middleware`);
@@ -90,6 +90,8 @@ class Server {
         this.quiet = quiet;
         (0, _env).loadEnvConfig(this.dir, dev, Log);
         this.nextConfig = conf;
+        this.hostname = hostname;
+        this.port = port;
         this.distDir = (0, _path).join(this.dir, this.nextConfig.distDir);
         this.publicDir = (0, _path).join(this.dir, _constants.CLIENT_PUBLIC_FILES_PATH);
         this.hasStaticDir = !minimalMode && _fs.default.existsSync((0, _path).join(this.dir, 'static'));
@@ -116,7 +118,8 @@ class Server {
             disableOptimizedLoading: this.nextConfig.experimental.disableOptimizedLoading,
             domainLocales: (ref1 = this.nextConfig.i18n) === null || ref1 === void 0 ? void 0 : ref1.domains,
             distDir: this.distDir,
-            concurrentFeatures: this.nextConfig.experimental.concurrentFeatures
+            concurrentFeatures: this.nextConfig.experimental.concurrentFeatures,
+            crossOrigin: this.nextConfig.crossOrigin ? this.nextConfig.crossOrigin : undefined
         };
         // Only the `publicRuntimeConfig` key is exposed to the client side
         // It'll be rendered as part of __NEXT_DATA__ on the client side
@@ -204,7 +207,7 @@ class Server {
             url: (ref23 = req.url) === null || ref23 === void 0 ? void 0 : ref23.replace(/^\/+/, '/')
         });
         if (url.basePath) {
-            req.url = req.url.replace(this.nextConfig.basePath, '') || '/';
+            req.url = (0, _router).replaceBasePath(req.url, this.nextConfig.basePath);
             (0, _requestMeta).addRequestMeta(req, '_nextHadBasePath', true);
         }
         if (this.minimalMode && req.headers['x-matched-path'] && typeof req.headers['x-matched-path'] === 'string') {
@@ -239,7 +242,7 @@ class Server {
             });
             try {
                 var ref43;
-                // ensure parsedUrl.pathname includes URL before processing 
+                // ensure parsedUrl.pathname includes URL before processing
                 // rewrites or they won't match correctly
                 if (this.nextConfig.i18n && !((ref43 = url.locale) === null || ref43 === void 0 ? void 0 : ref43.path.detectedLocale)) {
                     var ref44;
@@ -372,14 +375,14 @@ class Server {
         return this.getPrerenderManifest().preview;
     }
     getMiddleware() {
-        var ref;
+        var ref, ref30;
         const middleware = ((ref = this.middlewareManifest) === null || ref === void 0 ? void 0 : ref.middleware) || {
         };
-        return Object.keys(middleware).map((page)=>({
+        return ((ref30 = this.middlewareManifest) === null || ref30 === void 0 ? void 0 : ref30.sortedMiddleware.map((page)=>({
                 match: (0, _utils).getRouteMatcher((0, _utils).getMiddlewareRegex(page, _constants1.MIDDLEWARE_ROUTE.test(middleware[page].name))),
                 page
             })
-        );
+        )) || [];
     }
     async hasMiddleware(pathname, _isSSR) {
         try {
@@ -449,7 +452,7 @@ class Server {
                         url: (0, _requestMeta).getRequestMeta(params.request, '__NEXT_INIT_URL'),
                         page: page
                     },
-                    ssr: !!this.nextConfig.experimental.concurrentFeatures,
+                    useCache: !this.nextConfig.experimental.concurrentFeatures,
                     onWarning: (warning)=>{
                         if (params.onWarning) {
                             warning.message += ` "./${middlewareInfo.name}"`;
@@ -458,7 +461,9 @@ class Server {
                     }
                 });
                 for (let [key, value] of result.response.headers){
-                    allHeaders.append(key, value);
+                    if (key !== 'x-middleware-next') {
+                        allHeaders.append(key, value);
+                    }
                 }
                 if (!this.renderOpts.dev) {
                     result.waitUntil.catch((error)=>{
@@ -875,7 +880,7 @@ class Server {
                             params: _params,
                             query: parsedUrl.query
                         });
-                        if (parsedDestination.protocol) {
+                        if (parsedDestination.protocol && (parsedDestination.port ? `${parsedDestination.hostname}:${parsedDestination.port}` : parsedDestination.hostname) !== req.headers.host) {
                             return proxyRequest(req, res, parsedDestination);
                         }
                         if (this.nextConfig.i18n) {
@@ -1263,7 +1268,7 @@ class Server {
         };
     }
     async renderToResponseWithComponents({ req , res , pathname , renderOpts: opts  }, { components , query  }) {
-        var ref, ref30, ref46;
+        var ref, ref50, ref51;
         const is404Page = pathname === '/404';
         const is500Page = pathname === '/500';
         const isLikeServerless = typeof components.ComponentMod === 'object' && typeof components.ComponentMod.renderReqToHTML === 'function';
@@ -1295,14 +1300,14 @@ class Server {
             delete query.amp;
         }
         if (opts.supportsDynamicHTML === true) {
-            var ref47;
+            var ref52;
             // Disable dynamic HTML in cases that we know it won't be generated,
             // so that we can continue generating a cache key when possible.
-            opts.supportsDynamicHTML = !isSSG && !isLikeServerless && !query.amp && !this.minimalMode && typeof ((ref47 = components.Document) === null || ref47 === void 0 ? void 0 : ref47.getInitialProps) !== 'function';
+            opts.supportsDynamicHTML = !isSSG && !isLikeServerless && !query.amp && !this.minimalMode && typeof ((ref52 = components.Document) === null || ref52 === void 0 ? void 0 : ref52.getInitialProps) !== 'function';
         }
         const defaultLocale = isSSG ? (ref = this.nextConfig.i18n) === null || ref === void 0 ? void 0 : ref.defaultLocale : query.__nextDefaultLocale;
         const locale = query.__nextLocale;
-        const locales = (ref30 = this.nextConfig.i18n) === null || ref30 === void 0 ? void 0 : ref30.locales;
+        const locales = (ref50 = this.nextConfig.i18n) === null || ref50 === void 0 ? void 0 : ref50.locales;
         let previewData;
         let isPreviewMode = false;
         if (hasServerProps || isSSG) {
@@ -1315,7 +1320,7 @@ class Server {
         let urlPathname = (0, _url).parse(req.url || '').pathname || '/';
         let resolvedUrlPathname = (0, _requestMeta).getRequestMeta(req, '_nextRewroteUrl') || urlPathname;
         urlPathname = (0, _normalizeTrailingSlash).removePathTrailingSlash(urlPathname);
-        resolvedUrlPathname = (0, _normalizeLocalePath).normalizeLocalePath((0, _normalizeTrailingSlash).removePathTrailingSlash(resolvedUrlPathname), (ref46 = this.nextConfig.i18n) === null || ref46 === void 0 ? void 0 : ref46.locales).pathname;
+        resolvedUrlPathname = (0, _normalizeLocalePath).normalizeLocalePath((0, _normalizeTrailingSlash).removePathTrailingSlash(resolvedUrlPathname), (ref51 = this.nextConfig.i18n) === null || ref51 === void 0 ? void 0 : ref51.locales).pathname;
         const stripNextDataPath = (path)=>{
             if (path.includes(this.buildId)) {
                 const splitPath = path.substring(path.indexOf(this.buildId) + this.buildId.length);

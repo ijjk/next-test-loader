@@ -29,6 +29,8 @@ export declare type DynamicRoutes = Array<{
     match: RouteMatch;
 }>;
 export declare type PageChecker = (pathname: string) => Promise<boolean>;
+export declare function hasBasePath(pathname: string, basePath: string): boolean;
+export declare function replaceBasePath(pathname: string, basePath: string): string;
 export default class Router {
     basePath: string;
     headers: Route[];

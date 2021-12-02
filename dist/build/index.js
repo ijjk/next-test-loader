@@ -77,7 +77,7 @@ function _interopRequireWildcard(obj) {
 }
 async function build(dir, conf = null, reactProductionProfiling = false, debugOutput = false, runLint = true) {
     const nextBuildSpan = (0, _trace).trace('next-build', undefined, {
-        version: "12.0.4-canary.4"
+        version: "12.0.5-canary.13"
     });
     const buildResult = await nextBuildSpan.traceAsyncFn(async ()=>{
         var ref5;
@@ -168,7 +168,11 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
             previewModeSigningKey: _crypto.default.randomBytes(32).toString('hex'),
             previewModeEncryptionKey: _crypto.default.randomBytes(32).toString('hex')
         };
-        const mappedPages = nextBuildSpan.traceChild('create-pages-mapping').traceFn(()=>(0, _entries).createPagesMapping(pagePaths, config.pageExtensions, false, hasServerComponents)
+        const mappedPages = nextBuildSpan.traceChild('create-pages-mapping').traceFn(()=>(0, _entries).createPagesMapping(pagePaths, config.pageExtensions, {
+                isDev: false,
+                hasServerComponents,
+                hasConcurrentFeatures
+            })
         );
         const entrypoints = nextBuildSpan.traceChild('create-entrypoints').traceFn(()=>(0, _entries).createEntrypoints(mappedPages, target, buildId, previewProps, config, loadedEnvFiles)
         );
@@ -476,7 +480,7 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
                     if (attempts >= 3) {
                         throw new Error(`Static page generation for ${pagePath} is still timing out after 3 attempts. See more info here https://nextjs.org/docs/messages/static-page-generation-timeout`);
                     }
-                    Log.warn(`Restarted static page genertion for ${pagePath} because it took more than ${timeout} seconds`);
+                    Log.warn(`Restarted static page generation for ${pagePath} because it took more than ${timeout} seconds`);
                 } else {
                     const pagePath = arg;
                     if (attempts >= 2) {
@@ -666,7 +670,7 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
                             for (const includeGlob of includeGlobs){
                                 const results = await glob(includeGlob);
                                 includes.push(...results.map((file)=>{
-                                    return _path.default.relative(pageDir, _path.default.join(dir, file));
+                                    return(_path.default.relative(pageDir, _path.default.join(dir, file)));
                                 }));
                             }
                         }
@@ -804,14 +808,23 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
             requiredServerFiles.files.push(...cssFilePaths.map((filePath)=>_path.default.join(config.distDir, filePath)
             ));
         }
-        const optimizeCss = {
-            featureName: 'experimental/optimizeCss',
-            invocationCount: config.experimental.optimizeCss ? 1 : 0
-        };
-        telemetry.record({
-            eventName: _events.EVENT_BUILD_FEATURE_USAGE,
-            payload: optimizeCss
-        });
+        const features = [
+            {
+                featureName: 'experimental/optimizeCss',
+                invocationCount: config.experimental.optimizeCss ? 1 : 0
+            },
+            {
+                featureName: 'optimizeFonts',
+                invocationCount: config.optimizeFonts ? 1 : 0
+            }, 
+        ];
+        telemetry.record(features.map((feature)=>{
+            return {
+                // noop
+                eventName: _events.EVENT_BUILD_FEATURE_USAGE,
+                payload: feature
+            };
+        }));
         await _fs.promises.writeFile(_path.default.join(distDir, _constants1.SERVER_FILES_MANIFEST), JSON.stringify(requiredServerFiles), 'utf8');
         const outputFileTracingRoot = config.experimental.outputFileTracingRoot || dir;
         if (config.experimental.outputStandalone) {

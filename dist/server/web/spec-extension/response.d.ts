@@ -17,7 +17,8 @@ export declare class NextResponse extends Response {
         [key: string]: any;
     } | string, opts?: CookieSerializeOptions): this;
     clearCookie(name: string, opts?: CookieSerializeOptions): this;
-    static redirect(url: string | NextURL, status?: number): NextResponse;
+    static json(body: any): NextResponse;
+    static redirect(url: string | NextURL | URL, status?: number): NextResponse;
     static rewrite(destination: string | NextURL): NextResponse;
     static next(): NextResponse;
 }

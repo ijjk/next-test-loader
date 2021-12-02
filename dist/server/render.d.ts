@@ -40,7 +40,8 @@ export declare type RenderOptsPartial = {
     devOnlyCacheBusterQueryString?: string;
     resolvedUrl?: string;
     resolvedAsPath?: string;
-    renderServerComponent?: null | (() => Promise<string>);
+    serverComponentManifest?: any;
+    renderServerComponentData?: boolean;
     distDir?: string;
     locale?: string;
     locales?: string[];
@@ -50,6 +51,7 @@ export declare type RenderOptsPartial = {
     supportsDynamicHTML?: boolean;
     concurrentFeatures?: boolean;
     customServer?: boolean;
+    crossOrigin?: string;
 };
 export declare type RenderOpts = LoadComponentsReturnType & RenderOptsPartial;
 export declare function renderToHTML(req: IncomingMessage, res: ServerResponse, pathname: string, query: NextParsedUrlQuery, renderOpts: RenderOpts): Promise<RenderResult | null>;

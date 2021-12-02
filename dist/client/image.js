@@ -531,6 +531,17 @@ function Image(_param) {
             });
         }
     }
+    let imageSrcSetPropName = 'imagesrcset';
+    let imageSizesPropName = 'imagesizes';
+    if (process.env.__NEXT_REACT_ROOT) {
+        imageSrcSetPropName = 'imageSrcSet';
+        imageSizesPropName = 'imageSizes';
+    }
+    const linkProps = {
+        // Note: imagesrcset and imagesizes are not in the link element type with react 17.
+        [imageSrcSetPropName]: imgAttributes.srcSet,
+        [imageSizesPropName]: imgAttributes.sizes
+    };
     return(/*#__PURE__*/ _react.default.createElement("span", {
         style: wrapperStyle
     }, hasSizer ? /*#__PURE__*/ _react.default.createElement("span", {
@@ -582,16 +593,12 @@ function Image(_param) {
     // it would likely cause the incorrect image to be preloaded.
     //
     // https://html.spec.whatwg.org/multipage/semantics.html#attr-link-imagesrcset
-    /*#__PURE__*/ _react.default.createElement(_head.default, null, /*#__PURE__*/ _react.default.createElement("link", {
+    /*#__PURE__*/ _react.default.createElement(_head.default, null, /*#__PURE__*/ _react.default.createElement("link", Object.assign({
         key: '__nimg-' + imgAttributes.src + imgAttributes.srcSet + imgAttributes.sizes,
         rel: "preload",
         as: "image",
-        href: imgAttributes.srcSet ? undefined : imgAttributes.src,
-        // @ts-ignore: imagesrcset is not yet in the link element type.
-        imagesrcset: imgAttributes.srcSet,
-        // @ts-ignore: imagesizes is not yet in the link element type.
-        imagesizes: imgAttributes.sizes
-    })) : null));
+        href: imgAttributes.srcSet ? undefined : imgAttributes.src
+    }, linkProps))) : null));
 }
 function normalizeSrc(src) {
     return src[0] === '/' ? src.slice(1) : src;

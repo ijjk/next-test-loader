@@ -284,7 +284,11 @@ async function exportApp(dir, options, span, configuration) {
             disableOptimizedLoading: nextConfig.experimental.disableOptimizedLoading,
             // Exported pages do not currently support dynamic HTML.
             supportsDynamicHTML: false,
-            concurrentFeatures: nextConfig.experimental.concurrentFeatures
+            concurrentFeatures: nextConfig.experimental.concurrentFeatures,
+            crossOrigin: nextConfig.crossOrigin,
+            optimizeCss: nextConfig.experimental.optimizeCss,
+            optimizeFonts: nextConfig.optimizeFonts,
+            optimizeImages: nextConfig.experimental.optimizeImages
         };
         const { serverRuntimeConfig , publicRuntimeConfig  } = nextConfig;
         if (Object.keys(publicRuntimeConfig).length > 0) {

@@ -22,7 +22,6 @@ var _utils = require("../shared/lib/utils");
 var _entries = require("./entries");
 var Log = _interopRequireWildcard(require("./output/log"));
 var _config = require("./webpack/config");
-var _overrideCssConfiguration = require("./webpack/config/blocks/css/overrideCssConfiguration");
 var _middlewarePlugin = _interopRequireDefault(require("./webpack/plugins/middleware-plugin"));
 var _buildManifestPlugin = _interopRequireDefault(require("./webpack/plugins/build-manifest-plugin"));
 var _jsconfigPathsPlugin = require("./webpack/plugins/jsconfig-paths-plugin");
@@ -69,6 +68,14 @@ function _interopRequireWildcard(obj) {
         return newObj;
     }
 }
+const watchOptions = Object.freeze({
+    aggregateTimeout: 5,
+    ignored: [
+        '**/.git/**',
+        '**/node_modules/**',
+        '**/.next/**'
+    ]
+});
 function getSupportedBrowsers(dir, isDevelopment) {
     let browsers;
     try {
@@ -267,6 +274,7 @@ async function resolveExternal(appDir, esmExternalsConfig, context, request, isE
 }
 async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isServer =false , webServerRuntime =false , pagesDir , target ='server' , reactProductionProfiling =false , entrypoints , rewrites , isDevFallback =false , runWebpackSpan  }) {
     var ref23, ref1, ref2, ref3, ref4, ref5;
+    const { useTypeScript , jsConfig , resolvedBaseUrl  } = await (0, _loadJsconfig).default(dir, config);
     const supportedBrowsers = await getSupportedBrowsers(dir, dev);
     const hasRewrites = rewrites.beforeFiles.length > 0 || rewrites.afterFiles.length > 0 || rewrites.fallback.length > 0;
     const hasReactRefresh = dev && !isServer;
@@ -334,7 +342,8 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
                 isServer: isMiddleware || isServer,
                 pagesDir,
                 hasReactRefresh: !isMiddleware && hasReactRefresh,
-                styledComponents: config.experimental.styledComponents
+                nextConfig: config,
+                jsConfig
             }
         } : {
             loader: require.resolve('./babel/loader/index'),
@@ -382,7 +391,6 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
         },
         [_constants1.CLIENT_STATIC_FILES_RUNTIME_MAIN]: `./` + _path.default.relative(dir, _path.default.join(_constants.NEXT_PROJECT_ROOT_DIST_CLIENT, dev ? `next-dev.js` : 'next.js')).replace(/\\/g, '/')
     } : undefined;
-    const { useTypeScript , jsConfig , resolvedBaseUrl  } = await (0, _loadJsconfig).default(dir, config);
     function getReactProfilingInProduction() {
         if (reactProductionProfiling) {
             return {
@@ -421,7 +429,7 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
                 prev.push(_path.default.join(pagesDir, `_document.${ext}`));
                 return prev;
             }, []),
-            `next/dist/pages/_document${hasServerComponents ? '-web' : ''}.js`, 
+            `next/dist/pages/_document${webServerRuntime ? '-web' : ''}.js`, 
         ];
     }
     const resolveConfig = {
@@ -452,7 +460,6 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
             ...nodePathList
         ],
         alias: {
-            // noop
             next: _constants.NEXT_PROJECT_ROOT,
             ...customAppAliases,
             ...customErrorAlias,
@@ -725,7 +732,6 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
         }
     // Default behavior: bundle the code!
     }
-    const emacsLockfilePattern = '**/.#*';
     const codeCondition = {
         test: /\.(tsx|ts|js|cjs|mjs|jsx)$/,
         ...config.experimental.externalDir ? {
@@ -742,6 +748,10 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
             }
             return /node_modules/.test(excludePath);
         }
+    };
+    const nonUserCondition = {
+        include: /node_modules/,
+        exclude: babelIncludeRegexes
     };
     let webpackConfig = {
         parallelism: Number(process.env.NEXT_WEBPACK_PARALLELISM) || undefined,
@@ -853,16 +863,7 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
                 ...entrypoints
             };
         },
-        watchOptions: {
-            aggregateTimeout: 5,
-            ignored: [
-                '**/.git/**',
-                '**/node_modules/**',
-                '**/.next/**',
-                // can be removed after https://github.com/paulmillr/chokidar/issues/955 is released
-                emacsLockfilePattern, 
-            ]
-        },
+        watchOptions,
         output: {
             // we must set publicPath to an empty value to override the default of
             // auto which doesn't work in IE11
@@ -990,6 +991,13 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
                             ] : defaultLoaders.babel
                         }, 
                     ]
+                },
+                {
+                    ...nonUserCondition,
+                    // Make all non-user modules to be compiled in a single layer
+                    // This avoids compiling them mutliple times and avoids module id changes
+                    issuerLayer: 'middleware',
+                    layer: ''
                 },
                 ...!config.images.disableStaticImages ? [
                     {
@@ -1173,7 +1181,7 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
             new _wellknownErrorsPlugin.WellKnownErrorsPlugin(),
             !isServer && new _copyFilePlugin.CopyFilePlugin({
                 filePath: require.resolve('./polyfills/polyfill-nomodule'),
-                cacheKey: "12.0.4-canary.4",
+                cacheKey: "12.0.5-canary.13",
                 name: `static/chunks/polyfills${dev ? '' : '-[hash]'}.js`,
                 minimize: false,
                 info: {
@@ -1302,7 +1310,7 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
         // Includes:
         //  - Next.js version
         //  - next.config.js keys that affect compilation
-        version: `${"12.0.4-canary.4"}|${configVars}`,
+        version: `${"12.0.5-canary.13"}|${configVars}`,
         cacheDirectory: _path.default.join(distDir, 'cache', 'webpack')
     };
     // Adds `next.config.js` as a buildDependency when custom webpack config is provided
@@ -1412,9 +1420,6 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
         }
     }
     if (config.experimental.craCompat && ((ref4 = webpackConfig.module) === null || ref4 === void 0 ? void 0 : ref4.rules) && webpackConfig.plugins) {
-        // CRA prevents loading all locales by default
-        // https://github.com/facebook/create-react-app/blob/fddce8a9e21bf68f37054586deb0c8636a45f50b/packages/react-scripts/config/webpack.config.js#L721
-        webpackConfig.plugins.push(new _webpack.webpack.IgnorePlugin(/^\.\/locale$/, /moment$/));
         // CRA allows importing non-webpack handled files with file-loader
         // these need to be the last rule to prevent catching other items
         // https://github.com/facebook/create-react-app/blob/fddce8a9e21bf68f37054586deb0c8636a45f50b/packages/react-scripts/config/webpack.config.js#L594
@@ -1496,16 +1501,18 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
     const hasUserCssConfig = (ref67 = (ref5 = webpackConfig.module) === null || ref5 === void 0 ? void 0 : ref5.rules.some((rule)=>canMatchCss(rule.test) || canMatchCss(rule.include)
     )) !== null && ref67 !== void 0 ? ref67 : false;
     if (hasUserCssConfig) {
-        var ref103, ref68, ref69, ref70;
+        var ref, ref68, ref69, ref70;
         // only show warning for one build
         if (isServer) {
             console.warn(_chalk.default.yellow.bold('Warning: ') + _chalk.default.bold('Built-in CSS support is being disabled due to custom CSS configuration being detected.\n') + 'See here for more info: https://nextjs.org/docs/messages/built-in-css-disabled\n');
         }
-        if ((ref103 = webpackConfig.module) === null || ref103 === void 0 ? void 0 : ref103.rules.length) {
-            // Remove default CSS Loader
-            webpackConfig.module.rules = webpackConfig.module.rules.filter((r)=>{
-                var ref, ref101;
-                return !(typeof ((ref = r.oneOf) === null || ref === void 0 ? void 0 : (ref101 = ref[0]) === null || ref101 === void 0 ? void 0 : ref101.options) === 'object' && r.oneOf[0].options.__next_css_remove === true);
+        if ((ref = webpackConfig.module) === null || ref === void 0 ? void 0 : ref.rules.length) {
+            // Remove default CSS Loaders
+            webpackConfig.module.rules.forEach((r)=>{
+                if (Array.isArray(r.oneOf)) {
+                    r.oneOf = r.oneOf.filter((o)=>o[Symbol.for('__next_css_remove')] !== true
+                    );
+                }
             });
         }
         if ((ref68 = webpackConfig.plugins) === null || ref68 === void 0 ? void 0 : ref68.length) {
@@ -1518,8 +1525,6 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
             webpackConfig.optimization.minimizer = webpackConfig.optimization.minimizer.filter((e)=>e.__next_css_remove !== true
             );
         }
-    } else if (!config.future.strictPostcssConfiguration) {
-        await (0, _overrideCssConfiguration).__overrideCssConfiguration(dir, supportedBrowsers, webpackConfig);
     }
     // Inject missing React Refresh loaders so that development mode is fast:
     if (hasReactRefresh) {

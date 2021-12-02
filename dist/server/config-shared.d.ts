@@ -112,6 +112,13 @@ export declare type NextConfig = {
     crossOrigin?: false | 'anonymous' | 'use-credentials';
     swcMinify?: boolean;
     experimental?: {
+        disablePostcssPresetEnv?: boolean;
+        removeConsole?: boolean | {
+            exclude?: string[];
+        };
+        reactRemoveProperties?: boolean | {
+            properties?: string[];
+        };
         styledComponents?: boolean;
         swcMinify?: boolean;
         cpus?: number;

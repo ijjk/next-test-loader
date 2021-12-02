@@ -55,14 +55,14 @@ function buildError(error, file) {
     }
     return new Error(`${file} from Terser\n${error.message}`);
 }
+const debugMinify = process.env.NEXT_DEBUG_MINIFY;
 class TerserPlugin {
     constructor(options = {
     }){
-        const { cacheDir , terserOptions ={
+        const { terserOptions ={
         } , parallel , swcMinify  } = options;
         this.options = {
             swcMinify,
-            cacheDir,
             parallel,
             terserOptions
         };
@@ -109,6 +109,15 @@ class TerserPlugin {
                 const output = await cache.getPromise(name, eTag);
                 if (!output) {
                     numberOfAssetsForMinify += 1;
+                }
+                if (debugMinify && debugMinify === '1') {
+                    console.dir({
+                        name,
+                        source: source.source().toString()
+                    }, {
+                        breakLength: Infinity,
+                        maxStringLength: Infinity
+                    });
                 }
                 return {
                     name,

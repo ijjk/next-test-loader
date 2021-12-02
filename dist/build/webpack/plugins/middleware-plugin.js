@@ -36,15 +36,15 @@ class MiddlewarePlugin {
             if (!location) {
                 continue;
             }
+            const entryFiles = entrypoint.getFiles().filter((file)=>!file.endsWith('.hot-update.js')
+            );
             const files = ssrEntryInfo ? [
                 ssrEntryInfo.requireFlightManifest ? `server/${_constants.MIDDLEWARE_FLIGHT_MANIFEST}.js` : null,
                 `server/${_constants.MIDDLEWARE_BUILD_MANIFEST}.js`,
                 `server/${_constants.MIDDLEWARE_REACT_LOADABLE_MANIFEST}.js`,
-                ...entrypoint.getFiles().map((file)=>'server/' + file
+                ...entryFiles.map((file)=>'server/' + file
                 ), 
-            ].filter(_nonNullable.nonNullable).filter((file)=>!file.endsWith('.hot-update.js')
-            ) : entrypoint.getFiles().filter((file)=>!file.endsWith('.hot-update.js')
-            ).map((file)=>// we need to use the unminified version of the webpack runtime,
+            ].filter(_nonNullable.nonNullable) : entryFiles.map((file)=>// we need to use the unminified version of the webpack runtime,
                 // remove if we do start minifying middleware chunks
                 file.startsWith('static/chunks/webpack-') ? file.replace('webpack-', 'webpack-middleware-') : file
             );

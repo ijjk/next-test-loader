@@ -5,24 +5,31 @@ Object.defineProperty(exports, "__esModule", {
 exports.getJestSWCOptions = getJestSWCOptions;
 exports.getLoaderSWCOptions = getLoaderSWCOptions;
 const nextDistPath = /(next[\\/]dist[\\/]shared[\\/]lib)|(next[\\/]dist[\\/]client)|(next[\\/]dist[\\/]pages)/;
-function getBaseSWCOptions({ filename , development , hasReactRefresh , globalWindow , styledComponents , paths , baseUrl ,  }) {
+const regeneratorRuntimePath = require.resolve('regenerator-runtime');
+function getBaseSWCOptions({ filename , development , hasReactRefresh , globalWindow , nextConfig , resolvedBaseUrl , jsConfig ,  }) {
+    var ref, ref1, ref2, ref3, ref4, ref5;
     const isTSFile = filename.endsWith('.ts');
     const isTypeScript = isTSFile || filename.endsWith('.tsx');
+    const paths = jsConfig === null || jsConfig === void 0 ? void 0 : (ref = jsConfig.compilerOptions) === null || ref === void 0 ? void 0 : ref.paths;
+    const enableDecorators = Boolean(jsConfig === null || jsConfig === void 0 ? void 0 : (ref1 = jsConfig.compilerOptions) === null || ref1 === void 0 ? void 0 : ref1.experimentalDecorators);
     return {
         jsc: {
-            ...baseUrl && paths ? {
-                baseUrl,
+            ...resolvedBaseUrl && paths ? {
+                baseUrl: resolvedBaseUrl,
                 paths
             } : {
             },
             parser: {
                 syntax: isTypeScript ? 'typescript' : 'ecmascript',
                 dynamicImport: true,
+                decorators: enableDecorators,
                 // Exclude regular TypeScript files from React transformation to prevent e.g. generic parameters and angle-bracket type assertion from being interpreted as JSX tags.
                 [isTypeScript ? 'tsx' : 'jsx']: isTSFile ? false : true
             },
             transform: {
+                legacyDecorator: enableDecorators,
                 react: {
+                    importSource: (jsConfig === null || jsConfig === void 0 ? void 0 : (ref2 = jsConfig.compilerOptions) === null || ref2 === void 0 ? void 0 : ref2.jsxImportSource) || 'react',
                     runtime: 'automatic',
                     pragma: 'React.createElement',
                     pragmaFrag: 'React.Fragment',
@@ -36,28 +43,32 @@ function getBaseSWCOptions({ filename , development , hasReactRefresh , globalWi
                     globals: {
                         typeofs: {
                             window: globalWindow ? 'object' : 'undefined'
+                        },
+                        envs: {
+                            NODE_ENV: development ? '"development"' : '"production"'
                         }
                     }
                 },
                 regenerator: {
-                    importPath: require.resolve('regenerator-runtime')
+                    importPath: regeneratorRuntimePath
                 }
             }
         },
-        styledComponents: styledComponents ? {
+        styledComponents: (nextConfig === null || nextConfig === void 0 ? void 0 : (ref3 = nextConfig.experimental) === null || ref3 === void 0 ? void 0 : ref3.styledComponents) ? {
             displayName: Boolean(development)
-        } : null
+        } : null,
+        removeConsole: nextConfig === null || nextConfig === void 0 ? void 0 : (ref4 = nextConfig.experimental) === null || ref4 === void 0 ? void 0 : ref4.removeConsole,
+        reactRemoveProperties: nextConfig === null || nextConfig === void 0 ? void 0 : (ref5 = nextConfig.experimental) === null || ref5 === void 0 ? void 0 : ref5.reactRemoveProperties
     };
 }
-function getJestSWCOptions({ filename , esm , styledComponents , paths , baseUrl ,  }) {
+function getJestSWCOptions({ isServer , filename , esm , nextConfig , jsConfig ,  }) {
     let baseOptions = getBaseSWCOptions({
         filename,
         development: false,
         hasReactRefresh: false,
-        globalWindow: false,
-        styledComponents,
-        paths,
-        baseUrl
+        globalWindow: !isServer,
+        nextConfig,
+        jsConfig
     });
     const isNextDist = nextDistPath.test(filename);
     return {
@@ -75,13 +86,14 @@ function getJestSWCOptions({ filename , esm , styledComponents , paths , baseUrl
         disablePageConfig: true
     };
 }
-function getLoaderSWCOptions({ filename , development , isServer , pagesDir , isPageFile , hasReactRefresh , styledComponents ,  }) {
+function getLoaderSWCOptions({ filename , development , isServer , pagesDir , isPageFile , hasReactRefresh , nextConfig , jsConfig ,  }) {
     let baseOptions = getBaseSWCOptions({
         filename,
         development,
         globalWindow: !isServer,
         hasReactRefresh,
-        styledComponents
+        nextConfig,
+        jsConfig
     });
     const isNextDist = nextDistPath.test(filename);
     if (isServer) {

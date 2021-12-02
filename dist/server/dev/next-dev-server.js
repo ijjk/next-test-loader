@@ -75,6 +75,29 @@ const ReactDevOverlay = (props)=>{
     return ReactDevOverlayImpl(props);
 };
 class DevServer extends _nextServer.default {
+    getStaticPathsWorker() {
+        if (this.staticPathsWorker) {
+            return this.staticPathsWorker;
+        }
+        this.staticPathsWorker = new _jestWorker.Worker(require.resolve('./static-paths-worker'), {
+            maxRetries: 1,
+            numWorkers: this.nextConfig.experimental.cpus,
+            enableWorkerThreads: this.nextConfig.experimental.workerThreads,
+            forkOptions: {
+                env: {
+                    ...process.env,
+                    // discard --inspect/--inspect-brk flags from process.env.NODE_OPTIONS. Otherwise multiple Node.js debuggers
+                    // would be started if user launch Next.js in debugging mode. The number of debuggers is linked to
+                    // the number of workers Next.js tries to launch. The only worker users are interested in debugging
+                    // is the main Next.js one
+                    NODE_OPTIONS: (0, _utils1).getNodeOptionsWithoutInspect()
+                }
+            }
+        });
+        this.staticPathsWorker.getStdout().pipe(process.stdout);
+        this.staticPathsWorker.getStderr().pipe(process.stderr);
+        return this.staticPathsWorker;
+    }
     constructor(options){
         var ref, ref1;
         super({
@@ -109,23 +132,6 @@ class DevServer extends _nextServer.default {
         }
         this.isCustomServer = !options.isNextDevCommand;
         this.pagesDir = (0, _findPagesDir).findPagesDir(this.dir);
-        this.staticPathsWorker = new _jestWorker.Worker(require.resolve('./static-paths-worker'), {
-            maxRetries: 1,
-            numWorkers: this.nextConfig.experimental.cpus,
-            enableWorkerThreads: this.nextConfig.experimental.workerThreads,
-            forkOptions: {
-                env: {
-                    ...process.env,
-                    // discard --inspect/--inspect-brk flags from process.env.NODE_OPTIONS. Otherwise multiple Node.js debuggers
-                    // would be started if user launch Next.js in debugging mode. The number of debuggers is linked to
-                    // the number of workers Next.js tries to launch. The only worker users are interested in debugging
-                    // is the main Next.js one
-                    NODE_OPTIONS: (0, _utils1).getNodeOptionsWithoutInspect()
-                }
-            }
-        });
-        this.staticPathsWorker.getStdout().pipe(process.stdout);
-        this.staticPathsWorker.getStderr().pipe(process.stderr);
     }
     readBuildId() {
         return 'development';
@@ -315,7 +321,7 @@ class DevServer extends _nextServer.default {
     }
     async close() {
         await this.stopWatcher();
-        await this.staticPathsWorker.end();
+        await this.getStaticPathsWorker().end();
         if (this.hotReloader) {
             await this.hotReloader.stop();
         }
@@ -410,16 +416,15 @@ class DevServer extends _nextServer.default {
         }
     }
     async run(req, res, parsedUrl) {
-        var ref;
         await this.devReady;
         this.setupWebSocketHandler(undefined, req);
         const { basePath  } = this.nextConfig;
         let originalPathname = null;
-        if (basePath && ((ref = parsedUrl.pathname) === null || ref === void 0 ? void 0 : ref.startsWith(basePath))) {
+        if (basePath && (0, _router).hasBasePath(parsedUrl.pathname || '/', basePath)) {
             // strip basePath before handling dev bundles
             // If replace ends up replacing the full url it'll be `undefined`, meaning we have to default it to `/`
             originalPathname = parsedUrl.pathname;
-            parsedUrl.pathname = parsedUrl.pathname.slice(basePath.length) || '/';
+            parsedUrl.pathname = (0, _router).replaceBasePath(parsedUrl.pathname || '/', basePath);
         }
         const { pathname  } = parsedUrl;
         if (pathname.startsWith('/_next')) {
@@ -632,7 +637,7 @@ class DevServer extends _nextServer.default {
             const { configFileName , publicRuntimeConfig , serverRuntimeConfig , httpAgentOptions ,  } = this.nextConfig;
             const { locales , defaultLocale  } = this.nextConfig.i18n || {
             };
-            const paths = await this.staticPathsWorker.loadStaticPaths(this.distDir, pathname, !this.renderOpts.dev && this._isLikeServerless, {
+            const paths = await this.getStaticPathsWorker().loadStaticPaths(this.distDir, pathname, !this.renderOpts.dev && this._isLikeServerless, {
                 configFileName,
                 publicRuntimeConfig,
                 serverRuntimeConfig

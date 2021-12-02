@@ -1,8 +1,13 @@
 "use strict";
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+exports.default = nextJest;
 var _env = require("@next/env");
 var _path = require("path");
 var _config = _interopRequireDefault(require("../../server/config"));
 var _constants = require("../../shared/lib/constants");
+var _loadJsconfig = _interopRequireDefault(require("../load-jsconfig"));
 var Log = _interopRequireWildcard(require("../output/log"));
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
@@ -50,21 +55,7 @@ async function getConfig(dir) {
     }
 }
 console.warn('"next/jest" is currently experimental. https://nextjs.org/docs/messages/experimental-jest-transformer');
-/*
-// Usage in jest.config.js
-const nextJest = require('next/jest');
-
-// Optionally provide path to Next.js app which will enable loading next.config.js and .env files
-const createJestConfig = nextJest({ dir })
-
-// Any custom config you want to pass to Jest
-const customJestConfig = {
-    setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
-}
-
-// createJestConfig is exported in this way to ensure that next/jest can load the Next.js config which is async
-module.exports = createJestConfig(customJestConfig)
-*/ module.exports = function nextJest(options = {
+function nextJest(options = {
 }) {
     // createJestConfig
     return (customJestConfig)=>{
@@ -72,7 +63,7 @@ module.exports = createJestConfig(customJestConfig)
         // Will be called and awaited by Jest
         return async ()=>{
             let nextConfig;
-            let paths;
+            let jsConfig;
             let resolvedBaseUrl;
             let isEsmProject = false;
             if (options.dir) {
@@ -81,10 +72,10 @@ module.exports = createJestConfig(customJestConfig)
                 isEsmProject = packageConfig.type === 'module';
                 nextConfig = await getConfig(resolvedDir);
                 (0, _env).loadEnvConfig(resolvedDir, false, Log);
-            // TODO: revisit when bug in SWC is fixed that strips `.css`
-            // const result = await loadJsConfig(resolvedDir, nextConfig)
-            // paths = result?.jsConfig?.compilerOptions?.paths
-            // resolvedBaseUrl = result.resolvedBaseUrl
+                // TODO: revisit when bug in SWC is fixed that strips `.css`
+                const result = await (0, _loadJsconfig).default(resolvedDir, nextConfig);
+                jsConfig = result.jsConfig;
+                resolvedBaseUrl = result.resolvedBaseUrl;
             }
             // Ensure provided async config is supported
             const resolvedJestConfig = typeof customJestConfig === 'function' ? await customJestConfig() : customJestConfig;
@@ -116,9 +107,9 @@ module.exports = createJestConfig(customJestConfig)
                     '^.+\\.(js|jsx|ts|tsx)$': [
                         require.resolve('../swc/jest-transformer'),
                         {
-                            styledComponents: nextConfig && nextConfig.experimental.styledComponents,
-                            paths,
-                            resolvedBaseUrl: resolvedBaseUrl,
+                            nextConfig,
+                            jsConfig,
+                            resolvedBaseUrl,
                             isEsmProject
                         }, 
                     ],
@@ -138,6 +129,6 @@ module.exports = createJestConfig(customJestConfig)
             };
         };
     };
-};
+}
 
 //# sourceMappingURL=jest.js.map

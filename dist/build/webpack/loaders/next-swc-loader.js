@@ -2,16 +2,18 @@
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
+exports.pitch = pitch;
 exports.default = swcLoader;
 exports.raw = void 0;
 var _swc = require("../../swc");
 var _options = require("../../swc/options");
+var _path = require("path");
 async function loaderTransform(parentTrace, source, inputSourceMap) {
     // Make the loader async
     const filename = this.resourcePath;
     let loaderOptions = this.getOptions() || {
     };
-    const { isServer , pagesDir , hasReactRefresh , styledComponents  } = loaderOptions;
+    const { isServer , pagesDir , hasReactRefresh , nextConfig , jsConfig  } = loaderOptions;
     const isPageFile = filename.startsWith(pagesDir);
     const swcOptions = (0, _options).getLoaderSWCOptions({
         pagesDir,
@@ -20,7 +22,8 @@ async function loaderTransform(parentTrace, source, inputSourceMap) {
         isPageFile,
         development: this.mode === 'development',
         hasReactRefresh,
-        styledComponents
+        nextConfig,
+        jsConfig
     });
     const programmaticOptions = {
         ...swcOptions,
@@ -49,6 +52,20 @@ async function loaderTransform(parentTrace, source, inputSourceMap) {
             ];
         })
     );
+}
+function pitch() {
+    if (this.loaders.length - 1 === this.loaderIndex && (0, _path).isAbsolute(this.resourcePath)) {
+        const loaderSpan = this.currentTraceSpan.traceChild('next-swc-loader');
+        const callback = this.async();
+        loaderSpan.traceAsyncFn(()=>loaderTransform.call(this, loaderSpan)
+        ).then(([transformedSource, outputSourceMap])=>{
+            this.addDependency(this.resourcePath);
+            callback(null, transformedSource, outputSourceMap);
+        }, (err)=>{
+            this.addDependency(this.resourcePath);
+            callback(err);
+        });
+    }
 }
 function swcLoader(inputSource, inputSourceMap) {
     const loaderSpan = this.currentTraceSpan.traceChild('next-swc-loader');

@@ -16,26 +16,29 @@ module.exports = {
                 if (!/\.[jt]sx?$/.test(filename)) {
                     return src;
                 }
+                const jestConfig = getJestConfig(jestOptions);
                 let swcTransformOpts = (0, _options).getJestSWCOptions({
+                    // When target is node it's similar to the server option set in SWC.
+                    isServer: jestConfig.testEnvironment && jestConfig.testEnvironment === 'node',
                     filename,
-                    styledComponents: inputOptions.styledComponents,
-                    paths: inputOptions.paths,
-                    baseUrl: inputOptions.resolvedBaseUrl,
-                    esm: isSupportEsm && isEsm(Boolean(inputOptions.isEsmProject), filename, jestOptions)
+                    nextConfig: inputOptions.nextConfig,
+                    jsConfig: inputOptions.jsConfig,
+                    resolvedBaseUrl: inputOptions.resolvedBaseUrl,
+                    esm: isSupportEsm && isEsm(Boolean(inputOptions.isEsmProject), filename, jestConfig)
                 });
-                return((0, _index).transformSync(src, {
+                return (0, _index).transformSync(src, {
                     ...swcTransformOpts,
                     filename
-                }));
+                });
             }
         })
 };
 function getJestConfig(jestConfig) {
     return 'config' in jestConfig ? jestConfig.config : jestConfig;
 }
-function isEsm(isEsmProject, filename, jestOptions) {
+function isEsm(isEsmProject, filename, jestConfig) {
     var ref;
-    return /\.jsx?$/.test(filename) && isEsmProject || ((ref = getJestConfig(jestOptions).extensionsToTreatAsEsm) === null || ref === void 0 ? void 0 : ref.find((ext)=>filename.endsWith(ext)
+    return /\.jsx?$/.test(filename) && isEsmProject || ((ref = jestConfig.extensionsToTreatAsEsm) === null || ref === void 0 ? void 0 : ref.find((ext)=>filename.endsWith(ext)
     ));
 }
 

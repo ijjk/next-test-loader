@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
+exports.isEqualNode = isEqualNode;
 exports.default = initHeadManager;
 exports.DOMAttributeNames = void 0;
 const DOMAttributeNames = {
@@ -34,6 +35,20 @@ function reactElementToDOM({ type , props  }) {
     }
     return el;
 }
+function isEqualNode(oldTag, newTag) {
+    if (oldTag instanceof HTMLElement && newTag instanceof HTMLElement) {
+        const nonce = newTag.getAttribute('nonce');
+        // Only strip the nonce if `oldTag` has had it stripped. An element's nonce attribute will not
+        // be stripped if there is no content security policy response header that includes a nonce.
+        if (nonce && !oldTag.getAttribute('nonce')) {
+            const cloneTag = newTag.cloneNode(true);
+            cloneTag.setAttribute('nonce', '');
+            cloneTag.nonce = nonce;
+            return nonce === oldTag.nonce && oldTag.isEqualNode(cloneTag);
+        }
+    }
+    return oldTag.isEqualNode(newTag);
+}
 function updateElements(type, components) {
     const headEl = document.getElementsByTagName('head')[0];
     const headCountEl = headEl.querySelector('meta[name=next-head-count]');
@@ -54,7 +69,7 @@ function updateElements(type, components) {
     const newTags = components.map(reactElementToDOM).filter((newTag)=>{
         for(let k = 0, len = oldTags.length; k < len; k++){
             const oldTag = oldTags[k];
-            if (oldTag.isEqualNode(newTag)) {
+            if (isEqualNode(oldTag, newTag)) {
                 oldTags.splice(k, 1);
                 return false;
             }
