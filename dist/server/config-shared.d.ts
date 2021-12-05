@@ -105,7 +105,6 @@ export declare type NextConfig = {
          * @deprecated this options was moved to the top level
          */
         webpack5?: false;
-        strictPostcssConfiguration?: boolean;
     };
     outputFileTracing?: boolean;
     staticPageGenerationTimeout?: number;
@@ -121,6 +120,7 @@ export declare type NextConfig = {
         };
         styledComponents?: boolean;
         swcMinify?: boolean;
+        swcFileReading?: boolean;
         cpus?: number;
         sharedPool?: boolean;
         plugins?: boolean;

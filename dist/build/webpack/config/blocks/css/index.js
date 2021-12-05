@@ -38,7 +38,7 @@ const regexSassModules = /\.module\.(scss|sass)$/;
     return r;
 }
 let postcssInstancePromise;
-async function lazyPostCSS(rootDirectory, supportedBrowsers, strictPostcssConfiguration, disablePostcssPresetEnv) {
+async function lazyPostCSS(rootDirectory, supportedBrowsers, disablePostcssPresetEnv) {
     if (!postcssInstancePromise) {
         postcssInstancePromise = (async ()=>{
             const postcss = require('postcss');
@@ -96,7 +96,7 @@ async function lazyPostCSS(rootDirectory, supportedBrowsers, strictPostcssConfig
                     return prop.replace(/^-\w+-/, '');
                 }
             };
-            const postCssPlugins = await (0, _plugins).getPostCssPlugins(rootDirectory, supportedBrowsers, strictPostcssConfiguration, disablePostcssPresetEnv);
+            const postCssPlugins = await (0, _plugins).getPostCssPlugins(rootDirectory, supportedBrowsers, disablePostcssPresetEnv);
             return {
                 postcss,
                 postcssWithPlugins: postcss(postCssPlugins)
@@ -107,7 +107,7 @@ async function lazyPostCSS(rootDirectory, supportedBrowsers, strictPostcssConfig
 }
 const css = (0, _lodashCurry).default(async function css(ctx, config) {
     const { prependData: sassPrependData , additionalData: sassAdditionalData , ...sassOptions } = ctx.sassOptions;
-    const lazyPostCSSInitalizer = ()=>lazyPostCSS(ctx.rootDirectory, ctx.supportedBrowsers, ctx.future.strictPostcssConfiguration, ctx.experimental.disablePostcssPresetEnv)
+    const lazyPostCSSInitalizer = ()=>lazyPostCSS(ctx.rootDirectory, ctx.supportedBrowsers, ctx.experimental.disablePostcssPresetEnv)
     ;
     const sassPreprocessors = [
         // First, process files with `sass-loader`: this inlines content, and

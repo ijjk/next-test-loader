@@ -53,19 +53,22 @@ async function loaderTransform(parentTrace, source, inputSourceMap) {
         })
     );
 }
+const EXCLUDED_PATHS = /[\\/](cache[\\/][^\\/]+\.zip[\\/]node_modules|__virtual__)[\\/]/g;
 function pitch() {
-    if (this.loaders.length - 1 === this.loaderIndex && (0, _path).isAbsolute(this.resourcePath)) {
-        const loaderSpan = this.currentTraceSpan.traceChild('next-swc-loader');
-        const callback = this.async();
-        loaderSpan.traceAsyncFn(()=>loaderTransform.call(this, loaderSpan)
-        ).then(([transformedSource, outputSourceMap])=>{
+    const callback = this.async();
+    (async ()=>{
+        let loaderOptions = this.getOptions() || {
+        };
+        if (loaderOptions.fileReading && !EXCLUDED_PATHS.test(this.resourcePath) && this.loaders.length - 1 === this.loaderIndex && (0, _path).isAbsolute(this.resourcePath) && !await (0, _swc).isWasm()) {
+            const loaderSpan = this.currentTraceSpan.traceChild('next-swc-loader');
             this.addDependency(this.resourcePath);
-            callback(null, transformedSource, outputSourceMap);
-        }, (err)=>{
-            this.addDependency(this.resourcePath);
-            callback(err);
-        });
-    }
+            return loaderSpan.traceAsyncFn(()=>loaderTransform.call(this, loaderSpan)
+            );
+        }
+    })().then((r)=>{
+        if (r) return callback(null, ...r);
+        callback();
+    }, callback);
 }
 function swcLoader(inputSource, inputSourceMap) {
     const loaderSpan = this.currentTraceSpan.traceChild('next-swc-loader');

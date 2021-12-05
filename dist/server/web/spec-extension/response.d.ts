@@ -1,6 +1,6 @@
 import type { I18NConfig } from '../../config-shared';
-import type { CookieSerializeOptions } from 'next/dist/compiled/cookie';
 import { NextURL } from '../next-url';
+import { CookieSerializeOptions } from '../types';
 declare const INTERNALS: unique symbol;
 export declare class NextResponse extends Response {
     [INTERNALS]: {

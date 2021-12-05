@@ -259,7 +259,9 @@ function handleLoading(img, src, layout, placeholder, onLoadingComplete) {
                     var ref;
                     if ((ref = img.parentElement) === null || ref === void 0 ? void 0 : ref.parentElement) {
                         const parent = getComputedStyle(img.parentElement.parentElement);
-                        if (layout === 'responsive' && parent.display === 'flex') {
+                        if (!parent.position) {
+                        // The parent has not been rendered to the dom yet and therefore it has no position. Skip the warnings for such cases.
+                        } else if (layout === 'responsive' && parent.display === 'flex') {
                             console.warn(`Image with src "${src}" may not render properly as a child of a flex container. Consider wrapping the image with a div to configure the width.`);
                         } else if (layout === 'fill' && parent.position !== 'relative' && parent.position !== 'fixed') {
                             console.warn(`Image with src "${src}" may not render properly with a parent using position:"${parent.position}". Consider changing the parent style to position:"relative" with a width and height.`);

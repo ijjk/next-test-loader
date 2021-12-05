@@ -77,10 +77,9 @@ function _interopRequireWildcard(obj) {
 }
 async function build(dir, conf = null, reactProductionProfiling = false, debugOutput = false, runLint = true) {
     const nextBuildSpan = (0, _trace).trace('next-build', undefined, {
-        version: "12.0.5-canary.13"
+        version: "12.0.8-canary.0"
     });
     const buildResult = await nextBuildSpan.traceAsyncFn(async ()=>{
-        var ref5;
         // attempt to load global env values so they are available in next.config.js
         const { loadedEnvFiles  } = nextBuildSpan.traceChild('load-dotenv').traceFn(()=>(0, _env).loadEnvConfig(dir, false, Log)
         );
@@ -318,95 +317,102 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
                 ignore: []
             })
         );
-        const runWebpackSpan = nextBuildSpan.traceChild('run-webpack-compiler');
-        const configs = await runWebpackSpan.traceChild('generate-webpack-config').traceAsyncFn(()=>Promise.all([
-                (0, _webpackConfig).default(dir, {
-                    buildId,
-                    reactProductionProfiling,
-                    isServer: false,
-                    config,
-                    target,
-                    pagesDir,
-                    entrypoints: entrypoints.client,
-                    rewrites,
-                    runWebpackSpan
-                }),
-                (0, _webpackConfig).default(dir, {
-                    buildId,
-                    reactProductionProfiling,
-                    isServer: true,
-                    config,
-                    target,
-                    pagesDir,
-                    entrypoints: entrypoints.server,
-                    rewrites,
-                    runWebpackSpan
-                }),
-                hasConcurrentFeatures ? (0, _webpackConfig).default(dir, {
-                    buildId,
-                    reactProductionProfiling,
-                    isServer: true,
-                    webServerRuntime: true,
-                    config,
-                    target,
-                    pagesDir,
-                    entrypoints: entrypoints.serverWeb,
-                    rewrites,
-                    runWebpackSpan
-                }) : null, 
-            ])
-        );
-        const clientConfig = configs[0];
-        if (clientConfig.optimization && (clientConfig.optimization.minimize !== true || clientConfig.optimization.minimizer && clientConfig.optimization.minimizer.length === 0)) {
-            Log.warn(`Production code optimization has been disabled in your project. Read more: https://nextjs.org/docs/messages/minification-disabled`);
-        }
-        const webpackBuildStart = process.hrtime();
         let result = {
             warnings: [],
             errors: []
         };
-        // We run client and server compilation separately to optimize for memory usage
-        await runWebpackSpan.traceAsyncFn(async ()=>{
-            const clientResult = await (0, _compiler).runCompiler(clientConfig, {
-                runWebpackSpan
-            });
-            // Fail build if clientResult contains errors
-            if (clientResult.errors.length > 0) {
-                result = {
-                    warnings: [
-                        ...clientResult.warnings
-                    ],
-                    errors: [
-                        ...clientResult.errors
-                    ]
-                };
-            } else {
-                const serverResult = await (0, _compiler).runCompiler(configs[1], {
+        let webpackBuildStart;
+        let telemetryPlugin;
+        await (async ()=>{
+            var ref;
+            // IIFE to isolate locals and avoid retaining memory too long
+            const runWebpackSpan = nextBuildSpan.traceChild('run-webpack-compiler');
+            const configs = await runWebpackSpan.traceChild('generate-webpack-config').traceAsyncFn(()=>Promise.all([
+                    (0, _webpackConfig).default(dir, {
+                        buildId,
+                        reactProductionProfiling,
+                        isServer: false,
+                        config,
+                        target,
+                        pagesDir,
+                        entrypoints: entrypoints.client,
+                        rewrites,
+                        runWebpackSpan
+                    }),
+                    (0, _webpackConfig).default(dir, {
+                        buildId,
+                        reactProductionProfiling,
+                        isServer: true,
+                        config,
+                        target,
+                        pagesDir,
+                        entrypoints: entrypoints.server,
+                        rewrites,
+                        runWebpackSpan
+                    }),
+                    hasConcurrentFeatures ? (0, _webpackConfig).default(dir, {
+                        buildId,
+                        reactProductionProfiling,
+                        isServer: true,
+                        webServerRuntime: true,
+                        config,
+                        target,
+                        pagesDir,
+                        entrypoints: entrypoints.serverWeb,
+                        rewrites,
+                        runWebpackSpan
+                    }) : null, 
+                ])
+            );
+            const clientConfig = configs[0];
+            if (clientConfig.optimization && (clientConfig.optimization.minimize !== true || clientConfig.optimization.minimizer && clientConfig.optimization.minimizer.length === 0)) {
+                Log.warn(`Production code optimization has been disabled in your project. Read more: https://nextjs.org/docs/messages/minification-disabled`);
+            }
+            webpackBuildStart = process.hrtime();
+            // We run client and server compilation separately to optimize for memory usage
+            await runWebpackSpan.traceAsyncFn(async ()=>{
+                const clientResult = await (0, _compiler).runCompiler(clientConfig, {
                     runWebpackSpan
                 });
-                const serverWebResult = configs[2] ? await (0, _compiler).runCompiler(configs[2], {
-                    runWebpackSpan
-                }) : null;
-                result = {
-                    warnings: [
-                        ...clientResult.warnings,
-                        ...serverResult.warnings,
-                        ...(serverWebResult === null || serverWebResult === void 0 ? void 0 : serverWebResult.warnings) || [], 
-                    ],
-                    errors: [
-                        ...clientResult.errors,
-                        ...serverResult.errors,
-                        ...(serverWebResult === null || serverWebResult === void 0 ? void 0 : serverWebResult.errors) || [], 
-                    ]
-                };
-            }
-        });
+                // Fail build if clientResult contains errors
+                if (clientResult.errors.length > 0) {
+                    result = {
+                        warnings: [
+                            ...clientResult.warnings
+                        ],
+                        errors: [
+                            ...clientResult.errors
+                        ]
+                    };
+                } else {
+                    const serverResult = await (0, _compiler).runCompiler(configs[1], {
+                        runWebpackSpan
+                    });
+                    const serverWebResult = configs[2] ? await (0, _compiler).runCompiler(configs[2], {
+                        runWebpackSpan
+                    }) : null;
+                    result = {
+                        warnings: [
+                            ...clientResult.warnings,
+                            ...serverResult.warnings,
+                            ...(serverWebResult === null || serverWebResult === void 0 ? void 0 : serverWebResult.warnings) || [], 
+                        ],
+                        errors: [
+                            ...clientResult.errors,
+                            ...serverResult.errors,
+                            ...(serverWebResult === null || serverWebResult === void 0 ? void 0 : serverWebResult.errors) || [], 
+                        ]
+                    };
+                }
+            });
+            result = nextBuildSpan.traceChild('format-webpack-messages').traceFn(()=>(0, _formatWebpackMessages).default(result, true)
+            );
+            telemetryPlugin = (ref = clientConfig.plugins) === null || ref === void 0 ? void 0 : ref.find(isTelemetryPlugin);
+        })();
         const webpackBuildEnd = process.hrtime(webpackBuildStart);
         if (buildSpinner) {
             buildSpinner.stopAndPersist();
         }
-        result = nextBuildSpan.traceChild('format-webpack-messages').traceFn(()=>(0, _formatWebpackMessages).default(result, true)
-        );
         if (result.errors.length > 0) {
             // Only keep the first few errors. Others are often indicative
             // of the same problem, but confuse the reader with noise.
@@ -519,8 +525,8 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
             const errorPageHasCustomGetInitialProps = nonStaticErrorPageSpan.traceAsyncFn(async ()=>hasCustomErrorPage && await staticWorkers.hasCustomGetInitialProps('/_error', distDir, isLikeServerless, runtimeEnvConfig, false)
             );
             const errorPageStaticResult = nonStaticErrorPageSpan.traceAsyncFn(async ()=>{
-                var ref, ref14;
-                return hasCustomErrorPage && staticWorkers.isPageStatic('/_error', distDir, isLikeServerless, configFileName, runtimeEnvConfig, config.httpAgentOptions, (ref = config.i18n) === null || ref === void 0 ? void 0 : ref.locales, (ref14 = config.i18n) === null || ref14 === void 0 ? void 0 : ref14.defaultLocale);
+                var ref, ref11;
+                return hasCustomErrorPage && staticWorkers.isPageStatic('/_error', distDir, isLikeServerless, configFileName, runtimeEnvConfig, config.httpAgentOptions, (ref = config.i18n) === null || ref === void 0 ? void 0 : ref.locales, (ref11 = config.i18n) === null || ref11 === void 0 ? void 0 : ref11.defaultLocale);
             });
             // we don't output _app in serverless mode so use _app export
             // from _error instead
@@ -548,8 +554,8 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
                         try {
                             let isPageStaticSpan = checkPageSpan.traceChild('is-page-static');
                             let workerResult = await isPageStaticSpan.traceAsyncFn(()=>{
-                                var ref, ref22;
-                                return staticWorkers.isPageStatic(page, distDir, isLikeServerless, configFileName, runtimeEnvConfig, config.httpAgentOptions, (ref = config.i18n) === null || ref === void 0 ? void 0 : ref.locales, (ref22 = config.i18n) === null || ref22 === void 0 ? void 0 : ref22.defaultLocale, isPageStaticSpan.id);
+                                var ref, ref16;
+                                return staticWorkers.isPageStatic(page, distDir, isLikeServerless, configFileName, runtimeEnvConfig, config.httpAgentOptions, (ref = config.i18n) === null || ref === void 0 ? void 0 : ref.locales, (ref16 = config.i18n) === null || ref16 === void 0 ? void 0 : ref16.defaultLocale, isPageStaticSpan.id);
                             });
                             if (config.outputFileTracing) {
                                 pageTraceIncludes.set(page, workerResult.traceIncludes || []);
@@ -1144,7 +1150,7 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
             });
         }
         const analysisEnd = process.hrtime(analysisBegin);
-        var ref30;
+        var ref;
         telemetry.record((0, _events).eventBuildOptimize(pagePaths, {
             durationInSeconds: analysisEnd[0],
             staticPageCount: staticPages.size,
@@ -1152,7 +1158,7 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
             serverPropsPageCount: serverPropsPages.size,
             ssrPageCount: pagePaths.length - (staticPages.size + ssgPages.size + serverPropsPages.size),
             hasStatic404: useStatic404,
-            hasReportWebVitals: (ref30 = namedExports === null || namedExports === void 0 ? void 0 : namedExports.includes('reportWebVitals')) !== null && ref30 !== void 0 ? ref30 : false,
+            hasReportWebVitals: (ref = namedExports === null || namedExports === void 0 ? void 0 : namedExports.includes('reportWebVitals')) !== null && ref !== void 0 ? ref : false,
             rewritesCount: combinedRewrites.length,
             headersCount: headers.length,
             redirectsCount: redirects.length - 1,
@@ -1165,13 +1171,12 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
             middlewareCount: pageKeys.filter((page)=>_constants.MIDDLEWARE_ROUTE.test(page)
             ).length
         }));
-        const telemetryPlugin = (ref5 = clientConfig.plugins) === null || ref5 === void 0 ? void 0 : ref5.find(isTelemetryPlugin);
         if (telemetryPlugin) {
             const events = (0, _events).eventBuildFeatureUsage(telemetryPlugin);
             telemetry.record(events);
         }
         if (ssgPages.size > 0) {
-            var ref;
+            var ref21;
             const finalDynamicRoutes = {
             };
             tbdPrerenderRoutes.forEach((tbdRoute)=>{
@@ -1195,7 +1200,7 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
             await generateClientSsgManifest(prerenderManifest, {
                 distDir,
                 buildId,
-                locales: ((ref = config.i18n) === null || ref === void 0 ? void 0 : ref.locales) || []
+                locales: ((ref21 = config.i18n) === null || ref21 === void 0 ? void 0 : ref21.locales) || []
             });
         } else {
             const prerenderManifest = {

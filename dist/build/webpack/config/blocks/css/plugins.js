@@ -89,8 +89,8 @@ function getDefaultPlugins(supportedBrowsers, disablePostcssPresetEnv) {
         ], 
     ].filter(Boolean);
 }
-async function getPostCssPlugins(dir, supportedBrowsers, defaults = false, disablePostcssPresetEnv = false) {
-    let config = defaults ? null : await (0, _findConfig).findConfig(dir, 'postcss');
+async function getPostCssPlugins(dir, supportedBrowsers, disablePostcssPresetEnv = false) {
+    let config = await (0, _findConfig).findConfig(dir, 'postcss');
     if (config == null) {
         config = {
             plugins: getDefaultPlugins(supportedBrowsers, disablePostcssPresetEnv)

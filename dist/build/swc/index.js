@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
+exports.isWasm = isWasm;
 exports.transform = transform;
 exports.transformSync = transformSync;
 exports.minify = minify;
@@ -9,12 +10,7 @@ exports.minifySync = minifySync;
 exports.bundle = bundle;
 var _os = require("os");
 var _triples = require("@napi-rs/triples");
-var _log = _interopRequireDefault(require("../output/log"));
-function _interopRequireDefault(obj) {
-    return obj && obj.__esModule ? obj : {
-        default: obj
-    };
-}
+var Log = _interopRequireWildcard(require("../output/log"));
 function _interopRequireWildcard(obj) {
     if (obj && obj.__esModule) {
         return obj;
@@ -56,6 +52,7 @@ async function loadWasm() {
                 bindings = await bindings.default();
             }
             return {
+                isWasm: true,
                 transform (src, options) {
                     return Promise.resolve(bindings.transformSync(src.toString(), options));
                 },
@@ -73,7 +70,7 @@ function loadNative() {
     for (const triple of triples){
         try {
             bindings = require(`@next/swc/native/next-swc.${triple.platformArchABI}.node`);
-            _log.default.info('Using locally built binary of @next/swc');
+            Log.info('Using locally built binary of @next/swc');
             break;
         } catch (e) {
             if ((e === null || e === void 0 ? void 0 : e.code) !== 'MODULE_NOT_FOUND') {
@@ -95,6 +92,7 @@ function loadNative() {
     }
     if (bindings) {
         return {
+            isWasm: false,
             transform (src, options) {
                 var ref;
                 const isModule = typeof src !== undefined && typeof src !== 'string' && !Buffer.isBuffer(src);
@@ -138,11 +136,15 @@ function loadNative() {
     if (loadError) {
         console.error(loadError);
     }
-    _log.default.error(`Failed to load SWC binary, see more info here: https://nextjs.org/docs/messages/failed-loading-swc`);
+    Log.error(`Failed to load SWC binary, see more info here: https://nextjs.org/docs/messages/failed-loading-swc`);
     process.exit(1);
 }
 function toBuffer(t) {
     return Buffer.from(JSON.stringify(t));
+}
+async function isWasm() {
+    let bindings = await loadBindings();
+    return bindings.isWasm;
 }
 async function transform(src, options) {
     let bindings = await loadBindings();
