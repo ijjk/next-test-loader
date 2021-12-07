@@ -4,7 +4,6 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.default = void 0;
 var _compression = _interopRequireDefault(require("next/dist/compiled/compression"));
-var _fs = _interopRequireDefault(require("fs"));
 var _httpProxy = _interopRequireDefault(require("next/dist/compiled/http-proxy"));
 var _path = require("path");
 var _querystring = require("querystring");
@@ -17,7 +16,6 @@ var _utils1 = require("../shared/lib/utils");
 var _apiUtils = require("./api-utils");
 var _config = require("./config");
 var _pathMatch = _interopRequireDefault(require("../shared/lib/router/utils/path-match"));
-var _recursiveReaddirSync = require("./lib/recursive-readdir-sync");
 var _loadComponents = require("./load-components");
 var _normalizePagePath = require("./normalize-page-path");
 var _render = require("./render");
@@ -85,7 +83,6 @@ class Server {
         this.customErrorNo404Warn = (0, _utils1).execOnce(()=>{
             Log.warn(`You have added a custom /_error page without a custom /404 page. This prevents the 404 page from being auto statically optimized.\nSee here for info: https://nextjs.org/docs/messages/custom-error-no-custom-404`);
         });
-        this._validFilesystemPathSet = null;
         this.dir = (0, _path).resolve(dir);
         this.quiet = quiet;
         (0, _env).loadEnvConfig(this.dir, dev, Log);
@@ -96,12 +93,12 @@ class Server {
         this.port = port;
         this.distDir = (0, _path).join(this.dir, this.nextConfig.distDir);
         this.publicDir = (0, _path).join(this.dir, _constants.CLIENT_PUBLIC_FILES_PATH);
-        this.hasStaticDir = !minimalMode && _fs.default.existsSync((0, _path).join(this.dir, 'static'));
+        this.hasStaticDir = !minimalMode && this.getHasStaticDir();
         // Only serverRuntimeConfig needs the default
         // publicRuntimeConfig gets it's default in client/index.js
         const { serverRuntimeConfig ={
         } , publicRuntimeConfig , assetPrefix , generateEtags , compress ,  } = this.nextConfig;
-        this.buildId = this.readBuildId();
+        this.buildId = this.getBuildId();
         this.minimalMode = minimalMode;
         this.renderOpts = {
             poweredByHeader: this.nextConfig.poweredByHeader,
@@ -137,14 +134,8 @@ class Server {
             publicRuntimeConfig
         });
         this.serverBuildDir = (0, _path).join(this.distDir, this._isLikeServerless ? _constants.SERVERLESS_DIRECTORY : _constants.SERVER_DIRECTORY);
-        const pagesManifestPath = (0, _path).join(this.serverBuildDir, _constants.PAGES_MANIFEST);
-        const middlewareManifestPath = (0, _path).join((0, _path).join(this.distDir, _constants.SERVER_DIRECTORY), _constants.MIDDLEWARE_MANIFEST);
-        if (!dev) {
-            this.pagesManifest = require(pagesManifestPath);
-            if (!this.minimalMode) {
-                this.middlewareManifest = require(middlewareManifestPath);
-            }
-        }
+        this.pagesManifest = this.getPagesManifest();
+        this.middlewareManifest = this.getMiddlewareManifest();
         this.customRoutes = this.getCustomRoutes();
         this.router = new _router.default(this.generateRoutes());
         this.setAssetPrefix(assetPrefix);
@@ -381,6 +372,13 @@ class Server {
     getPreviewProps() {
         return this.getPrerenderManifest().preview;
     }
+    getMiddlewareManifest() {
+        if (!this.minimalMode) {
+            const middlewareManifestPath = (0, _path).join((0, _path).join(this.distDir, _constants.SERVER_DIRECTORY), _constants.MIDDLEWARE_MANIFEST);
+            return require(middlewareManifestPath);
+        }
+        return undefined;
+    }
     getMiddleware() {
         var ref, ref30;
         const middleware = ((ref = this.middlewareManifest) === null || ref === void 0 ? void 0 : ref.middleware) || {
@@ -494,7 +492,7 @@ class Server {
     generateRoutes() {
         var ref;
         const server = this;
-        const publicRoutes = _fs.default.existsSync(this.publicDir) ? this.generatePublicRoutes() : [];
+        const publicRoutes = this.generatePublicRoutes();
         const staticFilesRoute = this.hasStaticDir ? [
             {
                 // It's very important to keep this route's param optional.
@@ -1063,50 +1061,6 @@ class Server {
         }
         await (0, _apiUtils).apiResolver(req, res, query, pageModule, this.renderOpts.previewProps, this.minimalMode, this.renderOpts.dev, page);
         return true;
-    }
-    generatePublicRoutes() {
-        const publicFiles = new Set((0, _recursiveReaddirSync).recursiveReadDirSync(this.publicDir).map((p)=>encodeURI(p.replace(/\\/g, '/'))
-        ));
-        return [
-            {
-                match: (0, _router).route('/:path*'),
-                name: 'public folder catchall',
-                fn: async (req, res, params, parsedUrl)=>{
-                    const pathParts = params.path || [];
-                    const { basePath  } = this.nextConfig;
-                    // if basePath is defined require it be present
-                    if (basePath) {
-                        const basePathParts = basePath.split('/');
-                        // remove first empty value
-                        basePathParts.shift();
-                        if (!basePathParts.every((part, idx)=>{
-                            return part === pathParts[idx];
-                        })) {
-                            return {
-                                finished: false
-                            };
-                        }
-                        pathParts.splice(0, basePathParts.length);
-                    }
-                    let path = `/${pathParts.join('/')}`;
-                    if (!publicFiles.has(path)) {
-                        // In `next-dev-server.ts`, we ensure encoded paths match
-                        // decoded paths on the filesystem. So we need do the
-                        // opposite here: make sure decoded paths match encoded.
-                        path = encodeURI(path);
-                    }
-                    if (publicFiles.has(path)) {
-                        await this.serveStatic(req, res, (0, _path).join(this.publicDir, ...pathParts), parsedUrl);
-                        return {
-                            finished: true
-                        };
-                    }
-                    return {
-                        finished: false
-                    };
-                }
-            }, 
-        ];
     }
     getDynamicRoutes() {
         const addedPages = new Set();
@@ -1809,30 +1763,6 @@ class Server {
             }
         }
     }
-    getFilesystemPaths() {
-        if (this._validFilesystemPathSet) {
-            return this._validFilesystemPathSet;
-        }
-        const pathUserFilesStatic = (0, _path).join(this.dir, 'static');
-        let userFilesStatic = [];
-        if (this.hasStaticDir && _fs.default.existsSync(pathUserFilesStatic)) {
-            userFilesStatic = (0, _recursiveReaddirSync).recursiveReadDirSync(pathUserFilesStatic).map((f)=>(0, _path).join('.', 'static', f)
-            );
-        }
-        let userFilesPublic = [];
-        if (this.publicDir && _fs.default.existsSync(this.publicDir)) {
-            userFilesPublic = (0, _recursiveReaddirSync).recursiveReadDirSync(this.publicDir).map((f)=>(0, _path).join('.', 'public', f)
-            );
-        }
-        let nextFilesStatic = [];
-        nextFilesStatic = !this.minimalMode && _fs.default.existsSync((0, _path).join(this.distDir, 'static')) ? (0, _recursiveReaddirSync).recursiveReadDirSync((0, _path).join(this.distDir, 'static')).map((f)=>(0, _path).join('.', (0, _path).relative(this.dir, this.distDir), 'static', f)
-        ) : [];
-        return this._validFilesystemPathSet = new Set([
-            ...nextFilesStatic,
-            ...userFilesPublic,
-            ...userFilesStatic, 
-        ]);
-    }
     isServeableUrl(untrustedFileUrl) {
         // This method mimics what the version of `send` we use does:
         // 1. decodeURIComponent:
@@ -1862,17 +1792,6 @@ class Server {
         const filesystemUrls = this.getFilesystemPaths();
         const resolved = (0, _path).relative(this.dir, untrustedFilePath);
         return filesystemUrls.has(resolved);
-    }
-    readBuildId() {
-        const buildIdFile = (0, _path).join(this.distDir, _constants.BUILD_ID_FILE);
-        try {
-            return _fs.default.readFileSync(buildIdFile, 'utf8').trim();
-        } catch (err) {
-            if (!_fs.default.existsSync(buildIdFile)) {
-                throw new Error(`Could not find a production build in the '${this.distDir}' directory. Try building your app with 'next build' before starting the production server. https://nextjs.org/docs/messages/production-start-no-build-id`);
-            }
-            throw err;
-        }
     }
     get _isLikeServerless() {
         return (0, _config).isTargetLikeServerless(this.nextConfig.target);

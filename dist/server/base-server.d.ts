@@ -116,6 +116,11 @@ export default abstract class Server {
     protected middleware?: RoutingItem[];
     readonly hostname?: string;
     readonly port?: number;
+    protected abstract getHasStaticDir(): boolean;
+    protected abstract getPagesManifest(): PagesManifest | undefined;
+    protected abstract getBuildId(): string;
+    protected abstract generatePublicRoutes(): Route[];
+    protected abstract getFilesystemPaths(): Set<string>;
     constructor({ dir, quiet, conf, dev, minimalMode, customServer, hostname, port, }: Options);
     logError(err: Error): void;
     private handleRequest;
@@ -128,6 +133,7 @@ export default abstract class Server {
     private _cachedPreviewManifest;
     protected getPrerenderManifest(): PrerenderManifest;
     protected getPreviewProps(): __ApiPreviewProps;
+    protected getMiddlewareManifest(): MiddlewareManifest | undefined;
     protected getMiddleware(): {
         match: (pathname: string | null | undefined) => false | {
             [paramName: string]: string | string[];
@@ -172,7 +178,6 @@ export default abstract class Server {
      * @param pathname path of request
      */
     private handleApiRequest;
-    protected generatePublicRoutes(): Route[];
     protected getDynamicRoutes(): Array<RoutingItem>;
     private handleCompression;
     protected run(req: IncomingMessage, res: ServerResponse, parsedUrl: UrlWithParsedQuery): Promise<void>;
@@ -194,10 +199,7 @@ export default abstract class Server {
     protected getFallbackErrorComponents(): Promise<LoadComponentsReturnType | null>;
     render404(req: IncomingMessage, res: ServerResponse, parsedUrl?: NextUrlWithParsedQuery, setHeaders?: boolean): Promise<void>;
     serveStatic(req: IncomingMessage, res: ServerResponse, path: string, parsedUrl?: UrlWithParsedQuery): Promise<void>;
-    private _validFilesystemPathSet;
-    private getFilesystemPaths;
     protected isServeableUrl(untrustedFileUrl: string): boolean;
-    protected readBuildId(): string;
     protected get _isLikeServerless(): boolean;
 }
 export declare class WrappedBuildError extends Error {

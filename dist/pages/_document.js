@@ -492,11 +492,11 @@ class Head extends _react.Component {
 }
 exports.Head = Head;
 Head.contextType = _utils.HtmlContext;
-function Main({ children  }) {
-    const { docComponentsRendered , useMainContent  } = (0, _react).useContext(_utils.HtmlContext);
-    const content = useMainContent(children);
+function Main() {
+    const { docComponentsRendered  } = (0, _react).useContext(_utils.HtmlContext);
     docComponentsRendered.Main = true;
-    return content;
+    // @ts-ignore
+    return(/*#__PURE__*/ _react.default.createElement("next-js-internal-body-render-target", null));
 }
 class NextScript extends _react.Component {
     getDynamicChunks(files) {

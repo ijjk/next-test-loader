@@ -133,7 +133,7 @@ class DevServer extends _nextServer.default {
         this.isCustomServer = !options.isNextDevCommand;
         this.pagesDir = (0, _findPagesDir).findPagesDir(this.dir);
     }
-    readBuildId() {
+    getBuildId() {
         return 'development';
     }
     async addExportPathMapRoutes() {
@@ -525,8 +525,14 @@ class DevServer extends _nextServer.default {
             previewModeEncryptionKey: _crypto.default.randomBytes(32).toString('hex')
         };
     }
+    getPagesManifest() {
+        return undefined;
+    }
     getMiddleware() {
         return [];
+    }
+    getMiddlewareManifest() {
+        return undefined;
     }
     async hasMiddleware(pathname, isSSR) {
         return this.hasPage(isSSR ? pathname : getMiddlewareFilepath(pathname));

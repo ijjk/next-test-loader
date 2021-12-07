@@ -77,7 +77,7 @@ function _interopRequireWildcard(obj) {
 }
 async function build(dir, conf = null, reactProductionProfiling = false, debugOutput = false, runLint = true) {
     const nextBuildSpan = (0, _trace).trace('next-build', undefined, {
-        version: "12.0.8-canary.0"
+        version: "12.0.8-canary.1"
     });
     const buildResult = await nextBuildSpan.traceAsyncFn(async ()=>{
         // attempt to load global env values so they are available in next.config.js
@@ -146,12 +146,21 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
         }
         const ignoreESLint = Boolean(config.eslint.ignoreDuringBuilds);
         const eslintCacheDir = _path.default.join(cacheDir, 'eslint/');
-        if (!ignoreESLint && runLint) {
+        const shouldLint = !ignoreESLint && runLint;
+        if (shouldLint) {
             await nextBuildSpan.traceChild('verify-and-lint').traceAsyncFn(async ()=>{
                 var ref;
                 await (0, _verifyAndLint).verifyAndLint(dir, eslintCacheDir, (ref = config.eslint) === null || ref === void 0 ? void 0 : ref.dirs, config.experimental.cpus, config.experimental.workerThreads, telemetry);
             });
         }
+        const buildLintEvent = {
+            featureName: 'build-lint',
+            invocationCount: shouldLint ? 1 : 0
+        };
+        telemetry.record({
+            eventName: _events.EVENT_BUILD_FEATURE_USAGE,
+            payload: buildLintEvent
+        });
         const buildSpinner = (0, _spinner).default({
             prefixText: `${Log.prefixes.info} Creating an optimized production build`
         });
@@ -676,7 +685,7 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
                             for (const includeGlob of includeGlobs){
                                 const results = await glob(includeGlob);
                                 includes.push(...results.map((file)=>{
-                                    return(_path.default.relative(pageDir, _path.default.join(dir, file)));
+                                    return _path.default.relative(pageDir, _path.default.join(dir, file));
                                 }));
                             }
                         }
@@ -826,7 +835,6 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
         ];
         telemetry.record(features.map((feature)=>{
             return {
-                // noop
                 eventName: _events.EVENT_BUILD_FEATURE_USAGE,
                 payload: feature
             };

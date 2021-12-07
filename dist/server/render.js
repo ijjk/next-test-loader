@@ -640,16 +640,6 @@ async function renderToHTML(req, res, pathname, query, renderOpts) {
             id: "__next"
         }, children);
     };
-    const appWrappers = [];
-    const getWrappedApp = (app)=>{
-        // Prevent wrappers from reading/writing props by rendering inside an
-        // opaque component. Wrappers should use context instead.
-        const InnerApp = ()=>app
-        ;
-        return(/*#__PURE__*/ _react.default.createElement(AppContainerWithIsomorphicFiberStructure, null, appWrappers.reduceRight((innerContent, fn)=>{
-            return fn(innerContent);
-        }, /*#__PURE__*/ _react.default.createElement(InnerApp, null))));
-    };
     /**
    * Rules of Static & Dynamic HTML:
    *
@@ -683,7 +673,7 @@ async function renderToHTML(req, res, pathname, query, renderOpts) {
                     throw new Error(`'router' and 'Component' can not be returned in getInitialProps from _app.js https://nextjs.org/docs/messages/cant-override-next-props`);
                 }
                 const { App: EnhancedApp , Component: EnhancedComponent  } = enhanceComponents(options, App, Component);
-                const html = _server.default.renderToString(/*#__PURE__*/ _react.default.createElement(Body, null, getWrappedApp(/*#__PURE__*/ _react.default.createElement(EnhancedApp, Object.assign({
+                const html = _server.default.renderToString(/*#__PURE__*/ _react.default.createElement(Body, null, /*#__PURE__*/ _react.default.createElement(AppContainerWithIsomorphicFiberStructure, null, /*#__PURE__*/ _react.default.createElement(EnhancedApp, Object.assign({
                     Component: EnhancedComponent,
                     router: router
                 }, props)))));
@@ -711,13 +701,6 @@ async function renderToHTML(req, res, pathname, query, renderOpts) {
                 documentElement: (htmlProps)=>/*#__PURE__*/ _react.default.createElement(Document, Object.assign({
                     }, htmlProps, docProps))
                 ,
-                useMainContent: (fn)=>{
-                    if (fn) {
-                        throw new Error('The `children` property is not supported by non-functional custom Document components');
-                    }
-                    // @ts-ignore
-                    return(/*#__PURE__*/ _react.default.createElement("next-js-internal-body-render-target", null));
-                },
                 head: docProps.head,
                 headTags: await headTags(documentCtx),
                 styles: docProps.styles
@@ -730,7 +713,7 @@ async function renderToHTML(req, res, pathname, query, renderOpts) {
                     // up to date when getWrappedApp is called
                     const content = ctx.err && ErrorDebug ? /*#__PURE__*/ _react.default.createElement(Body, null, /*#__PURE__*/ _react.default.createElement(ErrorDebug, {
                         error: ctx.err
-                    })) : /*#__PURE__*/ _react.default.createElement(Body, null, getWrappedApp(/*#__PURE__*/ _react.default.createElement(App, Object.assign({
+                    })) : /*#__PURE__*/ _react.default.createElement(Body, null, /*#__PURE__*/ _react.default.createElement(AppContainerWithIsomorphicFiberStructure, null, /*#__PURE__*/ _react.default.createElement(App, Object.assign({
                     }, props, {
                         Component: Component,
                         router: router
@@ -740,7 +723,7 @@ async function renderToHTML(req, res, pathname, query, renderOpts) {
             } else {
                 const content = ctx.err && ErrorDebug ? /*#__PURE__*/ _react.default.createElement(Body, null, /*#__PURE__*/ _react.default.createElement(ErrorDebug, {
                     error: ctx.err
-                })) : /*#__PURE__*/ _react.default.createElement(Body, null, getWrappedApp(/*#__PURE__*/ _react.default.createElement(App, Object.assign({
+                })) : /*#__PURE__*/ _react.default.createElement(Body, null, /*#__PURE__*/ _react.default.createElement(AppContainerWithIsomorphicFiberStructure, null, /*#__PURE__*/ _react.default.createElement(App, Object.assign({
                 }, props, {
                     Component: Component,
                     router: router
@@ -758,13 +741,6 @@ async function renderToHTML(req, res, pathname, query, renderOpts) {
                 bodyResult,
                 documentElement: ()=>Document()
                 ,
-                useMainContent: (fn)=>{
-                    if (fn) {
-                        appWrappers.push(fn);
-                    }
-                    // @ts-ignore
-                    return(/*#__PURE__*/ _react.default.createElement("next-js-internal-body-render-target", null));
-                },
                 head,
                 headTags: [],
                 styles: jsxStyleRegistry.styles()
@@ -835,7 +811,6 @@ async function renderToHTML(req, res, pathname, query, renderOpts) {
         head: documentResult.head,
         headTags: documentResult.headTags,
         styles: documentResult.styles,
-        useMainContent: documentResult.useMainContent,
         useMaybeDeferContent,
         crossOrigin: renderOpts.crossOrigin,
         optimizeCss: renderOpts.optimizeCss,
