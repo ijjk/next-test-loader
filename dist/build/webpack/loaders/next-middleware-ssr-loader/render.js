@@ -22,7 +22,9 @@ function getRender({ App , Document , pageMod , errorMod , rscManifest , buildMa
             });
         }
         const renderServerComponentData = isServerComponent ? query.__flight__ !== undefined : false;
+        const serverComponentProps = isServerComponent && query.__props__ ? JSON.parse(query.__props__) : undefined;
         delete query.__flight__;
+        delete query.__props__;
         const req = {
             url: pathname,
             cookies,
@@ -50,6 +52,7 @@ function getRender({ App , Document , pageMod , errorMod , rscManifest , buildMa
             supportsDynamicHTML: true,
             concurrentFeatures: true,
             renderServerComponentData,
+            serverComponentProps,
             serverComponentManifest: isServerComponent ? rscManifest : null,
             ComponentMod: null
         };

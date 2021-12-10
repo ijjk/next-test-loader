@@ -7,7 +7,7 @@ exports.render = render;
 exports.renderError = renderError;
 exports.emitter = exports.router = exports.version = void 0;
 require("@next/polyfill-module");
-var _react = _interopRequireDefault(require("react"));
+var _react = _interopRequireWildcard(require("react"));
 var _reactDom = _interopRequireDefault(require("react-dom"));
 var _styledJsx = require("styled-jsx");
 var _headManagerContext = require("../shared/lib/head-manager-context");
@@ -26,6 +26,7 @@ var _routeAnnouncer = require("./route-announcer");
 var _router1 = require("./router");
 var _isError = _interopRequireDefault(require("../lib/is-error"));
 var _vitals = require("./vitals");
+var _rsc = require("./rsc");
 function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) {
     try {
         var info = gen[key](arg);
@@ -114,7 +115,7 @@ function _objectSpread(target) {
 }
 const data = JSON.parse(document.getElementById('__NEXT_DATA__').textContent);
 window.__NEXT_DATA__ = data;
-const version = "12.0.8-canary.1";
+const version = "12.0.8-canary.3";
 exports.version = version;
 const looseToArray = (input)=>[].slice.call(input)
 ;
@@ -557,14 +558,26 @@ const wrapApp = (App)=>(wrappedAppProps)=>{
 ;
 let RSCComponent;
 if (process.env.__NEXT_RSC) {
+    const { createFromFetch ,  } = require('next/dist/compiled/react-server-dom-webpack');
     function createResponseCache() {
         return new Map();
     }
     const rscCache = createResponseCache();
+    function fetchFlight(href, props) {
+        const url = new URL(href, location.origin);
+        const searchParams = url.searchParams;
+        searchParams.append('__flight__', '1');
+        if (props) {
+            searchParams.append('__props__', JSON.stringify(props));
+        }
+        return fetch(url.toString());
+    }
+    const getHref = ()=>{
+        const { pathname , search  } = location;
+        return pathname + search;
+    };
     const RSCWrapper = ({ cacheKey , serialized , _fresh  })=>{
-        const { createFromFetch ,  } = require('next/dist/compiled/react-server-dom-webpack');
         let response = rscCache.get(cacheKey);
-        // If there is no cache, or there is serialized data already
         if (!response) {
             response = createFromFetch(serialized ? (()=>{
                 const t = new TransformStream();
@@ -572,11 +585,7 @@ if (process.env.__NEXT_RSC) {
                 return Promise.resolve({
                     body: t.readable
                 });
-            })() : (()=>{
-                const search = location.search;
-                const flightReqUrl = location.pathname + search + (search ? '&__flight__' : '?__flight__');
-                return fetch(flightReqUrl);
-            })());
+            })() : fetchFlight(getHref()));
             rscCache.set(cacheKey, response);
         }
         const root = response.readRoot();
@@ -585,13 +594,32 @@ if (process.env.__NEXT_RSC) {
     RSCComponent = (props)=>{
         const cacheKey = (0, _router1).useRouter().asPath;
         const { __flight_serialized__ , __flight_fresh__  } = props;
-        return(/*#__PURE__*/ _react.default.createElement(_react.default.Suspense, {
+        const [, dispatch] = (0, _react).useState({
+        });
+        // @ts-ignore TODO: remove when react 18 types are supported
+        const startTransition = _react.default.startTransition;
+        const renrender = ()=>dispatch({
+            })
+        ;
+        // If there is no cache, or there is serialized data already
+        function refreshCache(nextProps) {
+            startTransition(()=>{
+                const href = getHref();
+                const response = createFromFetch(fetchFlight(href, nextProps));
+                // FIXME: router.asPath can be different from current location due to navigation
+                rscCache.set(href, response);
+                renrender();
+            });
+        }
+        return(/*#__PURE__*/ _react.default.createElement(_rsc.RefreshContext.Provider, {
+            value: refreshCache
+        }, /*#__PURE__*/ _react.default.createElement(_react.default.Suspense, {
             fallback: null
         }, /*#__PURE__*/ _react.default.createElement(RSCWrapper, {
             cacheKey: cacheKey,
             serialized: __flight_serialized__,
             _fresh: __flight_fresh__
-        })));
+        }))));
     };
 }
 let lastAppProps;

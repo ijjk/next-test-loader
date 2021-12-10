@@ -41,10 +41,10 @@ var _responseCache = _interopRequireDefault(require("./response-cache"));
 var _parseNextUrl = require("../shared/lib/router/utils/parse-next-url");
 var _isError = _interopRequireDefault(require("../lib/is-error"));
 var _constants1 = require("../lib/constants");
-var _response = require("./web/spec-extension/response");
 var _sandbox = require("./web/sandbox");
 var _requestMeta = require("./request-meta");
 var _utils4 = require("./web/utils");
+var _relativizeUrl = require("../shared/lib/router/utils/relativize-url");
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
         default: obj
@@ -191,7 +191,9 @@ class Server {
             if (typeof parsedUrl.query === 'string') {
                 parsedUrl.query = (0, _querystring).parse(parsedUrl.query);
             }
-            (0, _requestMeta).addRequestMeta(req, '__NEXT_INIT_URL', req.url);
+            // When there are hostname and port we build an absolute URL
+            const initUrl = this.hostname && this.port ? `http://${this.hostname}:${this.port}${req.url}` : req.url;
+            (0, _requestMeta).addRequestMeta(req, '__NEXT_INIT_URL', initUrl);
             (0, _requestMeta).addRequestMeta(req, '__NEXT_INIT_QUERY', {
                 ...parsedUrl.query
             });
@@ -405,6 +407,11 @@ class Server {
     }
     async runMiddleware(params) {
         this.middlewareBetaWarning();
+        // For middleware to "fetch" we must always provide an absolute URL
+        const url = (0, _requestMeta).getRequestMeta(params.request, '__NEXT_INIT_URL');
+        if (!url.startsWith('http')) {
+            throw new Error('To use middleware you must provide a `hostname` and `port` to the Next.js Server');
+        }
         const page = {
         };
         if (await this.hasPage(params.parsedUrl.pathname)) {
@@ -419,8 +426,6 @@ class Server {
                 }
             }
         }
-        const subreq = params.request.headers[`x-middleware-subrequest`];
-        const subrequests = typeof subreq === 'string' ? subreq.split(':') : [];
         const allHeaders = new Headers();
         let result = null;
         for (const middleware of this.middleware || []){
@@ -436,13 +441,6 @@ class Server {
                     page: middleware.page,
                     serverless: this._isLikeServerless
                 });
-                if (subrequests.includes(middlewareInfo.name)) {
-                    result = {
-                        response: _response.NextResponse.next(),
-                        waitUntil: Promise.resolve()
-                    };
-                    continue;
-                }
                 result = await (0, _sandbox).run({
                     name: middlewareInfo.name,
                     paths: middlewareInfo.paths,
@@ -454,7 +452,7 @@ class Server {
                             i18n: this.nextConfig.i18n,
                             trailingSlash: this.nextConfig.trailingSlash
                         },
-                        url: (0, _requestMeta).getRequestMeta(params.request, '__NEXT_INIT_URL'),
+                        url: url,
                         page: page
                     },
                     useCache: !this.nextConfig.experimental.concurrentFeatures,
@@ -490,7 +488,7 @@ class Server {
         return result;
     }
     generateRoutes() {
-        var ref;
+        var ref52;
         const server = this;
         const publicRoutes = this.generatePublicRoutes();
         const staticFilesRoute = this.hasStaticDir ? [
@@ -803,10 +801,15 @@ class Server {
                 type: 'route',
                 name: 'middleware catchall',
                 fn: async (req, res, _params, parsed)=>{
-                    var ref;
-                    const fullUrl = (0, _requestMeta).getRequestMeta(req, '__NEXT_INIT_URL');
+                    var ref, ref50;
+                    if (!((ref = this.middleware) === null || ref === void 0 ? void 0 : ref.length)) {
+                        return {
+                            finished: false
+                        };
+                    }
+                    const initUrl = (0, _requestMeta).getRequestMeta(req, '__NEXT_INIT_URL');
                     const parsedUrl = (0, _parseNextUrl).parseNextUrl({
-                        url: fullUrl,
+                        url: initUrl,
                         headers: req.headers,
                         nextConfig: {
                             basePath: this.nextConfig.basePath,
@@ -814,7 +817,7 @@ class Server {
                             trailingSlash: this.nextConfig.trailingSlash
                         }
                     });
-                    if (!((ref = this.middleware) === null || ref === void 0 ? void 0 : ref.some((m)=>m.match(parsedUrl.pathname)
+                    if (!((ref50 = this.middleware) === null || ref50 === void 0 ? void 0 : ref50.some((m)=>m.match(parsedUrl.pathname)
                     ))) {
                         return {
                             finished: false
@@ -847,6 +850,16 @@ class Server {
                         return {
                             finished: true
                         };
+                    }
+                    if (result.response.headers.has('x-middleware-rewrite')) {
+                        const value = result.response.headers.get('x-middleware-rewrite');
+                        const rel = (0, _relativizeUrl).relativizeURL(value, initUrl);
+                        result.response.headers.set('x-middleware-rewrite', rel);
+                    }
+                    if (result.response.headers.has('Location')) {
+                        const value = result.response.headers.get('Location');
+                        const rel = (0, _relativizeUrl).relativizeURL(value, initUrl);
+                        result.response.headers.set('Location', rel);
                     }
                     if (!result.response.headers.has('x-middleware-rewrite') && !result.response.headers.has('x-middleware-next') && !result.response.headers.has('Location')) {
                         result.response.headers.set('x-middleware-refresh', '1');
@@ -990,7 +1003,7 @@ class Server {
             dynamicRoutes: this.dynamicRoutes,
             basePath: this.nextConfig.basePath,
             pageChecker: this.hasPage.bind(this),
-            locales: ((ref = this.nextConfig.i18n) === null || ref === void 0 ? void 0 : ref.locales) || []
+            locales: ((ref52 = this.nextConfig.i18n) === null || ref52 === void 0 ? void 0 : ref52.locales) || []
         };
     }
     async getPagePath(pathname, locales) {
@@ -1229,7 +1242,7 @@ class Server {
         };
     }
     async renderToResponseWithComponents({ req , res , pathname , renderOpts: opts  }, { components , query  }) {
-        var ref, ref50, ref51;
+        var ref, ref54, ref58;
         const is404Page = pathname === '/404';
         const is500Page = pathname === '/500';
         const isLikeServerless = typeof components.ComponentMod === 'object' && typeof components.ComponentMod.renderReqToHTML === 'function';
@@ -1261,14 +1274,14 @@ class Server {
             delete query.amp;
         }
         if (opts.supportsDynamicHTML === true) {
-            var ref52;
+            var ref59;
             // Disable dynamic HTML in cases that we know it won't be generated,
             // so that we can continue generating a cache key when possible.
-            opts.supportsDynamicHTML = !isSSG && !isLikeServerless && !query.amp && !this.minimalMode && typeof ((ref52 = components.Document) === null || ref52 === void 0 ? void 0 : ref52.getInitialProps) !== 'function';
+            opts.supportsDynamicHTML = !isSSG && !isLikeServerless && !query.amp && !this.minimalMode && typeof ((ref59 = components.Document) === null || ref59 === void 0 ? void 0 : ref59.getInitialProps) !== 'function';
         }
         const defaultLocale = isSSG ? (ref = this.nextConfig.i18n) === null || ref === void 0 ? void 0 : ref.defaultLocale : query.__nextDefaultLocale;
         const locale = query.__nextLocale;
-        const locales = (ref50 = this.nextConfig.i18n) === null || ref50 === void 0 ? void 0 : ref50.locales;
+        const locales = (ref54 = this.nextConfig.i18n) === null || ref54 === void 0 ? void 0 : ref54.locales;
         let previewData;
         let isPreviewMode = false;
         if (hasServerProps || isSSG) {
@@ -1281,7 +1294,7 @@ class Server {
         let urlPathname = (0, _url).parse(req.url || '').pathname || '/';
         let resolvedUrlPathname = (0, _requestMeta).getRequestMeta(req, '_nextRewroteUrl') || urlPathname;
         urlPathname = (0, _normalizeTrailingSlash).removePathTrailingSlash(urlPathname);
-        resolvedUrlPathname = (0, _normalizeLocalePath).normalizeLocalePath((0, _normalizeTrailingSlash).removePathTrailingSlash(resolvedUrlPathname), (ref51 = this.nextConfig.i18n) === null || ref51 === void 0 ? void 0 : ref51.locales).pathname;
+        resolvedUrlPathname = (0, _normalizeLocalePath).normalizeLocalePath((0, _normalizeTrailingSlash).removePathTrailingSlash(resolvedUrlPathname), (ref58 = this.nextConfig.i18n) === null || ref58 === void 0 ? void 0 : ref58.locales).pathname;
         const stripNextDataPath = (path)=>{
             if (path.includes(this.buildId)) {
                 const splitPath = path.substring(path.indexOf(this.buildId) + this.buildId.length);

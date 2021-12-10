@@ -22,7 +22,7 @@ const TRACE_IGNORES = [
 function getModuleFromDependency(compilation, dep) {
     return compilation.moduleGraph.getModule(dep);
 }
-function getFilesMapFromReasons(fileList, reasons, ignoreFn) {
+function getFilesMapFromReasons(fileList, reasons) {
     // this uses the reasons tree to collect files specific to a
     // certain parent allowing us to not have to trace each parent
     // separately
@@ -36,9 +36,7 @@ function getFilesMapFromReasons(fileList, reasons, ignoreFn) {
                     parentFiles = new Set();
                     parentFilesMap.set(parent, parentFiles);
                 }
-                if (!(ignoreFn === null || ignoreFn === void 0 ? void 0 : ignoreFn(file, parent))) {
-                    parentFiles.add(file);
-                }
+                parentFiles.add(file);
                 const parentReason = reasons.get(parent);
                 if (parentReason === null || parentReason === void 0 ? void 0 : parentReason.parents) {
                     propagateToParents(parentReason.parents, file, seen);
@@ -140,11 +138,9 @@ class TraceEntryPointsPlugin {
                 assets[traceOutputName] = new _webpack.sources.RawSource(JSON.stringify({
                     version: _constants.TRACE_OUTPUT_VERSION,
                     files: [
-                        ...new Set([
-                            ...entryFiles,
-                            ...allEntryFiles,
-                            ...this.entryTraces.get(entrypoint1.name) || [], 
-                        ]), 
+                        ...entryFiles,
+                        ...allEntryFiles,
+                        ...this.entryTraces.get(entrypoint1.name) || [], 
                     ].map((file)=>{
                         return _path.default.relative(traceOutputPath, file).replace(/\\/g, '/');
                     })
@@ -250,11 +246,7 @@ class TraceEntryPointsPlugin {
                     reasons = result.reasons;
                 });
                 await finishModulesSpan.traceChild('collect-traced-files').traceAsyncFn(()=>{
-                    const parentFilesMap = getFilesMapFromReasons(fileList, reasons, (file)=>{
-                        file = _path.default.join(this.tracingRoot, file);
-                        const depMod = depModMap.get(file);
-                        return Array.isArray(depMod === null || depMod === void 0 ? void 0 : depMod.loaders) && depMod.loaders.length > 0;
-                    });
+                    const parentFilesMap = getFilesMapFromReasons(fileList, reasons);
                     entryPaths.forEach((entry)=>{
                         var ref;
                         const entryName = entryNameMap.get(entry);
@@ -348,11 +340,6 @@ class TraceEntryPointsPlugin {
                                 if (!result) {
                                     return reject(new Error('module not found'));
                                 }
-                                // webpack resolver doesn't strip loader query info
-                                // from the result so use path instead
-                                if (result.includes('?') || result.includes('!')) {
-                                    result = (resContext === null || resContext === void 0 ? void 0 : resContext.path) || result;
-                                }
                                 try {
                                     // we need to collect all parent package.json's used
                                     // as webpack's resolve doesn't expose this and parent
@@ -407,6 +394,9 @@ class TraceEntryPointsPlugin {
                     alias: false
                 };
                 const doResolve = async (request, parent, job, isEsmRequested)=>{
+                    if (this.staticImageImports && _webpackConfig.nextImageLoaderRegex.test(request)) {
+                        throw new Error(`not resolving ${request} as this is handled by next-image-loader`);
+                    }
                     const context = _path.default.dirname(parent);
                     // When in esm externals mode, and using import, we resolve with
                     // ESM resolving options.
@@ -416,9 +406,6 @@ class TraceEntryPointsPlugin {
                     , undefined, undefined, ESM_RESOLVE_OPTIONS, CJS_RESOLVE_OPTIONS, BASE_ESM_RESOLVE_OPTIONS, BASE_CJS_RESOLVE_OPTIONS);
                     if (!res) {
                         throw new Error(`failed to resolve ${request} from ${parent}`);
-                    }
-                    if (res.includes('?')) {
-                        console.log('wtf?', res);
                     }
                     return res.replace(/\0/g, '');
                 };

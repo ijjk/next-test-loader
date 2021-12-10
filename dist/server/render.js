@@ -173,7 +173,7 @@ async function renderToHTML(req, res, pathname, query, renderOpts) {
     query = Object.assign({
     }, query);
     const { err , dev =false , ampPath ='' , App , Document , pageConfig ={
-    } , buildManifest , fontManifest , reactLoadableManifest , ErrorDebug , getStaticProps , getStaticPaths , getServerSideProps , serverComponentManifest , renderServerComponentData , isDataReq , params , previewProps , basePath , devOnlyCacheBusterQueryString , supportsDynamicHTML , concurrentFeatures ,  } = renderOpts;
+    } , buildManifest , fontManifest , reactLoadableManifest , ErrorDebug , getStaticProps , getStaticPaths , getServerSideProps , serverComponentManifest , renderServerComponentData , serverComponentProps , isDataReq , params , previewProps , basePath , devOnlyCacheBusterQueryString , supportsDynamicHTML , concurrentFeatures ,  } = renderOpts;
     const isServerComponent = !!serverComponentManifest;
     const OriginalComponent = renderOpts.Component;
     const Component = isServerComponent ? createServerComponentRenderer(OriginalComponent, serverComponentManifest) : renderOpts.Component;
@@ -599,7 +599,7 @@ async function renderToHTML(req, res, pathname, query, renderOpts) {
     if ((0, _utils).isResSent(res) && !isSSG) return null;
     if (renderServerComponentData) {
         const stream = (0, _writerBrowserServer).renderToReadableStream(/*#__PURE__*/ _react.default.createElement(OriginalComponent, Object.assign({
-        }, props.pageProps)), serverComponentManifest);
+        }, props.pageProps, serverComponentProps)), serverComponentManifest);
         const reader = stream.getReader();
         const piper = (innerRes, next)=>{
             bufferedReadFromReadableStream(reader, (val)=>innerRes.write(val)
@@ -946,72 +946,54 @@ function serializeError(dev, err) {
 function renderToNodeStream(element, generateStaticHTML) {
     return new Promise((resolve, reject)=>{
         let underlyingStream = null;
-        const stream = new Writable({
-            // Use the buffer from the underlying stream
-            highWaterMark: 0,
-            writev (chunks, callback) {
-                let str = '';
-                for (let { chunk  } of chunks){
-                    str += chunk.toString();
-                }
+        let queuedCallbacks = [];
+        // Based on the suggestion here:
+        // https://github.com/reactwg/react-18/discussions/110
+        class NextWritable extends Writable {
+            _write(chunk, encoding, callback) {
                 if (!underlyingStream) {
                     throw new Error('invariant: write called without an underlying stream. This is a bug in Next.js');
                 }
-                if (!underlyingStream.writable.write(str)) {
-                    underlyingStream.queuedCallbacks.push(()=>callback()
-                    );
+                // The compression module (https://github.com/expressjs/compression) doesn't
+                // support callbacks, so we have to wait for a drain event.
+                if (!underlyingStream.write(chunk, encoding)) {
+                    queuedCallbacks.push(callback);
                 } else {
                     callback();
                 }
             }
-        });
-        stream.once('finish', ()=>{
-            if (!underlyingStream) {
-                throw new Error('invariant: finish called without an underlying stream. This is a bug in Next.js');
-            }
-            underlyingStream.resolve();
-        });
-        stream.once('error', (err)=>{
-            if (!underlyingStream) {
-                throw new Error('invariant: error called without an underlying stream. This is a bug in Next.js');
-            }
-            underlyingStream.resolve(err);
-        });
-        // React uses `flush` to prevent stream middleware like gzip from buffering to the
-        // point of harming streaming performance, so we make sure to expose it and forward it.
-        // See: https://github.com/reactwg/react-18/discussions/91
-        Object.defineProperty(stream, 'flush', {
-            value: ()=>{
+            flush() {
                 if (!underlyingStream) {
                     throw new Error('invariant: flush called without an underlying stream. This is a bug in Next.js');
                 }
-                if (typeof underlyingStream.writable.flush === 'function') {
-                    underlyingStream.writable.flush();
+                const anyWritable = underlyingStream;
+                if (typeof anyWritable.flush === 'function') {
+                    anyWritable.flush();
                 }
-            },
-            enumerable: true
+            }
+        }
+        const stream = new NextWritable();
+        stream.on('drain', ()=>{
+            const callbacks = queuedCallbacks;
+            queuedCallbacks = [];
+            callbacks.forEach((callback)=>callback()
+            );
         });
         let resolved = false;
         const doResolve = (startWriting)=>{
             if (!resolved) {
                 resolved = true;
                 resolve((res, next)=>{
-                    const drainHandler = ()=>{
-                        const prevCallbacks = underlyingStream.queuedCallbacks;
-                        underlyingStream.queuedCallbacks = [];
-                        prevCallbacks.forEach((callback)=>callback()
-                        );
+                    const doNext = (err)=>{
+                        underlyingStream = null;
+                        queuedCallbacks = [];
+                        next(err);
                     };
-                    res.on('drain', drainHandler);
-                    underlyingStream = {
-                        resolve: (err)=>{
-                            underlyingStream = null;
-                            res.removeListener('drain', drainHandler);
-                            next(err);
-                        },
-                        writable: res,
-                        queuedCallbacks: []
-                    };
+                    stream.once('error', (err)=>doNext(err)
+                    );
+                    stream.once('finish', ()=>doNext()
+                    );
+                    underlyingStream = res;
                     startWriting();
                 });
             }
