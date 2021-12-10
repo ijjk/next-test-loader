@@ -13,6 +13,8 @@ function _interopRequireDefault(obj) {
 const Internal = Symbol('NextURLInternal');
 class NextURL extends URL {
     constructor(input, baseOrOpts, opts){
+        console.log('NextUrl input', input, baseOrOpts, opts);
+        
         super('http://127.0.0.1') // This works as a placeholder
         ;
         let base;
