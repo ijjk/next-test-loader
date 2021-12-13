@@ -461,6 +461,7 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
             ...nodePathList
         ],
         alias: {
+            // noop
             next: _constants.NEXT_PROJECT_ROOT,
             ...customAppAliases,
             ...customErrorAlias,

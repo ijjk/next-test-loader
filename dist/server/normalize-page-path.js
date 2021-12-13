@@ -16,13 +16,12 @@ Object.defineProperty(exports, "denormalizePagePath", {
 });
 exports.normalizePagePath = normalizePagePath;
 var _path = require("path");
-var _utils = require("../shared/lib/router/utils");
 var _denormalizePagePath = require("./denormalize-page-path");
 function normalizePagePath(page) {
     // If the page is `/` we need to append `/index`, otherwise the returned directory root will be bundles instead of pages
     if (page === '/') {
         page = '/index';
-    } else if (/^\/index(\/|$)/.test(page) && !(0, _utils).isDynamicRoute(page)) {
+    } else if (/^\/index(\/|$)/.test(page)) {
         page = `/index${page}`;
     }
     // Resolve on anything that doesn't start with `/`
