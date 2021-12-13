@@ -461,7 +461,6 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
             ...nodePathList
         ],
         alias: {
-            // noop
             next: _constants.NEXT_PROJECT_ROOT,
             ...customAppAliases,
             ...customErrorAlias,
@@ -1183,7 +1182,7 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
             new _wellknownErrorsPlugin.WellKnownErrorsPlugin(),
             !isServer && new _copyFilePlugin.CopyFilePlugin({
                 filePath: require.resolve('./polyfills/polyfill-nomodule'),
-                cacheKey: "12.0.8-canary.3",
+                cacheKey: "12.0.8-canary.4",
                 name: `static/chunks/polyfills${dev ? '' : '-[hash]'}.js`,
                 minimize: false,
                 info: {
@@ -1312,7 +1311,7 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
         // Includes:
         //  - Next.js version
         //  - next.config.js keys that affect compilation
-        version: `${"12.0.8-canary.3"}|${configVars}`,
+        version: `${"12.0.8-canary.4"}|${configVars}`,
         cacheDirectory: _path.default.join(distDir, 'cache', 'webpack')
     };
     // Adds `next.config.js` as a buildDependency when custom webpack config is provided

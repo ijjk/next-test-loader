@@ -115,7 +115,7 @@ function _objectSpread(target) {
 }
 const data = JSON.parse(document.getElementById('__NEXT_DATA__').textContent);
 window.__NEXT_DATA__ = data;
-const version = "12.0.8-canary.3";
+const version = "12.0.8-canary.4";
 exports.version = version;
 const looseToArray = (input)=>[].slice.call(input)
 ;
@@ -559,6 +559,46 @@ const wrapApp = (App)=>(wrappedAppProps)=>{
 let RSCComponent;
 if (process.env.__NEXT_RSC) {
     const { createFromFetch ,  } = require('next/dist/compiled/react-server-dom-webpack');
+    const encoder = new TextEncoder();
+    const serverDataBuffer = new Map();
+    const serverDataWriter = new Map();
+    const ssrCacheKey = location ? location.href : '';
+    function nextServerDataCallback(seg) {
+        const key = ssrCacheKey + ',' + seg[1];
+        if (seg[0] === 0) {
+            serverDataBuffer.set(key, []);
+        } else {
+            const buffer = serverDataBuffer.get(key);
+            if (!buffer) throw new Error('Unexpected server data: missing bootstrap script.');
+            const writer = serverDataWriter.get(key);
+            if (writer) {
+                writer.write(encoder.encode(seg[2]));
+            } else {
+                buffer.push(seg[2]);
+            }
+        }
+    }
+    function nextServerDataRegisterWriter(key, writer) {
+        const buffer = serverDataBuffer.get(key);
+        if (buffer) {
+            buffer.forEach((val)=>{
+                writer.write(encoder.encode(val));
+            });
+            buffer.length = 0;
+        }
+        serverDataWriter.set(key, writer);
+    }
+    // When `DOMContentLoaded`, we can close all pending writers to finish hydration.
+    document.addEventListener('DOMContentLoaded', function() {
+        serverDataWriter.forEach((writer)=>{
+            if (!writer.closed) {
+                writer.close();
+            }
+        });
+    }, false);
+    const nextServerDataLoadingGlobal = self.__next_s = self.__next_s || [];
+    nextServerDataLoadingGlobal.forEach(nextServerDataCallback);
+    nextServerDataLoadingGlobal.push = nextServerDataCallback;
     function createResponseCache() {
         return new Map();
     }
@@ -572,27 +612,39 @@ if (process.env.__NEXT_RSC) {
         }
         return fetch(url.toString());
     }
-    const getHref = ()=>{
+    const getCacheKey = ()=>{
         const { pathname , search  } = location;
         return pathname + search;
     };
-    const RSCWrapper = ({ cacheKey , serialized , _fresh  })=>{
+    function useServerResponse(cacheKey, serialized) {
+        const id = _react.default.useId();
         let response = rscCache.get(cacheKey);
-        if (!response) {
+        if (response) return response;
+        if (serverDataBuffer.has(cacheKey + ',' + id)) {
+            const t = new TransformStream();
+            const writer = t.writable.getWriter();
+            response = createFromFetch(Promise.resolve({
+                body: t.readable
+            }));
+            nextServerDataRegisterWriter(cacheKey + ',' + id, writer);
+        } else {
             response = createFromFetch(serialized ? (()=>{
                 const t = new TransformStream();
                 t.writable.getWriter().write(new TextEncoder().encode(serialized));
                 return Promise.resolve({
                     body: t.readable
                 });
-            })() : fetchFlight(getHref()));
-            rscCache.set(cacheKey, response);
+            })() : fetchFlight(getCacheKey()));
         }
-        const root = response.readRoot();
-        return root;
+        rscCache.set(cacheKey, response);
+        return response;
+    }
+    const ServerRoot = ({ cacheKey , serialized , _fresh  })=>{
+        const response = useServerResponse(cacheKey, serialized);
+        return response.readRoot();
     };
     RSCComponent = (props)=>{
-        const cacheKey = (0, _router1).useRouter().asPath;
+        const cacheKey = getCacheKey();
         const { __flight_serialized__ , __flight_fresh__  } = props;
         const [, dispatch] = (0, _react).useState({
         });
@@ -604,10 +656,10 @@ if (process.env.__NEXT_RSC) {
         // If there is no cache, or there is serialized data already
         function refreshCache(nextProps) {
             startTransition(()=>{
-                const href = getHref();
-                const response = createFromFetch(fetchFlight(href, nextProps));
+                const currentCacheKey = getCacheKey();
+                const response = createFromFetch(fetchFlight(currentCacheKey, nextProps));
                 // FIXME: router.asPath can be different from current location due to navigation
-                rscCache.set(href, response);
+                rscCache.set(currentCacheKey, response);
                 renrender();
             });
         }
@@ -615,7 +667,7 @@ if (process.env.__NEXT_RSC) {
             value: refreshCache
         }, /*#__PURE__*/ _react.default.createElement(_react.default.Suspense, {
             fallback: null
-        }, /*#__PURE__*/ _react.default.createElement(RSCWrapper, {
+        }, /*#__PURE__*/ _react.default.createElement(ServerRoot, {
             cacheKey: cacheKey,
             serialized: __flight_serialized__,
             _fresh: __flight_fresh__

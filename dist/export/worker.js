@@ -124,8 +124,8 @@ async function exportPage({ parentSpanId , path , pathMap , distDir , outDir , p
             const getHtmlFilename = (_path1)=>subFolders ? `${_path1}${_path.sep}index.html` : `${_path1}.html`
             ;
             let htmlFilename = getHtmlFilename(filePath);
-            const pageExt = (0, _path).extname(page);
-            const pathExt = (0, _path).extname(path);
+            const pageExt = isDynamic ? '' : (0, _path).extname(page);
+            const pathExt = isDynamic ? '' : (0, _path).extname(path);
             // Make sure page isn't a folder with a dot in the name e.g. `v1.2`
             if (pageExt !== pathExt && pathExt !== '') {
                 const isBuiltinPaths = [

@@ -132,15 +132,53 @@ function checkRedirectValues(redirect, req, method) {
         throw new Error(`Invalid redirect object returned from ${method} for ${req.url}\n` + errors.join(' and ') + '\n' + `See more info here: https://nextjs.org/docs/messages/invalid-redirect-gssp`);
     }
 }
-// Create the wrapper component for a Flight stream.
-function createServerComponentRenderer(OriginalComponent, serverComponentManifest) {
-    let responseCache;
-    const ServerComponentWrapper = (props)=>{
-        let response = responseCache;
-        if (!response) {
-            responseCache = response = (0, _reactServerDomWebpack).createFromReadableStream((0, _writerBrowserServer).renderToReadableStream(/*#__PURE__*/ _react.default.createElement(OriginalComponent, Object.assign({
-            }, props)), serverComponentManifest));
+function createRSCHook() {
+    const rscCache = new Map();
+    const decoder = new TextDecoder();
+    return (writable, id, req, bootstrap)=>{
+        let entry = rscCache.get(id);
+        if (!entry) {
+            const [renderStream, forwardStream] = req.tee();
+            entry = (0, _reactServerDomWebpack).createFromReadableStream(renderStream);
+            rscCache.set(id, entry);
+            const transfomer = new TransformStream({
+                start (controller) {
+                    if (bootstrap) {
+                        controller.enqueue(_server.default.renderToString(/*#__PURE__*/ _react.default.createElement("script", {
+                            dangerouslySetInnerHTML: {
+                                __html: `(self.__next_s=self.__next_s||[]).push(${JSON.stringify([
+                                    0,
+                                    id
+                                ])})`
+                            }
+                        })));
+                    }
+                },
+                transform (chunk, controller) {
+                    controller.enqueue(_server.default.renderToString(/*#__PURE__*/ _react.default.createElement("script", {
+                        dangerouslySetInnerHTML: {
+                            __html: `(self.__next_s=self.__next_s||[]).push(${JSON.stringify([
+                                1,
+                                id,
+                                decoder.decode(chunk)
+                            ])})`
+                        }
+                    })));
+                }
+            });
+            forwardStream.pipeThrough(transfomer).pipeTo(writable);
         }
+        return entry;
+    };
+}
+const useRSCResponse = createRSCHook();
+// Create the wrapper component for a Flight stream.
+function createServerComponentRenderer(transformStream, OriginalComponent, serverComponentManifest) {
+    const writable = transformStream.writable;
+    const ServerComponentWrapper = (props)=>{
+        const id = _react.default.useId();
+        const response = useRSCResponse(writable, id, (0, _writerBrowserServer).renderToReadableStream(/*#__PURE__*/ _react.default.createElement(OriginalComponent, Object.assign({
+        }, props)), serverComponentManifest), true);
         return response.readRoot();
     };
     const Component = (props)=>{
@@ -176,7 +214,8 @@ async function renderToHTML(req, res, pathname, query, renderOpts) {
     } , buildManifest , fontManifest , reactLoadableManifest , ErrorDebug , getStaticProps , getStaticPaths , getServerSideProps , serverComponentManifest , renderServerComponentData , serverComponentProps , isDataReq , params , previewProps , basePath , devOnlyCacheBusterQueryString , supportsDynamicHTML , concurrentFeatures ,  } = renderOpts;
     const isServerComponent = !!serverComponentManifest;
     const OriginalComponent = renderOpts.Component;
-    const Component = isServerComponent ? createServerComponentRenderer(OriginalComponent, serverComponentManifest) : renderOpts.Component;
+    const serverComponentsInlinedTransformStream = process.browser && isServerComponent ? new TransformStream() : null;
+    const Component = isServerComponent ? createServerComponentRenderer(serverComponentsInlinedTransformStream, OriginalComponent, serverComponentManifest) : renderOpts.Component;
     const getFontDefinition = (url)=>{
         if (fontManifest) {
             return getFontDefinitionFromManifest(url, fontManifest);
@@ -694,8 +733,9 @@ async function renderToHTML(req, res, pathname, query, renderOpts) {
                 throw new Error(message);
             }
             return {
-                bodyResult: ()=>piperFromArray([
-                        docProps.html
+                bodyResult: (suffix)=>piperFromArray([
+                        docProps.html,
+                        suffix
                     ])
                 ,
                 documentElement: (htmlProps)=>/*#__PURE__*/ _react.default.createElement(Document, Object.assign({
@@ -708,7 +748,7 @@ async function renderToHTML(req, res, pathname, query, renderOpts) {
         } else {
             let bodyResult;
             if (concurrentFeatures) {
-                bodyResult = async ()=>{
+                bodyResult = async (suffix)=>{
                     // this must be called inside bodyResult so appWrappers is
                     // up to date when getWrappedApp is called
                     const content = ctx.err && ErrorDebug ? /*#__PURE__*/ _react.default.createElement(Body, null, /*#__PURE__*/ _react.default.createElement(ErrorDebug, {
@@ -718,7 +758,7 @@ async function renderToHTML(req, res, pathname, query, renderOpts) {
                         Component: Component,
                         router: router
                     }))));
-                    return process.browser ? await renderToWebStream(content) : await renderToNodeStream(content, generateStaticHTML);
+                    return process.browser ? await renderToWebStream(content, suffix, serverComponentsInlinedTransformStream) : await renderToNodeStream(content, suffix, generateStaticHTML);
                 };
             } else {
                 const content = ctx.err && ErrorDebug ? /*#__PURE__*/ _react.default.createElement(Body, null, /*#__PURE__*/ _react.default.createElement(ErrorDebug, {
@@ -731,10 +771,11 @@ async function renderToHTML(req, res, pathname, query, renderOpts) {
                 // for non-concurrent rendering we need to ensure App is rendered
                 // before _document so that updateHead is called/collected before
                 // rendering _document's head
-                const result = piperFromArray([
-                    _server.default.renderToString(content)
-                ]);
-                bodyResult = ()=>result
+                const result = _server.default.renderToString(content);
+                bodyResult = (suffix)=>piperFromArray([
+                        result,
+                        suffix
+                    ])
                 ;
             }
             return {
@@ -875,10 +916,7 @@ async function renderToHTML(req, res, pathname, query, renderOpts) {
     }
     let pipers = [
         piperFromArray(prefix),
-        await documentResult.bodyResult(),
-        piperFromArray([
-            renderTargetSuffix
-        ]), 
+        await documentResult.bodyResult(renderTargetSuffix), 
     ];
     const postProcessors = (generateStaticHTML ? [
         inAmpMode ? async (html)=>{
@@ -943,10 +981,13 @@ function serializeError(dev, err) {
         statusCode: 500
     };
 }
-function renderToNodeStream(element, generateStaticHTML) {
+function renderToNodeStream(element, suffix, generateStaticHTML) {
     return new Promise((resolve, reject)=>{
         let underlyingStream = null;
         let queuedCallbacks = [];
+        let shellFlushed = false;
+        const closeTag = '</body></html>';
+        const [suffixUnclosed] = suffix.split(closeTag);
         // Based on the suggestion here:
         // https://github.com/reactwg/react-18/discussions/110
         class NextWritable extends Writable {
@@ -960,6 +1001,10 @@ function renderToNodeStream(element, generateStaticHTML) {
                     queuedCallbacks.push(callback);
                 } else {
                     callback();
+                }
+                if (!shellFlushed) {
+                    shellFlushed = true;
+                    underlyingStream.write(suffixUnclosed);
                 }
             }
             flush() {
@@ -985,6 +1030,9 @@ function renderToNodeStream(element, generateStaticHTML) {
                 resolved = true;
                 resolve((res, next)=>{
                     const doNext = (err)=>{
+                        if (!err) {
+                            res.write(closeTag);
+                        }
                         underlyingStream = null;
                         queuedCallbacks = [];
                         next(err);
@@ -1045,9 +1093,12 @@ async function bufferedReadFromReadableStream(reader, writeFn) {
     // Make sure the promise resolves after any pending flushes
     await pendingFlush;
 }
-function renderToWebStream(element) {
+function renderToWebStream(element, suffix, serverComponentsInlinedTransformStream) {
     return new Promise((resolve, reject)=>{
         let resolved = false;
+        const inlinedDataReader = serverComponentsInlinedTransformStream ? serverComponentsInlinedTransformStream.readable.getReader() : null;
+        const closeTag = '</body></html>';
+        const [suffixUnclosed] = suffix.split(closeTag);
         const stream = _server.default.renderToReadableStream(element, {
             onError (err) {
                 if (!resolved) {
@@ -1059,9 +1110,20 @@ function renderToWebStream(element) {
                 if (!resolved) {
                     resolved = true;
                     resolve((res, next)=>{
-                        bufferedReadFromReadableStream(reader, (val)=>res.write(val)
-                        ).then(()=>next()
-                        , (err)=>next(err)
+                        let shellFlushed = false;
+                        Promise.all([
+                            bufferedReadFromReadableStream(reader, (val)=>{
+                                if (!shellFlushed) {
+                                    shellFlushed = true;
+                                    val += suffixUnclosed;
+                                }
+                                res.write(val);
+                            }),
+                            inlinedDataReader && bufferedReadFromReadableStream(inlinedDataReader, res.write), 
+                        ]).then(()=>{
+                            res.write(closeTag);
+                            next();
+                        }, (err)=>next(err)
                         );
                     });
                 }

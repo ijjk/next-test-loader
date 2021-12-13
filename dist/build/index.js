@@ -77,7 +77,7 @@ function _interopRequireWildcard(obj) {
 }
 async function build(dir, conf = null, reactProductionProfiling = false, debugOutput = false, runLint = true) {
     const nextBuildSpan = (0, _trace).trace('next-build', undefined, {
-        version: "12.0.8-canary.3"
+        version: "12.0.8-canary.4"
     });
     const buildResult = await nextBuildSpan.traceAsyncFn(async ()=>{
         // attempt to load global env values so they are available in next.config.js
@@ -158,6 +158,7 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
             invocationCount: shouldLint ? 1 : 0
         };
         telemetry.record({
+            // noop
             eventName: _events.EVENT_BUILD_FEATURE_USAGE,
             payload: buildLintEvent
         });
