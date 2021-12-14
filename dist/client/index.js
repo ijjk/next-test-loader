@@ -115,7 +115,7 @@ function _objectSpread(target) {
 }
 const data = JSON.parse(document.getElementById('__NEXT_DATA__').textContent);
 window.__NEXT_DATA__ = data;
-const version = "12.0.8-canary.4";
+const version = "12.0.8-canary.5";
 exports.version = version;
 const looseToArray = (input)=>[].slice.call(input)
 ;

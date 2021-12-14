@@ -7,6 +7,7 @@ export declare function getMiddlewareInfo(params: {
     distDir: string;
     page: string;
     serverless: boolean;
+    ssr: boolean;
 }): {
     name: string;
     paths: string[];

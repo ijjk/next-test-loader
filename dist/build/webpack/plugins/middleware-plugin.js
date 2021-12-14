@@ -2,23 +2,45 @@
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-exports.default = exports.ssrEntries = void 0;
+exports.mergeMiddlewareManifests = mergeMiddlewareManifests;
+exports.readMiddlewareManifest = readMiddlewareManifest;
+exports.default = exports.getMiddlewareManifestName = exports.ssrEntries = void 0;
+var _path = require("path");
 var _webpack = require("next/dist/compiled/webpack/webpack");
 var _utils = require("../../../shared/lib/router/utils");
 var _constants = require("../../../shared/lib/constants");
 var _constants1 = require("../../../lib/constants");
 var _nonNullable = require("../../../lib/non-nullable");
 const PLUGIN_NAME = 'MiddlewarePlugin';
+const SSR_PREFIX = 'ssr__';
 const MIDDLEWARE_FULL_ROUTE_REGEX = /^pages[/\\]?(.*)\/_middleware$/;
 const ssrEntries = new Map();
 exports.ssrEntries = ssrEntries;
-const middlewareManifest = {
-    sortedMiddleware: [],
-    clientInfo: [],
-    middleware: {
-    },
-    version: 1
-};
+const getMiddlewareManifestName = (hasConcurrentFeatures = false)=>(hasConcurrentFeatures ? SSR_PREFIX : '') + _constants.MIDDLEWARE_MANIFEST
+;
+exports.getMiddlewareManifestName = getMiddlewareManifestName;
+function mergeMiddlewareManifests(a, b) {
+    const clientInfo = a.clientInfo.concat(b ? b.clientInfo : []);
+    const sortedMiddleware = a.sortedMiddleware.concat(b ? b.sortedMiddleware : []);
+    const middleware = Object.assign({
+    }, a.middleware, b === null || b === void 0 ? void 0 : b.middleware);
+    return {
+        version: a.version,
+        clientInfo,
+        sortedMiddleware,
+        middleware
+    };
+}
+function readMiddlewareManifest(dir, hasConcurrentFeatures) {
+    const middlewareManifestPath = (0, _path).join(dir, getMiddlewareManifestName());
+    const serverWebMiddlewareManifestPath = (0, _path).join(dir, getMiddlewareManifestName(true));
+    const middlewareManifest = require(middlewareManifestPath);
+    let serverWebMiddlewareManifest;
+    if (hasConcurrentFeatures) {
+        serverWebMiddlewareManifest = require(serverWebMiddlewareManifestPath);
+    }
+    return mergeMiddlewareManifests(middlewareManifest, serverWebMiddlewareManifest);
+}
 class MiddlewarePlugin {
     constructor({ dev , webServerRuntime  }){
         this.dev = dev;
@@ -26,6 +48,13 @@ class MiddlewarePlugin {
     }
     createAssets(compilation, assets, envPerRoute) {
         const entrypoints = compilation.entrypoints;
+        const middlewareManifest = {
+            sortedMiddleware: [],
+            clientInfo: [],
+            middleware: {
+            },
+            version: 1
+        };
         for (const entrypoint of entrypoints.values()){
             if (!entrypoint.name) continue;
             const result = MIDDLEWARE_FULL_ROUTE_REGEX.exec(entrypoint.name);
@@ -44,10 +73,7 @@ class MiddlewarePlugin {
                 `server/${_constants.MIDDLEWARE_REACT_LOADABLE_MANIFEST}.js`,
                 ...entryFiles.map((file)=>'server/' + file
                 ), 
-            ].filter(_nonNullable.nonNullable) : entryFiles.map((file)=>// we need to use the unminified version of the webpack runtime,
-                // remove if we do start minifying middleware chunks
-                file.startsWith('static/chunks/webpack-') ? file.replace('webpack-', 'webpack-middleware-') : file
-            );
+            ].filter(_nonNullable.nonNullable) : entryFiles;
             middlewareManifest.middleware[location] = {
                 env: envPerRoute.get(entrypoint.name) || [],
                 files,
@@ -65,7 +91,8 @@ class MiddlewarePlugin {
                 !!ssrEntryInfo
             ];
         });
-        assets[this.webServerRuntime ? _constants.MIDDLEWARE_MANIFEST : `server/${_constants.MIDDLEWARE_MANIFEST}`] = new _webpack.sources.RawSource(JSON.stringify(middlewareManifest, null, 2));
+        const assetName = this.webServerRuntime ? getMiddlewareManifestName(true) : `server/${getMiddlewareManifestName()}`;
+        assets[assetName] = new _webpack.sources.RawSource(JSON.stringify(middlewareManifest, null, 2));
     }
     apply(compiler) {
         const { dev  } = this;

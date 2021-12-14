@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 exports.default = void 0;
+var _middlewarePlugin = require("../build/webpack/plugins/middleware-plugin");
 var _compression = _interopRequireDefault(require("next/dist/compiled/compression"));
 var _httpProxy = _interopRequireDefault(require("next/dist/compiled/http-proxy"));
 var _path = require("path");
@@ -120,6 +121,7 @@ class Server {
             concurrentFeatures: this.nextConfig.experimental.concurrentFeatures,
             crossOrigin: this.nextConfig.crossOrigin ? this.nextConfig.crossOrigin : undefined
         };
+        this.webServerRuntime = !!this.nextConfig.experimental.concurrentFeatures;
         // Only the `publicRuntimeConfig` key is exposed to the client side
         // It'll be rendered as part of __NEXT_DATA__ on the client side
         if (Object.keys(publicRuntimeConfig).length > 0) {
@@ -376,8 +378,7 @@ class Server {
     }
     getMiddlewareManifest() {
         if (!this.minimalMode) {
-            const middlewareManifestPath = (0, _path).join((0, _path).join(this.distDir, _constants.SERVER_DIRECTORY), _constants.MIDDLEWARE_MANIFEST);
-            return require(middlewareManifestPath);
+            return (0, _middlewarePlugin).readMiddlewareManifest((0, _path).join(this.distDir, _constants.SERVER_DIRECTORY), this.webServerRuntime);
         }
         return undefined;
     }
@@ -397,7 +398,8 @@ class Server {
                 dev: this.renderOpts.dev,
                 distDir: this.distDir,
                 page: pathname,
-                serverless: this._isLikeServerless
+                serverless: this._isLikeServerless,
+                ssr: !!_isSSR
             }).paths.length > 0;
         } catch (_) {
         }
@@ -439,7 +441,8 @@ class Server {
                     dev: this.renderOpts.dev,
                     distDir: this.distDir,
                     page: middleware.page,
-                    serverless: this._isLikeServerless
+                    serverless: this._isLikeServerless,
+                    ssr: !!middleware.ssr
                 });
                 result = await (0, _sandbox).run({
                     name: middlewareInfo.name,
@@ -455,7 +458,7 @@ class Server {
                         url: url,
                         page: page
                     },
-                    useCache: !this.nextConfig.experimental.concurrentFeatures,
+                    useCache: !this.webServerRuntime,
                     onWarning: (warning)=>{
                         if (params.onWarning) {
                             warning.message += ` "./${middlewareInfo.name}"`;

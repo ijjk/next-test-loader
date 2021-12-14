@@ -46,6 +46,7 @@ var _writeBuildId = require("./write-build-id");
 var _normalizeLocalePath = require("../shared/lib/i18n/normalize-locale-path");
 var _isError = _interopRequireDefault(require("../lib/is-error"));
 var _telemetryPlugin = require("./webpack/plugins/telemetry-plugin");
+var _middlewarePlugin = require("./webpack/plugins/middleware-plugin");
 var _recursiveCopy = require("../lib/recursive-copy");
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
@@ -77,7 +78,7 @@ function _interopRequireWildcard(obj) {
 }
 async function build(dir, conf = null, reactProductionProfiling = false, debugOutput = false, runLint = true) {
     const nextBuildSpan = (0, _trace).trace('next-build', undefined, {
-        version: "12.0.8-canary.4"
+        version: "12.0.8-canary.5"
     });
     const buildResult = await nextBuildSpan.traceAsyncFn(async ()=>{
         // attempt to load global env values so they are available in next.config.js
@@ -158,6 +159,7 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
             invocationCount: shouldLint ? 1 : 0
         };
         telemetry.record({
+            // noop
             eventName: _events.EVENT_BUILD_FEATURE_USAGE,
             payload: buildLintEvent
         });
@@ -1222,7 +1224,13 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
             };
             await _fs.promises.writeFile(_path.default.join(distDir, _constants1.PRERENDER_MANIFEST), JSON.stringify(prerenderManifest), 'utf8');
         }
-        const middlewareManifest = JSON.parse(await _fs.promises.readFile(_path.default.join(distDir, _constants1.SERVER_DIRECTORY, _constants1.MIDDLEWARE_MANIFEST), 'utf8'));
+        const middlewareManifest = JSON.parse(await _fs.promises.readFile(_path.default.join(distDir, _constants1.SERVER_DIRECTORY, (0, _middlewarePlugin).getMiddlewareManifestName()), 'utf8'));
+        let serverWebMiddlewareManifest = null;
+        if (hasConcurrentFeatures) {
+            serverWebMiddlewareManifest = JSON.parse(await _fs.promises.readFile(_path.default.join(distDir, _constants1.SERVER_DIRECTORY, (0, _middlewarePlugin).getMiddlewareManifestName(true)), 'utf8'));
+            const mergedManifest = (0, _middlewarePlugin).mergeMiddlewareManifests(middlewareManifest, serverWebMiddlewareManifest);
+            await _fs.promises.writeFile(_path.default.join(distDir, _constants1.SERVER_DIRECTORY, _constants1.MIDDLEWARE_MANIFEST), JSON.stringify(mergedManifest), 'utf8');
+        }
         await _fs.promises.writeFile(_path.default.join(distDir, _constants1.CLIENT_STATIC_FILES_PATH, buildId, '_middlewareManifest.js'), `self.__MIDDLEWARE_MANIFEST=${(0, _devalue).default(middlewareManifest.clientInfo)};self.__MIDDLEWARE_MANIFEST_CB&&self.__MIDDLEWARE_MANIFEST_CB()`);
         const images = {
             ...config.images

@@ -7,7 +7,7 @@ import type { FetchEventResult } from './web/types';
 import type { FontManifest } from './font-utils';
 import type { IncomingMessage, ServerResponse } from 'http';
 import type { LoadComponentsReturnType } from './load-components';
-import type { MiddlewareManifest } from '../build/webpack/plugins/middleware-plugin';
+import { MiddlewareManifest } from '../build/webpack/plugins/middleware-plugin';
 import type { NextConfig, NextConfigComplete } from './config-shared';
 import type { NextParsedUrlQuery, NextUrlWithParsedQuery } from './request-meta';
 import type { ParsedNextUrl } from '../shared/lib/router/utils/parse-next-url';
@@ -114,6 +114,7 @@ export default abstract class Server {
     protected customRoutes: CustomRoutes;
     protected middlewareManifest?: MiddlewareManifest;
     protected middleware?: RoutingItem[];
+    protected webServerRuntime: boolean;
     readonly hostname?: string;
     readonly port?: number;
     protected abstract getHasStaticDir(): boolean;
