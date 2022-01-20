@@ -5,7 +5,6 @@ Object.defineProperty(exports, "__esModule", {
 exports.default = Image;
 var _react = _interopRequireDefault(require("react"));
 var _head = _interopRequireDefault(require("../shared/lib/head"));
-var _toBase64 = require("../shared/lib/to-base-64");
 var _imageConfig = require("../server/image-config");
 var _useIntersection = require("./use-intersection");
 function _defineProperty(obj, key, value) {
@@ -241,9 +240,10 @@ function handleLoading(img, src, layout, placeholder, onLoadingComplete) {
             p.catch(()=>{
             }).then(()=>{
                 if (placeholder === 'blur') {
-                    img.style.filter = 'none';
-                    img.style.backgroundSize = 'none';
-                    img.style.backgroundImage = 'none';
+                    img.style.filter = '';
+                    img.style.backgroundSize = '';
+                    img.style.backgroundImage = '';
+                    img.style.backgroundPosition = '';
                 }
                 loadedImageURLs.add(src);
                 if (onLoadingComplete) {
@@ -434,7 +434,7 @@ function Image(_param) {
         padding: 0
     };
     let hasSizer = false;
-    let sizerSvg;
+    let sizerSvgUrl;
     const imgStyle = {
         position: 'absolute',
         top: 0,
@@ -487,7 +487,8 @@ function Image(_param) {
             wrapperStyle.maxWidth = '100%';
             hasSizer = true;
             sizerStyle.maxWidth = '100%';
-            sizerSvg = `<svg width="${widthInt}" height="${heightInt}" xmlns="http://www.w3.org/2000/svg" version="1.1"/>`;
+            // url encoded svg is a little bit shorten than base64 encoding
+            sizerSvgUrl = `data:image/svg+xml,%3csvg xmlns=%27http://www.w3.org/2000/svg%27 version=%271.1%27 width=%27${widthInt}%27 height=%27${heightInt}%27/%3e`;
         } else if (layout === 'fixed') {
             // <Image src="i.png" width="100" height="100" layout="fixed" />
             wrapperStyle.display = 'inline-block';
@@ -548,7 +549,7 @@ function Image(_param) {
         style: wrapperStyle
     }, hasSizer ? /*#__PURE__*/ _react.default.createElement("span", {
         style: sizerStyle
-    }, sizerSvg ? /*#__PURE__*/ _react.default.createElement("img", {
+    }, sizerSvgUrl ? /*#__PURE__*/ _react.default.createElement("img", {
         style: {
             display: 'block',
             maxWidth: '100%',
@@ -562,7 +563,7 @@ function Image(_param) {
         },
         alt: "",
         "aria-hidden": true,
-        src: `data:image/svg+xml;base64,${(0, _toBase64).toBase64(sizerSvg)}`
+        src: sizerSvgUrl
     }) : null) : null, /*#__PURE__*/ _react.default.createElement("img", Object.assign({
     }, rest, imgAttributes, {
         decoding: "async",
@@ -574,7 +575,7 @@ function Image(_param) {
         },
         style: _objectSpread({
         }, imgStyle, blurStyle)
-    })), /*#__PURE__*/ _react.default.createElement("noscript", null, /*#__PURE__*/ _react.default.createElement("img", Object.assign({
+    })), isLazy && /*#__PURE__*/ _react.default.createElement("noscript", null, /*#__PURE__*/ _react.default.createElement("img", Object.assign({
     }, rest, generateImgAttrs({
         src,
         unoptimized,

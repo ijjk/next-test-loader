@@ -7,11 +7,11 @@ exports.detectContentType = detectContentType;
 exports.getMaxAge = getMaxAge;
 exports.resizeImage = resizeImage;
 exports.getImageSize = getImageSize;
-var _accept = require("@hapi/accept");
+var _accept = require("next/dist/compiled/@hapi/accept");
 var _crypto = require("crypto");
 var _fs = require("fs");
-var _getOrientation = require("get-orientation");
-var _imageSize = _interopRequireDefault(require("image-size"));
+var _getOrientation = require("next/dist/compiled/get-orientation");
+var _imageSize = _interopRequireDefault(require("next/dist/compiled/image-size"));
 var _isAnimated = _interopRequireDefault(require("next/dist/compiled/is-animated"));
 var _contentDisposition = _interopRequireDefault(require("next/dist/compiled/content-disposition"));
 var _path = require("path");
@@ -22,7 +22,7 @@ var _imageConfig = require("./image-config");
 var _main = require("./lib/squoosh/main");
 var _sendPayload = require("./send-payload");
 var _serveStatic = require("./serve-static");
-var _chalk = _interopRequireDefault(require("chalk"));
+var _chalk = _interopRequireDefault(require("next/dist/compiled/chalk"));
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
         default: obj
@@ -53,13 +53,13 @@ try {
 // Sharp not present on the server, Squoosh fallback will be used
 }
 let showSharpMissingWarning = process.env.NODE_ENV === 'production';
-async function imageOptimizer(server, req, res, parsedUrl, nextConfig, distDir, isDev = false) {
+async function imageOptimizer(req, res, parsedUrl, nextConfig, distDir, render404, handleRequest, isDev = false) {
     const imageData = nextConfig.images || _imageConfig.imageConfigDefault;
     const { deviceSizes =[] , imageSizes =[] , domains =[] , loader , minimumCacheTTL =60 , formats =[
         'image/webp'
     ] ,  } = imageData;
     if (loader !== 'default') {
-        await server.render404(req, res, parsedUrl);
+        await render404();
         return {
             finished: true
         };
@@ -278,7 +278,7 @@ async function imageOptimizer(server, req, res, parsedUrl, nextConfig, distDir, 
                 mockReq.method = req.method;
                 mockReq.url = href;
                 mockReq.connection = req.connection;
-                await server.getRequestHandler()(mockReq, mockRes, _url.default.parse(href, true));
+                await handleRequest(mockReq, mockRes, _url.default.parse(href, true));
                 await isStreamFinished;
                 res.statusCode = mockRes.statusCode;
                 upstreamBuffer = Buffer.concat(resBuffers);
@@ -358,6 +358,17 @@ async function imageOptimizer(server, req, res, parsedUrl, nextConfig, distDir, 
                 optimizedBuffer = await transformer.toBuffer();
             // End sharp transformation logic
             } else {
+                var ref;
+                if (showSharpMissingWarning && ((ref = nextConfig.experimental) === null || ref === void 0 ? void 0 : ref.outputStandalone)) {
+                    // TODO: should we ensure squoosh also works even though we don't
+                    // recommend it be used in production and this is a production feature
+                    console.error(`Error: 'sharp' is required to be installed in standalone mode for the image optimization to function correctly`);
+                    req.statusCode = 500;
+                    res.end('internal server error');
+                    return {
+                        finished: true
+                    };
+                }
                 // Show sharp warning in production once
                 if (showSharpMissingWarning) {
                     console.warn(_chalk.default.yellow.bold('Warning: ') + `For production Image Optimization with Next.js, the optional 'sharp' package is strongly recommended. Run 'yarn add sharp', and Next.js will use it automatically for Image Optimization.\n` + 'Read more: https://nextjs.org/docs/messages/sharp-missing-in-production');

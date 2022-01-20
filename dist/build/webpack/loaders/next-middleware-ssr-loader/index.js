@@ -38,7 +38,7 @@ async function middlewareSSRLoader() {
       buildManifest,
       reactLoadableManifest,
       rscManifest,
-      isServerComponent: ${JSON.stringify(isServerComponent)},
+      isServerComponent: ${isServerComponent},
       restRenderOpts: ${JSON.stringify(restRenderOpts)}
     })
 

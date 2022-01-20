@@ -2,45 +2,22 @@
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-exports.mergeMiddlewareManifests = mergeMiddlewareManifests;
-exports.readMiddlewareManifest = readMiddlewareManifest;
-exports.default = exports.getMiddlewareManifestName = exports.ssrEntries = void 0;
-var _path = require("path");
+exports.default = exports.ssrEntries = void 0;
 var _webpack = require("next/dist/compiled/webpack/webpack");
 var _utils = require("../../../shared/lib/router/utils");
 var _constants = require("../../../shared/lib/constants");
-var _constants1 = require("../../../lib/constants");
 var _nonNullable = require("../../../lib/non-nullable");
 const PLUGIN_NAME = 'MiddlewarePlugin';
-const SSR_PREFIX = 'ssr__';
 const MIDDLEWARE_FULL_ROUTE_REGEX = /^pages[/\\]?(.*)\/_middleware$/;
 const ssrEntries = new Map();
 exports.ssrEntries = ssrEntries;
-const getMiddlewareManifestName = (hasConcurrentFeatures = false)=>(hasConcurrentFeatures ? SSR_PREFIX : '') + _constants.MIDDLEWARE_MANIFEST
-;
-exports.getMiddlewareManifestName = getMiddlewareManifestName;
-function mergeMiddlewareManifests(a, b) {
-    const clientInfo = a.clientInfo.concat(b ? b.clientInfo : []);
-    const sortedMiddleware = a.sortedMiddleware.concat(b ? b.sortedMiddleware : []);
-    const middleware = Object.assign({
-    }, a.middleware, b === null || b === void 0 ? void 0 : b.middleware);
-    return {
-        version: a.version,
-        clientInfo,
-        sortedMiddleware,
-        middleware
-    };
-}
-function readMiddlewareManifest(dir, hasConcurrentFeatures) {
-    const middlewareManifestPath = (0, _path).join(dir, getMiddlewareManifestName());
-    const serverWebMiddlewareManifestPath = (0, _path).join(dir, getMiddlewareManifestName(true));
-    const middlewareManifest = require(middlewareManifestPath);
-    let serverWebMiddlewareManifest;
-    if (hasConcurrentFeatures) {
-        serverWebMiddlewareManifest = require(serverWebMiddlewareManifestPath);
-    }
-    return mergeMiddlewareManifests(middlewareManifest, serverWebMiddlewareManifest);
-}
+const middlewareManifest = {
+    sortedMiddleware: [],
+    clientInfo: [],
+    middleware: {
+    },
+    version: 1
+};
 class MiddlewarePlugin {
     constructor({ dev , webServerRuntime  }){
         this.dev = dev;
@@ -48,13 +25,6 @@ class MiddlewarePlugin {
     }
     createAssets(compilation, assets, envPerRoute) {
         const entrypoints = compilation.entrypoints;
-        const middlewareManifest = {
-            sortedMiddleware: [],
-            clientInfo: [],
-            middleware: {
-            },
-            version: 1
-        };
         for (const entrypoint of entrypoints.values()){
             if (!entrypoint.name) continue;
             const result = MIDDLEWARE_FULL_ROUTE_REGEX.exec(entrypoint.name);
@@ -73,7 +43,8 @@ class MiddlewarePlugin {
                 `server/${_constants.MIDDLEWARE_REACT_LOADABLE_MANIFEST}.js`,
                 ...entryFiles.map((file)=>'server/' + file
                 ), 
-            ].filter(_nonNullable.nonNullable) : entryFiles;
+            ].filter(_nonNullable.nonNullable) : entryFiles.map((file)=>file
+            );
             middlewareManifest.middleware[location] = {
                 env: envPerRoute.get(entrypoint.name) || [],
                 files,
@@ -91,19 +62,24 @@ class MiddlewarePlugin {
                 !!ssrEntryInfo
             ];
         });
-        const assetName = this.webServerRuntime ? getMiddlewareManifestName(true) : `server/${getMiddlewareManifestName()}`;
-        assets[assetName] = new _webpack.sources.RawSource(JSON.stringify(middlewareManifest, null, 2));
+        assets[this.webServerRuntime ? _constants.MIDDLEWARE_MANIFEST : `server/${_constants.MIDDLEWARE_MANIFEST}`] = new _webpack.sources.RawSource(JSON.stringify(middlewareManifest, null, 2));
     }
     apply(compiler) {
         const { dev  } = this;
         const wp = compiler.webpack;
         compiler.hooks.compilation.tap(PLUGIN_NAME, (compilation, { normalModuleFactory  })=>{
+            compilation.hooks.afterChunks.tap(PLUGIN_NAME, ()=>{
+                const middlewareRuntimeChunk = compilation.namedChunks.get(_constants.MIDDLEWARE_RUNTIME_WEBPACK);
+                if (middlewareRuntimeChunk) {
+                    middlewareRuntimeChunk.filenameTemplate = 'server/[name].js';
+                }
+            });
             const envPerRoute = new Map();
             compilation.hooks.afterOptimizeModules.tap(PLUGIN_NAME, ()=>{
                 const { moduleGraph  } = compilation;
                 envPerRoute.clear();
                 for (const [name, info] of compilation.entries){
-                    if (name.match(_constants1.MIDDLEWARE_ROUTE)) {
+                    if (info.options.runtime === _constants.MIDDLEWARE_SSR_RUNTIME_WEBPACK || info.options.runtime === _constants.MIDDLEWARE_RUNTIME_WEBPACK) {
                         const middlewareEntries = new Set();
                         const env = new Set();
                         const addEntriesFromDependency = (dep)=>{
@@ -198,7 +174,6 @@ class MiddlewarePlugin {
                 parser.hooks.expression.for('global.Function').tap(PLUGIN_NAME, expressionHandler);
                 parser.hooks.expression.for('global.Function.prototype').tap(PLUGIN_NAME, ignore);
                 const memberChainHandler = (_expr, members)=>{
-                    if (!isMiddlewareModule()) return;
                     if (members.length >= 2 && members[0] === 'env') {
                         const envName = members[1];
                         const { buildInfo  } = parser.state.module;
@@ -206,7 +181,7 @@ class MiddlewarePlugin {
                             buildInfo.nextUsedEnvVars = new Set();
                         }
                         buildInfo.nextUsedEnvVars.add(envName);
-                        return true;
+                        if (isMiddlewareModule()) return true;
                     }
                 };
                 parser.hooks.callMemberChain.for('process').tap(PLUGIN_NAME, memberChainHandler);

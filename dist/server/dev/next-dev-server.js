@@ -5,13 +5,13 @@ Object.defineProperty(exports, "__esModule", {
 exports.default = void 0;
 var _crypto = _interopRequireDefault(require("crypto"));
 var _fs = _interopRequireDefault(require("fs"));
-var _chalk = _interopRequireDefault(require("chalk"));
-var _jestWorker = require("jest-worker");
+var _chalk = _interopRequireDefault(require("next/dist/compiled/chalk"));
+var _jestWorker = require("next/dist/compiled/jest-worker");
 var _amphtmlValidator = _interopRequireDefault(require("next/dist/compiled/amphtml-validator"));
 var _findUp = _interopRequireDefault(require("next/dist/compiled/find-up"));
 var _path = require("path");
 var _react = _interopRequireDefault(require("react"));
-var _watchpack = _interopRequireDefault(require("watchpack"));
+var _watchpack = _interopRequireDefault(require("next/dist/compiled/watchpack"));
 var _output = require("../../build/output");
 var _constants = require("../../lib/constants");
 var _fileExists = require("../../lib/file-exists");
@@ -32,10 +32,9 @@ var _utils1 = require("../lib/utils");
 var _coalescedFunction = require("../../lib/coalesced-function");
 var _loadComponents = require("../load-components");
 var _utils2 = require("../../shared/lib/utils");
-var _parseStack = require("@next/react-dev-overlay/lib/internal/helpers/parseStack");
-var _middleware = require("@next/react-dev-overlay/lib/middleware");
+var _middleware = require("next/dist/compiled/@next/react-dev-overlay/middleware");
 var Log = _interopRequireWildcard(require("../../build/output/log"));
-var _isError = _interopRequireDefault(require("../../lib/is-error"));
+var _isError = _interopRequireWildcard(require("../../lib/is-error"));
 var _getMiddlewareRegex = require("../../shared/lib/router/utils/get-middleware-regex");
 var _utils3 = require("../../build/utils");
 function _interopRequireDefault(obj) {
@@ -70,7 +69,7 @@ function _interopRequireWildcard(obj) {
 let ReactDevOverlayImpl;
 const ReactDevOverlay = (props)=>{
     if (ReactDevOverlayImpl === undefined) {
-        ReactDevOverlayImpl = require('@next/react-dev-overlay/lib/client').ReactDevOverlay;
+        ReactDevOverlayImpl = require('next/dist/compiled/@next/react-dev-overlay/client').ReactDevOverlay;
     }
     return ReactDevOverlayImpl(props);
 };
@@ -369,7 +368,7 @@ class DevServer extends _nextServer.default {
         if (!this.addedUpgradeListener) {
             var ref;
             this.addedUpgradeListener = true;
-            server = server || ((ref = _req === null || _req === void 0 ? void 0 : _req.socket) === null || ref === void 0 ? void 0 : ref.server);
+            server = server || ((ref = _req === null || _req === void 0 ? void 0 : _req.originalRequest.socket) === null || ref === void 0 ? void 0 : ref.server);
             if (!server) {
                 // this is very unlikely to happen but show an error in case
                 // it does somehow
@@ -408,7 +407,7 @@ class DevServer extends _nextServer.default {
             return result;
         } catch (error) {
             this.logErrorWithOriginalStack(error, undefined, 'client');
-            const err = (0, _isError).default(error) ? error : new Error(error + '');
+            const err = (0, _isError).getProperError(error);
             err.middleware = true;
             const { request , response , parsedUrl  } = params;
             this.renderError(err, request, response, parsedUrl.pathname);
@@ -432,7 +431,7 @@ class DevServer extends _nextServer.default {
                 throw new Error(_constants.PUBLIC_DIR_MIDDLEWARE_CONFLICT);
             }
         }
-        const { finished =false  } = await this.hotReloader.run(req, res, parsedUrl);
+        const { finished =false  } = await this.hotReloader.run(req.originalRequest, res.originalResponse, parsedUrl);
         if (finished) {
             return;
         }
@@ -445,7 +444,7 @@ class DevServer extends _nextServer.default {
             return await super.run(req, res, parsedUrl);
         } catch (error) {
             res.statusCode = 500;
-            const err = (0, _isError).default(error) ? error : error ? new Error(error + '') : null;
+            const err = (0, _isError).getProperError(error);
             try {
                 this.logErrorWithOriginalStack(err).catch(()=>{
                 });
@@ -454,7 +453,7 @@ class DevServer extends _nextServer.default {
                 });
             } catch (internalErr) {
                 console.error(internalErr);
-                res.end('Internal Server Error');
+                res.body('Internal Server Error').send();
             }
         }
     }
@@ -462,7 +461,7 @@ class DevServer extends _nextServer.default {
         let usedOriginalStack = false;
         if ((0, _isError).default(err) && err.name && err.stack && err.message) {
             try {
-                const frames = (0, _parseStack).parseStack(err.stack);
+                const frames = (0, _middleware).parseStack(err.stack);
                 const frame = frames[0];
                 if (frame.lineNumber && (frame === null || frame === void 0 ? void 0 : frame.file)) {
                     var ref, ref1, ref2, ref3, ref4, ref5;
@@ -563,9 +562,9 @@ class DevServer extends _nextServer.default {
             fn: async (_req, res)=>{
                 res.statusCode = 200;
                 res.setHeader('Content-Type', 'application/json; charset=utf-8');
-                res.end(JSON.stringify({
+                res.body(JSON.stringify({
                     pages: this.sortedRoutes
-                }));
+                })).send();
                 return {
                     finished: true
                 };
@@ -579,11 +578,11 @@ class DevServer extends _nextServer.default {
                 var ref;
                 res.statusCode = 200;
                 res.setHeader('Content-Type', 'application/json; charset=utf-8');
-                res.end(JSON.stringify(((ref = this.middleware) === null || ref === void 0 ? void 0 : ref.map((middleware)=>[
+                res.body(JSON.stringify(((ref = this.middleware) === null || ref === void 0 ? void 0 : ref.map((middleware)=>[
                         middleware.page,
                         !!middleware.ssr, 
                     ]
-                )) || []));
+                )) || [])).send();
                 return {
                     finished: true
                 };

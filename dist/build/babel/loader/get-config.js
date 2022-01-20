@@ -64,17 +64,10 @@ function getCacheCharacteristics(loaderOptions, source, filename) {
         type: 'plugin'
     }) : null;
     const reactRefreshItem = hasReactRefresh ? (0, _core).createConfigItem([
-        require('react-refresh/babel'),
+        require('next/dist/compiled/react-refresh/babel'),
         {
             skipEnvCheck: true
-        }
-    ], {
-        type: 'plugin'
-    }) : null;
-    const noAnonymousDefaultExportItem = hasReactRefresh && !isServer ? (0, _core).createConfigItem([
-        require('../plugins/no-anonymous-default-export'),
-        {
-        }
+        }, 
     ], {
         type: 'plugin'
     }) : null;
@@ -108,7 +101,6 @@ function getCacheCharacteristics(loaderOptions, source, filename) {
         type: 'plugin'
     }) : null;
     return [
-        noAnonymousDefaultExportItem,
         reactRefreshItem,
         pageConfigItem,
         disallowExportAllItem,

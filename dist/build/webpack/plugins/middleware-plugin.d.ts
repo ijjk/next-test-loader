@@ -2,9 +2,6 @@ import { webpack5 } from 'next/dist/compiled/webpack/webpack';
 export declare const ssrEntries: Map<string, {
     requireFlightManifest: boolean;
 }>;
-export declare const getMiddlewareManifestName: (hasConcurrentFeatures?: boolean) => string;
-export declare function mergeMiddlewareManifests(a: MiddlewareManifest, b?: MiddlewareManifest): MiddlewareManifest;
-export declare function readMiddlewareManifest(dir: string, hasConcurrentFeatures: boolean): MiddlewareManifest;
 export interface MiddlewareManifest {
     version: 1;
     sortedMiddleware: string[];

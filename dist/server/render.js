@@ -4,6 +4,7 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.renderToHTML = renderToHTML;
 exports.useMaybeDeferContent = useMaybeDeferContent;
+var _querystring = require("querystring");
 var _react = _interopRequireDefault(require("react"));
 var _server = _interopRequireDefault(require("react-dom/server"));
 var _reactServerDomWebpack = require("next/dist/compiled/react-server-dom-webpack");
@@ -27,6 +28,7 @@ var _requestMeta = require("./request-meta");
 var _loadCustomRoutes = require("../lib/load-custom-routes");
 var _renderResult = _interopRequireDefault(require("./render-result"));
 var _isError = _interopRequireDefault(require("../lib/is-error"));
+var _utils1 = require("./web/utils");
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
         default: obj
@@ -103,6 +105,11 @@ function enhanceComponents(options, App, Component) {
         Component: options.enhanceComponent ? options.enhanceComponent(Component) : Component
     };
 }
+function renderFlight(App, Component, props) {
+    const AppServer = App.__next_rsc__ ? App : _react.default.Fragment;
+    return(/*#__PURE__*/ _react.default.createElement(AppServer, null, /*#__PURE__*/ _react.default.createElement(Component, Object.assign({
+    }, props))));
+}
 const invalidKeysMsg = (methodName, invalidKeys)=>{
     return `Additional keys were returned from \`${methodName}\`. Properties intended for your component must be nested under the \`props\` key, e.g.:` + `\n\n\treturn { props: { title: 'My Title', content: '...' } }` + `\n\nKeys that need to be moved: ${invalidKeys.join(', ')}.` + `\nRead more: https://nextjs.org/docs/messages/invalid-getstaticprops-value`;
 };
@@ -132,54 +139,57 @@ function checkRedirectValues(redirect, req, method) {
         throw new Error(`Invalid redirect object returned from ${method} for ${req.url}\n` + errors.join(' and ') + '\n' + `See more info here: https://nextjs.org/docs/messages/invalid-redirect-gssp`);
     }
 }
+const rscCache = new Map();
 function createRSCHook() {
-    const rscCache = new Map();
     const decoder = new TextDecoder();
+    const encoder = new TextEncoder();
     return (writable, id, req, bootstrap)=>{
         let entry = rscCache.get(id);
         if (!entry) {
-            const [renderStream, forwardStream] = req.tee();
+            const [renderStream, forwardStream] = (0, _utils1).readableStreamTee(req);
             entry = (0, _reactServerDomWebpack).createFromReadableStream(renderStream);
             rscCache.set(id, entry);
-            const transfomer = new TransformStream({
-                start (controller) {
-                    if (bootstrap) {
-                        controller.enqueue(_server.default.renderToString(/*#__PURE__*/ _react.default.createElement("script", {
-                            dangerouslySetInnerHTML: {
-                                __html: `(self.__next_s=self.__next_s||[]).push(${JSON.stringify([
-                                    0,
-                                    id
-                                ])})`
-                            }
-                        })));
+            let bootstrapped = false;
+            const forwardReader = forwardStream.getReader();
+            const writer = writable.getWriter();
+            function process() {
+                forwardReader.read().then(({ done , value  })=>{
+                    if (bootstrap && !bootstrapped) {
+                        bootstrapped = true;
+                        writer.write(encoder.encode(`<script>(self.__next_s=self.__next_s||[]).push(${JSON.stringify([
+                            0,
+                            id
+                        ])})</script>`));
                     }
-                },
-                transform (chunk, controller) {
-                    controller.enqueue(_server.default.renderToString(/*#__PURE__*/ _react.default.createElement("script", {
-                        dangerouslySetInnerHTML: {
-                            __html: `(self.__next_s=self.__next_s||[]).push(${JSON.stringify([
-                                1,
-                                id,
-                                decoder.decode(chunk)
-                            ])})`
-                        }
-                    })));
-                }
-            });
-            forwardStream.pipeThrough(transfomer).pipeTo(writable);
+                    if (done) {
+                        rscCache.delete(id);
+                        writer.close();
+                    } else {
+                        writer.write(encoder.encode(`<script>(self.__next_s=self.__next_s||[]).push(${JSON.stringify([
+                            1,
+                            id,
+                            decoder.decode(value)
+                        ])})</script>`));
+                        process();
+                    }
+                });
+            }
+            process();
         }
         return entry;
     };
 }
 const useRSCResponse = createRSCHook();
 // Create the wrapper component for a Flight stream.
-function createServerComponentRenderer(transformStream, OriginalComponent, serverComponentManifest) {
+function createServerComponentRenderer(cachePrefix, transformStream, App, OriginalComponent, serverComponentManifest) {
     const writable = transformStream.writable;
     const ServerComponentWrapper = (props)=>{
         const id = _react.default.useId();
-        const response = useRSCResponse(writable, id, (0, _writerBrowserServer).renderToReadableStream(/*#__PURE__*/ _react.default.createElement(OriginalComponent, Object.assign({
-        }, props)), serverComponentManifest), true);
-        return response.readRoot();
+        const reqStream = (0, _writerBrowserServer).renderToReadableStream(renderFlight(App, OriginalComponent, props), serverComponentManifest);
+        const response = useRSCResponse(writable, cachePrefix + ',' + id, reqStream, true);
+        const root = response.readRoot();
+        rscCache.delete(id);
+        return root;
     };
     const Component = (props)=>{
         return(/*#__PURE__*/ _react.default.createElement(_react.default.Suspense, {
@@ -215,7 +225,9 @@ async function renderToHTML(req, res, pathname, query, renderOpts) {
     const isServerComponent = !!serverComponentManifest;
     const OriginalComponent = renderOpts.Component;
     const serverComponentsInlinedTransformStream = process.browser && isServerComponent ? new TransformStream() : null;
-    const Component = isServerComponent ? createServerComponentRenderer(serverComponentsInlinedTransformStream, OriginalComponent, serverComponentManifest) : renderOpts.Component;
+    const search = (0, _querystring).stringify(query);
+    const cachePrefix = pathname + '?' + search;
+    const Component = isServerComponent ? createServerComponentRenderer(cachePrefix, serverComponentsInlinedTransformStream, App, OriginalComponent, serverComponentManifest) : renderOpts.Component;
     const getFontDefinition = (url)=>{
         if (fontManifest) {
             return getFontDefinitionFromManifest(url, fontManifest);
@@ -283,7 +295,7 @@ async function renderToHTML(req, res, pathname, query, renderOpts) {
     }
     let asPath = renderOpts.resolvedAsPath || req.url;
     if (dev) {
-        const { isValidElementType  } = require('react-is');
+        const { isValidElementType  } = require('next/dist/compiled/react-is');
         if (!isValidElementType(Component)) {
             throw new Error(`The default export is not a React Component in page: "${pathname}"`);
         }
@@ -346,7 +358,8 @@ async function renderToHTML(req, res, pathname, query, renderOpts) {
                 router: router
             }))));
         },
-        defaultGetInitialProps: async (docCtx)=>{
+        defaultGetInitialProps: async (docCtx, options = {
+        })=>{
             const enhanceApp = (AppComp)=>{
                 return (props)=>/*#__PURE__*/ _react.default.createElement(AppComp, Object.assign({
                     }, props))
@@ -355,7 +368,9 @@ async function renderToHTML(req, res, pathname, query, renderOpts) {
             const { html , head  } = await docCtx.renderPage({
                 enhanceApp
             });
-            const styles = jsxStyleRegistry.styles();
+            const styles = jsxStyleRegistry.styles({
+                nonce: options.nonce
+            });
             return {
                 html,
                 head,
@@ -536,7 +551,14 @@ async function renderToHTML(req, res, pathname, query, renderOpts) {
                             warn(message);
                         }
                     }
-                    return Reflect.get(obj, prop, receiver);
+                    const value = Reflect.get(obj, prop, receiver);
+                    // since ServerResponse uses internal fields which
+                    // proxy can't map correctly we need to ensure functions
+                    // are bound correctly while being proxied
+                    if (typeof value === 'function') {
+                        return value.bind(obj);
+                    }
+                    return value;
                 }
             });
         }
@@ -637,8 +659,10 @@ async function renderToHTML(req, res, pathname, query, renderOpts) {
     // the response might be finished on the getInitialProps call
     if ((0, _utils).isResSent(res) && !isSSG) return null;
     if (renderServerComponentData) {
-        const stream = (0, _writerBrowserServer).renderToReadableStream(/*#__PURE__*/ _react.default.createElement(OriginalComponent, Object.assign({
-        }, props.pageProps, serverComponentProps)), serverComponentManifest);
+        const stream = (0, _writerBrowserServer).renderToReadableStream(renderFlight(App, OriginalComponent, {
+            ...props.pageProps,
+            ...serverComponentProps
+        }), serverComponentManifest);
         const reader = stream.getReader();
         const piper = (innerRes, next)=>{
             bufferedReadFromReadableStream(reader, (val)=>innerRes.write(val)
@@ -693,9 +717,6 @@ async function renderToHTML(req, res, pathname, query, renderOpts) {
    * coalescing, and ISR continue working as intended.
    */ const generateStaticHTML = supportsDynamicHTML !== true;
     const renderDocument = async ()=>{
-        if (process.browser && Document.getInitialProps) {
-            throw new Error('`getInitialProps` in Document component is not supported with `concurrentFeatures` enabled.');
-        }
         if (!process.browser && Document.getInitialProps) {
             const renderPage = (options = {
             })=>{
@@ -747,27 +768,27 @@ async function renderToHTML(req, res, pathname, query, renderOpts) {
             };
         } else {
             let bodyResult;
-            if (concurrentFeatures) {
-                bodyResult = async (suffix)=>{
-                    // this must be called inside bodyResult so appWrappers is
-                    // up to date when getWrappedApp is called
-                    const content = ctx.err && ErrorDebug ? /*#__PURE__*/ _react.default.createElement(Body, null, /*#__PURE__*/ _react.default.createElement(ErrorDebug, {
-                        error: ctx.err
-                    })) : /*#__PURE__*/ _react.default.createElement(Body, null, /*#__PURE__*/ _react.default.createElement(AppContainerWithIsomorphicFiberStructure, null, /*#__PURE__*/ _react.default.createElement(App, Object.assign({
-                    }, props, {
-                        Component: Component,
-                        router: router
-                    }))));
-                    return process.browser ? await renderToWebStream(content, suffix, serverComponentsInlinedTransformStream) : await renderToNodeStream(content, suffix, generateStaticHTML);
-                };
-            } else {
-                const content = ctx.err && ErrorDebug ? /*#__PURE__*/ _react.default.createElement(Body, null, /*#__PURE__*/ _react.default.createElement(ErrorDebug, {
+            const renderContent = ()=>{
+                return ctx.err && ErrorDebug ? /*#__PURE__*/ _react.default.createElement(Body, null, /*#__PURE__*/ _react.default.createElement(ErrorDebug, {
                     error: ctx.err
-                })) : /*#__PURE__*/ _react.default.createElement(Body, null, /*#__PURE__*/ _react.default.createElement(AppContainerWithIsomorphicFiberStructure, null, /*#__PURE__*/ _react.default.createElement(App, Object.assign({
+                })) : /*#__PURE__*/ _react.default.createElement(Body, null, /*#__PURE__*/ _react.default.createElement(AppContainerWithIsomorphicFiberStructure, null, renderOpts.serverComponents && App.__next_rsc__ ? /*#__PURE__*/ _react.default.createElement(Component, Object.assign({
+                }, props.pageProps, {
+                    router: router
+                })) : /*#__PURE__*/ _react.default.createElement(App, Object.assign({
                 }, props, {
                     Component: Component,
                     router: router
                 }))));
+            };
+            if (concurrentFeatures) {
+                bodyResult = async (suffix)=>{
+                    // this must be called inside bodyResult so appWrappers is
+                    // up to date when getWrappedApp is called
+                    const content = renderContent();
+                    return process.browser ? await renderToWebStream(content, suffix, serverComponentsInlinedTransformStream) : await renderToNodeStream(content, suffix, generateStaticHTML);
+                };
+            } else {
+                const content = renderContent();
                 // for non-concurrent rendering we need to ensure App is rendered
                 // before _document so that updateHead is called/collected before
                 // rendering _document's head
@@ -887,25 +908,27 @@ async function renderToHTML(req, res, pathname, query, renderOpts) {
     } else {
         documentHTML = _server.default.renderToStaticMarkup(document);
     }
-    const nonRenderedComponents = [];
-    const expectedDocComponents = [
-        'Main',
-        'Head',
-        'NextScript',
-        'Html'
-    ];
-    for (const comp of expectedDocComponents){
-        if (!docComponentsRendered[comp]) {
-            nonRenderedComponents.push(comp);
+    if (process.env.NODE_ENV !== 'production') {
+        const nonRenderedComponents = [];
+        const expectedDocComponents = [
+            'Main',
+            'Head',
+            'NextScript',
+            'Html'
+        ];
+        for (const comp of expectedDocComponents){
+            if (!docComponentsRendered[comp]) {
+                nonRenderedComponents.push(comp);
+            }
+        }
+        if (nonRenderedComponents.length) {
+            const missingComponentList = nonRenderedComponents.map((e)=>`<${e} />`
+            ).join(', ');
+            const plural = nonRenderedComponents.length !== 1 ? 's' : '';
+            console.warn(`Your custom Document (pages/_document) did not render all the required subcomponent${plural}.\n` + `Missing component${plural}: ${missingComponentList}\n` + 'Read how to fix here: https://nextjs.org/docs/messages/missing-document-component');
         }
     }
-    if (nonRenderedComponents.length) {
-        const missingComponentList = nonRenderedComponents.map((e)=>`<${e} />`
-        ).join(', ');
-        const plural = nonRenderedComponents.length !== 1 ? 's' : '';
-        throw new Error(`Your custom Document (pages/_document) did not render all the required subcomponent${plural}.\n` + `Missing component${plural}: ${missingComponentList}\n` + 'Read how to fix here: https://nextjs.org/docs/messages/missing-document-component');
-    }
-    const [renderTargetPrefix, renderTargetSuffix] = documentHTML.split(/<next-js-internal-body-render-target><\/next-js-internal-body-render-target>/);
+    const [renderTargetPrefix, renderTargetSuffix] = documentHTML.split('<next-js-internal-body-render-target></next-js-internal-body-render-target>');
     const prefix = [];
     if (!documentHTML.startsWith(DOCTYPE)) {
         prefix.push(DOCTYPE);
@@ -990,6 +1013,7 @@ function renderToNodeStream(element, suffix, generateStaticHTML) {
         const [suffixUnclosed] = suffix.split(closeTag);
         // Based on the suggestion here:
         // https://github.com/reactwg/react-18/discussions/110
+        let suffixFlushed = false;
         class NextWritable extends Writable {
             _write(chunk, encoding, callback) {
                 if (!underlyingStream) {
@@ -1004,7 +1028,15 @@ function renderToNodeStream(element, suffix, generateStaticHTML) {
                 }
                 if (!shellFlushed) {
                     shellFlushed = true;
-                    underlyingStream.write(suffixUnclosed);
+                    // In the first round of streaming, all chunks will be finished in the micro task.
+                    // We use setTimeout to guarantee the suffix is flushed after the micro task.
+                    setTimeout(()=>{
+                        // Flush the suffix if stream is not closed.
+                        if (underlyingStream) {
+                            suffixFlushed = true;
+                            underlyingStream.write(suffixUnclosed);
+                        }
+                    });
                 }
             }
             flush() {
@@ -1030,6 +1062,11 @@ function renderToNodeStream(element, suffix, generateStaticHTML) {
                 resolved = true;
                 resolve((res, next)=>{
                     const doNext = (err)=>{
+                        // Some cases when the stream is closed too fast before setTimeout,
+                        // have to ensure suffix is flushed anyway.
+                        if (!suffixFlushed) {
+                            res.write(suffixUnclosed);
+                        }
                         if (!err) {
                             res.write(closeTag);
                         }
@@ -1055,6 +1092,7 @@ function renderToNodeStream(element, suffix, generateStaticHTML) {
                 abort();
             },
             onCompleteShell () {
+                shellFlushed = true;
                 if (!generateStaticHTML) {
                     doResolve(()=>pipe(stream)
                     );

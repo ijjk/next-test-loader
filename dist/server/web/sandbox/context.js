@@ -10,6 +10,7 @@ var _require = require("./require");
 var _webStreamsPolyfill = require("next/dist/compiled/web-streams-polyfill");
 var _cookie = _interopRequireDefault(require("next/dist/compiled/cookie"));
 var polyfills = _interopRequireWildcard(require("./polyfills"));
+var _abortController = require("next/dist/compiled/abort-controller");
 var _vm = _interopRequireDefault(require("vm"));
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
@@ -95,7 +96,7 @@ function getModuleContext(options) {
             }
         ], 
     ]);
-    const context = createContext();
+    const context = createContext(options);
     (0, _require).requireDependencies({
         requireCache: requireCache,
         context: context,
@@ -163,7 +164,7 @@ function getModuleContext(options) {
 /**
  * Create a base context with all required globals for the runtime that
  * won't depend on any externally provided dependency.
- */ function createContext() {
+ */ function createContext(options) {
     const context = {
         _ENTRIES: {
         },
@@ -182,15 +183,15 @@ function getModuleContext(options) {
             timeLog: console.timeLog.bind(console),
             warn: console.warn.bind(console)
         },
+        AbortController: _abortController.AbortController,
+        AbortSignal: _abortController.AbortSignal,
         CryptoKey: polyfills.CryptoKey,
         Crypto: polyfills.Crypto,
         crypto: new polyfills.Crypto(),
         File: _formdataNode.File,
         FormData: _formdataNode.FormData,
         process: {
-            env: {
-                ...process.env
-            }
+            env: buildEnvironmentVariablesFrom(options.env)
         },
         ReadableStream: polyfills.ReadableStream,
         setInterval,
@@ -231,6 +232,14 @@ function getModuleContext(options) {
             wasm: false
         } : undefined
     });
+}
+function buildEnvironmentVariablesFrom(keys) {
+    const pairs = keys.map((key)=>[
+            key,
+            process.env[key]
+        ]
+    );
+    return Object.fromEntries(pairs);
 }
 
 //# sourceMappingURL=context.js.map

@@ -4,13 +4,13 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.default = build;
 var _env = require("@next/env");
-var _chalk = _interopRequireDefault(require("chalk"));
+var _chalk = _interopRequireDefault(require("next/dist/compiled/chalk"));
 var _crypto = _interopRequireDefault(require("crypto"));
 var _micromatch = require("next/dist/compiled/micromatch");
 var _fs = require("fs");
 var _worker = require("../lib/worker");
 var _devalue = _interopRequireDefault(require("next/dist/compiled/devalue"));
-var _escapeStringRegexp = _interopRequireDefault(require("next/dist/compiled/escape-string-regexp"));
+var _escapeRegexp = require("../shared/lib/escape-regexp");
 var _findUp = _interopRequireDefault(require("next/dist/compiled/find-up"));
 var _indexCjs = require("next/dist/compiled/nanoid/index.cjs");
 var _pathToRegexp = require("next/dist/compiled/path-to-regexp");
@@ -27,7 +27,6 @@ var _verifyTypeScriptSetup = require("../lib/verifyTypeScriptSetup");
 var _constants1 = require("../shared/lib/constants");
 var _utils = require("../shared/lib/router/utils");
 var _config = _interopRequireWildcard(require("../server/config"));
-require("../server/node-polyfill-fetch");
 var _normalizePagePath = require("../server/normalize-page-path");
 var _require = require("../server/require");
 var ciEnvironment = _interopRequireWildcard(require("../telemetry/ci-info"));
@@ -46,7 +45,6 @@ var _writeBuildId = require("./write-build-id");
 var _normalizeLocalePath = require("../shared/lib/i18n/normalize-locale-path");
 var _isError = _interopRequireDefault(require("../lib/is-error"));
 var _telemetryPlugin = require("./webpack/plugins/telemetry-plugin");
-var _middlewarePlugin = require("./webpack/plugins/middleware-plugin");
 var _recursiveCopy = require("../lib/recursive-copy");
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
@@ -78,7 +76,7 @@ function _interopRequireWildcard(obj) {
 }
 async function build(dir, conf = null, reactProductionProfiling = false, debugOutput = false, runLint = true) {
     const nextBuildSpan = (0, _trace).trace('next-build', undefined, {
-        version: "12.0.8-canary.5"
+        version: "12.0.9-canary.3"
     });
     const buildResult = await nextBuildSpan.traceAsyncFn(async ()=>{
         // attempt to load global env values so they are available in next.config.js
@@ -489,6 +487,7 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
         const sharedPool = config.experimental.sharedPool || false;
         const staticWorker = sharedPool ? require.resolve('./worker') : require.resolve('./utils');
         let infoPrinted = false;
+        process.env.NEXT_PHASE = _constants1.PHASE_PRODUCTION_BUILD;
         const staticWorkers = new _worker.Worker(staticWorker, {
             timeout: timeout * 1000,
             onRestart: (method, [arg], attempts)=>{
@@ -526,7 +525,6 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
         const analysisBegin = process.hrtime();
         const staticCheckSpan = nextBuildSpan.traceChild('static-check');
         const { customAppGetInitialProps , namedExports , isNextImageImported , hasSsrAmpPages , hasNonStaticErrorPage ,  } = await staticCheckSpan.traceAsyncFn(async ()=>{
-            process.env.NEXT_PHASE = _constants1.PHASE_PRODUCTION_BUILD;
             const { configFileName , publicRuntimeConfig , serverRuntimeConfig  } = config;
             const runtimeEnvConfig = {
                 publicRuntimeConfig,
@@ -733,6 +731,8 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
                 if (lockFiles.length > 0) {
                     const cacheHash = require('crypto').createHash('sha256');
                     cacheHash.update(require('next/package').version);
+                    cacheHash.update(hasSsrAmpPages + '');
+                    cacheHash.update(ciEnvironment.hasNextSupport + '');
                     await Promise.all(lockFiles.map(async (lockFile)=>{
                         cacheHash.update(await _fs.promises.readFile(lockFile));
                     }));
@@ -754,12 +754,18 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
                     processCwd: dir,
                     ignore: [
                         '**/next/dist/pages/**/*',
-                        '**/next/dist/server/image-optimizer.js',
-                        '**/next/dist/compiled/@ampproject/toolbox-optimizer/**/*',
-                        '**/next/dist/server/lib/squoosh/**/*.wasm',
                         '**/next/dist/compiled/webpack/(bundle4|bundle5).js',
-                        '**/node_modules/sharp/**/*',
-                        '**/node_modules/webpack5/**/*', 
+                        '**/node_modules/webpack5/**/*',
+                        '**/next/dist/server/lib/squoosh/**/*.wasm',
+                        ...ciEnvironment.hasNextSupport ? [
+                            // only ignore image-optimizer code when
+                            // this is being handled outside of next-server
+                            '**/next/dist/server/image-optimizer.js',
+                            '**/node_modules/sharp/**/*', 
+                        ] : [],
+                        ...!hasSsrAmpPages ? [
+                            '**/next/dist/compiled/@ampproject/toolbox-optimizer/**/*'
+                        ] : [], 
                     ]
                 });
                 const tracedFiles = new Set();
@@ -797,7 +803,7 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
                     namedDataRouteRegex = routeRegex.namedRegex.replace(/\(\?:\/\)\?\$$/, `\\.json$`);
                     routeKeys = routeRegex.routeKeys;
                 } else {
-                    dataRouteRegex = (0, _loadCustomRoutes).normalizeRouteRegex(new RegExp(`^${_path.default.posix.join('/_next/data', (0, _escapeStringRegexp).default(buildId), `${pagePath}.json`)}$`).source);
+                    dataRouteRegex = (0, _loadCustomRoutes).normalizeRouteRegex(new RegExp(`^${_path.default.posix.join('/_next/data', (0, _escapeRegexp).escapeStringRegexp(buildId), `${pagePath}.json`)}$`).source);
                 }
                 return {
                     page,
@@ -842,10 +848,11 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
             };
         }));
         await _fs.promises.writeFile(_path.default.join(distDir, _constants1.SERVER_FILES_MANIFEST), JSON.stringify(requiredServerFiles), 'utf8');
+        const middlewareManifest = JSON.parse(await _fs.promises.readFile(_path.default.join(distDir, _constants1.SERVER_DIRECTORY, _constants1.MIDDLEWARE_MANIFEST), 'utf8'));
         const outputFileTracingRoot = config.experimental.outputFileTracingRoot || dir;
         if (config.experimental.outputStandalone) {
             await nextBuildSpan.traceChild('copy-traced-files').traceAsyncFn(async ()=>{
-                await (0, _utils1).copyTracedFiles(dir, distDir, pageKeys, outputFileTracingRoot, requiredServerFiles.config);
+                await (0, _utils1).copyTracedFiles(dir, distDir, pageKeys, outputFileTracingRoot, requiredServerFiles.config, middlewareManifest);
             });
         }
         const finalPrerenderRoutes = {
@@ -1224,13 +1231,6 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
             };
             await _fs.promises.writeFile(_path.default.join(distDir, _constants1.PRERENDER_MANIFEST), JSON.stringify(prerenderManifest), 'utf8');
         }
-        const middlewareManifest = JSON.parse(await _fs.promises.readFile(_path.default.join(distDir, _constants1.SERVER_DIRECTORY, (0, _middlewarePlugin).getMiddlewareManifestName()), 'utf8'));
-        let serverWebMiddlewareManifest = null;
-        if (hasConcurrentFeatures) {
-            serverWebMiddlewareManifest = JSON.parse(await _fs.promises.readFile(_path.default.join(distDir, _constants1.SERVER_DIRECTORY, (0, _middlewarePlugin).getMiddlewareManifestName(true)), 'utf8'));
-            const mergedManifest = (0, _middlewarePlugin).mergeMiddlewareManifests(middlewareManifest, serverWebMiddlewareManifest);
-            await _fs.promises.writeFile(_path.default.join(distDir, _constants1.SERVER_DIRECTORY, _constants1.MIDDLEWARE_MANIFEST), JSON.stringify(mergedManifest), 'utf8');
-        }
         await _fs.promises.writeFile(_path.default.join(distDir, _constants1.CLIENT_STATIC_FILES_PATH, buildId, '_middlewareManifest.js'), `self.__MIDDLEWARE_MANIFEST=${(0, _devalue).default(middlewareManifest.clientInfo)};self.__MIDDLEWARE_MANIFEST_CB&&self.__MIDDLEWARE_MANIFEST_CB()`);
         const images = {
             ...config.images
@@ -1264,7 +1264,9 @@ async function build(dir, conf = null, reactProductionProfiling = false, debugOu
                 const filePath = _path.default.join(dir, file);
                 await _fs.promises.copyFile(filePath, _path.default.join(distDir, 'standalone', _path.default.relative(outputFileTracingRoot, filePath)));
             }
-            await (0, _recursiveCopy).recursiveCopy(_path.default.join(distDir, _constants1.SERVER_DIRECTORY, 'pages'), _path.default.join(distDir, 'standalone', _path.default.relative(outputFileTracingRoot, distDir), _constants1.SERVER_DIRECTORY, 'pages'));
+            await (0, _recursiveCopy).recursiveCopy(_path.default.join(distDir, _constants1.SERVER_DIRECTORY, 'pages'), _path.default.join(distDir, 'standalone', _path.default.relative(outputFileTracingRoot, distDir), _constants1.SERVER_DIRECTORY, 'pages'), {
+                overwrite: true
+            });
         }
         staticPages.forEach((pg)=>allStaticPages.add(pg)
         );

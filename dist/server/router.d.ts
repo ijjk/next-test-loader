@@ -1,8 +1,8 @@
 /// <reference types="node" />
-import type { IncomingMessage, ServerResponse } from 'http';
 import type { ParsedUrlQuery } from 'querystring';
 import type { NextUrlWithParsedQuery } from './request-meta';
 import { RouteHas } from '../lib/load-custom-routes';
+import { BaseNextRequest, BaseNextResponse } from './base-http';
 export declare const route: (path: string, regexModifier?: ((regex: string) => string) | undefined) => (pathname: string | null | undefined, params?: any) => any;
 export declare type Params = {
     [param: string]: any;
@@ -22,7 +22,7 @@ export declare type Route = {
     name: string;
     requireBasePath?: false;
     internal?: true;
-    fn: (req: IncomingMessage, res: ServerResponse, params: Params, parsedUrl: NextUrlWithParsedQuery) => Promise<RouteResult> | RouteResult;
+    fn: (req: BaseNextRequest, res: BaseNextResponse, params: Params, parsedUrl: NextUrlWithParsedQuery) => Promise<RouteResult> | RouteResult;
 };
 export declare type DynamicRoutes = Array<{
     page: string;
@@ -66,6 +66,6 @@ export default class Router {
     });
     setDynamicRoutes(routes?: DynamicRoutes): void;
     addFsRoute(fsRoute: Route): void;
-    execute(req: IncomingMessage, res: ServerResponse, parsedUrl: NextUrlWithParsedQuery): Promise<boolean>;
+    execute(req: BaseNextRequest, res: BaseNextResponse, parsedUrl: NextUrlWithParsedQuery): Promise<boolean>;
 }
 export {};

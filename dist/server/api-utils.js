@@ -12,14 +12,14 @@ exports.sendJson = sendJson;
 exports.tryGetPreviewData = tryGetPreviewData;
 exports.sendError = sendError;
 exports.setLazyProp = setLazyProp;
-exports.SYMBOL_PREVIEW_DATA = void 0;
+exports.SYMBOL_CLEARED_COOKIES = exports.SYMBOL_PREVIEW_DATA = void 0;
 var _contentType = require("next/dist/compiled/content-type");
-var _rawBody = _interopRequireDefault(require("raw-body"));
+var _rawBody = _interopRequireDefault(require("next/dist/compiled/raw-body"));
 var _stream = require("stream");
 var _utils = require("../shared/lib/utils");
 var _cryptoUtils = require("./crypto-utils");
 var _sendPayload = require("./send-payload");
-var _etag = _interopRequireDefault(require("etag"));
+var _etag = _interopRequireDefault(require("next/dist/compiled/etag"));
 var _isError = _interopRequireDefault(require("../lib/is-error"));
 var _interopDefault = require("../lib/interop-default");
 function _interopRequireDefault(obj) {
@@ -257,6 +257,7 @@ const COOKIE_NAME_PRERENDER_DATA = `__next_preview_data`;
 const SYMBOL_PREVIEW_DATA = Symbol(COOKIE_NAME_PRERENDER_DATA);
 exports.SYMBOL_PREVIEW_DATA = SYMBOL_PREVIEW_DATA;
 const SYMBOL_CLEARED_COOKIES = Symbol(COOKIE_NAME_PRERENDER_BYPASS);
+exports.SYMBOL_CLEARED_COOKIES = SYMBOL_CLEARED_COOKIES;
 function tryGetPreviewData(req, res, options) {
     // Read cached preview data if present
     if (SYMBOL_PREVIEW_DATA in req) {

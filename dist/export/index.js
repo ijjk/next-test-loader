@@ -3,7 +3,7 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 exports.default = exportApp;
-var _chalk = _interopRequireDefault(require("chalk"));
+var _chalk = _interopRequireDefault(require("next/dist/compiled/chalk"));
 var _findUp = _interopRequireDefault(require("next/dist/compiled/find-up"));
 var _fs = require("fs");
 var _worker = require("../lib/worker");
@@ -329,13 +329,11 @@ async function exportApp(dir, options, span, configuration) {
         }
         if (prerenderManifest && !options.buildExport) {
             const fallbackEnabledPages = new Set();
-            for (const key of Object.keys(prerenderManifest.dynamicRoutes)){
-                // only error if page is included in path map
-                if (!exportPathMap[key] && !excludedPrerenderRoutes.has(key)) {
-                    continue;
-                }
-                if (prerenderManifest.dynamicRoutes[key].fallback !== false) {
-                    fallbackEnabledPages.add(key);
+            for (const path of Object.keys(exportPathMap)){
+                const page = exportPathMap[path].page;
+                const prerenderInfo = prerenderManifest.dynamicRoutes[page];
+                if (prerenderInfo && prerenderInfo.fallback !== false) {
+                    fallbackEnabledPages.add(page);
                 }
             }
             if (fallbackEnabledPages.size) {

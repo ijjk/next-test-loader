@@ -5,7 +5,7 @@ Object.defineProperty(exports, "__esModule", {
 exports.createPagesMapping = createPagesMapping;
 exports.createEntrypoints = createEntrypoints;
 exports.finalizeEntrypoint = finalizeEntrypoint;
-var _chalk = _interopRequireDefault(require("chalk"));
+var _chalk = _interopRequireDefault(require("next/dist/compiled/chalk"));
 var _path = require("path");
 var _querystring = require("querystring");
 var _constants = require("../lib/constants");
@@ -23,6 +23,9 @@ function _interopRequireDefault(obj) {
 function createPagesMapping(pagePaths, extensions, { isDev , hasServerComponents , hasConcurrentFeatures  }) {
     const previousPages = {
     };
+    // Do not process .d.ts files inside the `pages` folder
+    pagePaths = extensions.includes('ts') ? pagePaths.filter((pagePath)=>!pagePath.endsWith('.d.ts')
+    ) : pagePaths;
     const pages = pagePaths.reduce((result, pagePath)=>{
         let page = pagePath.replace(new RegExp(`\\.+(${extensions.join('|')})$`), '');
         if (hasServerComponents && /\.client$/.test(page)) {
@@ -96,6 +99,7 @@ function createEntrypoints(pages, target, buildId, previewMode, config, loadedEn
         const isCustomError = (0, _utils).isCustomErrorPage(page);
         const isFlight = (0, _utils).isFlightPage(config, absolutePagePath);
         const webServerRuntime = !!config.experimental.concurrentFeatures;
+        const hasServerComponents = !!config.experimental.serverComponents;
         if (page.match(_constants.MIDDLEWARE_ROUTE)) {
             const loaderOpts = {
                 absolutePagePath: pages[page],
@@ -115,6 +119,7 @@ function createEntrypoints(pages, target, buildId, previewMode, config, loadedEn
                     absolute500Path: pages['/500'] || '',
                     absolutePagePath,
                     isServerComponent: isFlight,
+                    serverComponents: hasServerComponents,
                     ...defaultServerlessOptions
                 })}!`,
                 isServer: false,
@@ -205,6 +210,8 @@ function finalizeEntrypoint({ name , value , isServer , isMiddleware , isServerW
                 ],
                 type: 'assign'
             },
+            runtime: _constants1.MIDDLEWARE_RUNTIME_WEBPACK,
+            asyncChunks: false,
             ...entry
         };
         return middlewareEntry;

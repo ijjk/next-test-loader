@@ -20,13 +20,12 @@ exports.getUnresolvedModuleFromError = getUnresolvedModuleFromError;
 exports.copyTracedFiles = copyTracedFiles;
 exports.isReservedPage = isReservedPage;
 exports.isCustomErrorPage = isCustomErrorPage;
-require("../server/node-polyfill-fetch");
-var _chalk = _interopRequireDefault(require("chalk"));
+var _chalk = _interopRequireDefault(require("next/dist/compiled/chalk"));
 var _gzipSize = _interopRequireDefault(require("next/dist/compiled/gzip-size"));
 var _textTable = _interopRequireDefault(require("next/dist/compiled/text-table"));
 var _path = _interopRequireDefault(require("path"));
 var _fs = require("fs");
-var _reactIs = require("react-is");
+var _reactIs = require("next/dist/compiled/react-is");
 var _stripAnsi = _interopRequireDefault(require("next/dist/compiled/strip-ansi"));
 var _constants = require("../lib/constants");
 var _prettyBytes = _interopRequireDefault(require("../lib/pretty-bytes"));
@@ -774,7 +773,7 @@ function getUnresolvedModuleFromError(error) {
     return builtinModules.find((item)=>item === moduleName
     );
 }
-async function copyTracedFiles(dir, distDir, pageKeys, tracingRoot, serverConfig) {
+async function copyTracedFiles(dir, distDir, pageKeys, tracingRoot, serverConfig, middlewareManifest) {
     const outputPath = _path.default.join(distDir, 'standalone');
     const copiedFiles = new Set();
     await (0, _recursiveDelete).recursiveDelete(outputPath);
@@ -806,6 +805,18 @@ async function copyTracedFiles(dir, distDir, pageKeys, tracingRoot, serverConfig
         }));
     }
     for (const page of pageKeys){
+        if (_constants.MIDDLEWARE_ROUTE.test(page)) {
+            const { files  } = middlewareManifest.middleware[page.replace(/\/_middleware$/, '') || '/'];
+            for (const file of files){
+                const originalPath = _path.default.join(distDir, file);
+                const fileOutputPath = _path.default.join(outputPath, _path.default.relative(tracingRoot, distDir), file);
+                await _fs.promises.mkdir(_path.default.dirname(fileOutputPath), {
+                    recursive: true
+                });
+                await _fs.promises.copyFile(originalPath, fileOutputPath);
+            }
+            continue;
+        }
         const pageFile = _path.default.join(distDir, 'server', 'pages', `${(0, _normalizePagePath).normalizePagePath(page)}.js`);
         const pageTraceFile = `${pageFile}.nft.json`;
         await handleTraceFiles(pageTraceFile);
@@ -819,16 +830,7 @@ const NextServer = require('next/dist/server/next-server').default
 const http = require('http')
 const path = require('path')
 
-const nextServer = new NextServer({
-  dir: path.join(__dirname),
-  dev: false,
-  conf: ${JSON.stringify({
-        ...serverConfig,
-        distDir: `./${_path.default.relative(dir, distDir)}`
-    })},
-})
-
-const handler = nextServer.getRequestHandler()
+let handler
 
 const server = http.createServer(async (req, res) => {
   try {
@@ -839,12 +841,26 @@ const server = http.createServer(async (req, res) => {
     res.end('internal server error')
   }
 })
-const currentPort = process.env.PORT || 3000
+const currentPort = parseInt(process.env.PORT, 10) || 3000
+
 server.listen(currentPort, (err) => {
   if (err) {
     console.error("Failed to start server", err)
     process.exit(1)
   }
+  const addr = server.address()
+  const nextServer = new NextServer({
+    hostname: 'localhost',
+    port: currentPort,
+    dir: path.join(__dirname),
+    dev: false,
+    conf: ${JSON.stringify({
+        ...serverConfig,
+        distDir: `./${_path.default.relative(dir, distDir)}`
+    })},
+  })
+  handler = nextServer.getRequestHandler()
+
   console.log("Listening on port", currentPort)
 })
     `);

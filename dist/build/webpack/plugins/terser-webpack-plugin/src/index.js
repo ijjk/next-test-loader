@@ -4,8 +4,8 @@ Object.defineProperty(exports, "__esModule", {
 });
 var path = _interopRequireWildcard(require("path"));
 var _webpack = require("next/dist/compiled/webpack/webpack");
-var _pLimit = _interopRequireDefault(require("p-limit"));
-var _jestWorker = require("jest-worker");
+var _pLimit = _interopRequireDefault(require("next/dist/compiled/p-limit"));
+var _jestWorker = require("next/dist/compiled/jest-worker");
 var _profilingPlugin = require("../../profiling-plugin");
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
@@ -84,6 +84,11 @@ class TerserPlugin {
                 const res = compilation.getAsset(name);
                 if (!res) {
                     console.log(name);
+                    return false;
+                }
+                // don't minify _middleware as it can break in some cases
+                // and doesn't provide too much of a benefit as it's server-side
+                if (name.match(/(middleware-runtime\.js|middleware-chunks|_middleware\.js$)/)) {
                     return false;
                 }
                 const { info  } = res;
