@@ -166,7 +166,7 @@ class DevServer extends _nextServer.default {
                             ...urlQuery,
                             ...query
                         };
-                        await this.render(req, res, page, mergedQuery, parsedUrl);
+                        await this.render(req, res, page, mergedQuery, parsedUrl, true);
                         return {
                             finished: true
                         };

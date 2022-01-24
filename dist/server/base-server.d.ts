@@ -76,7 +76,6 @@ export default abstract class Server {
     protected pagesDir?: string;
     protected publicDir: string;
     protected hasStaticDir: boolean;
-    protected serverBuildDir: string;
     protected pagesManifest?: PagesManifest;
     protected buildId: string;
     protected minimalMode: boolean;
@@ -120,6 +119,7 @@ export default abstract class Server {
     protected middleware?: RoutingItem[];
     readonly hostname?: string;
     readonly port?: number;
+    protected abstract getPublicDir(): string;
     protected abstract getHasStaticDir(): boolean;
     protected abstract getPagesManifest(): PagesManifest | undefined;
     protected abstract getBuildId(): string;
@@ -136,12 +136,7 @@ export default abstract class Server {
         page: string;
     }[];
     protected abstract findPageComponents(pathname: string, query?: NextParsedUrlQuery, params?: Params | null): Promise<FindComponentsResult | null>;
-    protected abstract getMiddlewareInfo(params: {
-        dev?: boolean;
-        distDir: string;
-        page: string;
-        serverless: boolean;
-    }): {
+    protected abstract getMiddlewareInfo(page: string): {
         name: string;
         paths: string[];
         env: string[];
@@ -149,6 +144,8 @@ export default abstract class Server {
     protected abstract getPagePath(pathname: string, locales?: string[]): string;
     protected abstract getFontManifest(): FontManifest | undefined;
     protected abstract getMiddlewareManifest(): MiddlewareManifest | undefined;
+    protected abstract getPrerenderManifest(): PrerenderManifest;
+    protected abstract getRoutesManifest(): CustomRoutes;
     protected abstract sendRenderResult(req: BaseNextRequest, res: BaseNextResponse, options: {
         result: RenderResult;
         type: 'html' | 'json';
@@ -173,6 +170,9 @@ export default abstract class Server {
         parsed: UrlWithParsedQuery;
         onWarning?: (warning: Error) => void;
     }): Promise<FetchEventResult | null>;
+    protected abstract loadEnvConfig(params: {
+        dev: boolean;
+    }): void;
     constructor({ dir, quiet, conf, dev, minimalMode, customServer, hostname, port, }: Options);
     logError(err: Error): void;
     private handleRequest;
@@ -182,8 +182,6 @@ export default abstract class Server {
     protected close(): Promise<void>;
     protected setImmutableAssetCacheControl(res: BaseNextResponse): void;
     protected getCustomRoutes(): CustomRoutes;
-    private _cachedPreviewManifest;
-    protected getPrerenderManifest(): PrerenderManifest;
     protected getPreviewProps(): __ApiPreviewProps;
     protected hasMiddleware(pathname: string, _isSSR?: boolean): Promise<boolean>;
     protected ensureMiddleware(_pathname: string, _isSSR?: boolean): Promise<void>;
@@ -218,7 +216,7 @@ export default abstract class Server {
     protected run(req: BaseNextRequest, res: BaseNextResponse, parsedUrl: UrlWithParsedQuery): Promise<void>;
     private pipe;
     private getStaticHTML;
-    render(req: BaseNextRequest, res: BaseNextResponse, pathname: string, query?: NextParsedUrlQuery, parsedUrl?: NextUrlWithParsedQuery): Promise<void>;
+    render(req: BaseNextRequest, res: BaseNextResponse, pathname: string, query?: NextParsedUrlQuery, parsedUrl?: NextUrlWithParsedQuery, internalRender?: boolean): Promise<void>;
     protected getStaticPaths(pathname: string): Promise<{
         staticPaths: string[] | undefined;
         fallbackMode: 'static' | 'blocking' | false;

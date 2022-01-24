@@ -144,7 +144,7 @@ function _objectWithoutPropertiesLoose(source, excluded) {
 }
 const data = JSON.parse(document.getElementById('__NEXT_DATA__').textContent);
 window.__NEXT_DATA__ = data;
-const version = "12.0.9-canary.3";
+const version = "12.0.9-canary.7";
 exports.version = version;
 const looseToArray = (input)=>[].slice.call(input)
 ;

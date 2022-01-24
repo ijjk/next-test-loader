@@ -47,6 +47,7 @@ export default class Router {
     dynamicRoutes: DynamicRoutes;
     useFileSystemPublicRoutes: boolean;
     locales: string[];
+    seenRequests: Set<any>;
     constructor({ basePath, headers, fsRoutes, rewrites, redirects, catchAllRoute, catchAllMiddleware, dynamicRoutes, pageChecker, useFileSystemPublicRoutes, locales, }: {
         basePath: string;
         headers: Route[];

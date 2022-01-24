@@ -1,7 +1,7 @@
 /// <reference types="node" />
-import { IncomingMessage, ServerResponse } from 'http';
+import type { IncomingMessage, ServerResponse } from 'http';
+import type { BaseNextResponse } from './base-http';
 import RenderResult from './render-result';
-import { BaseNextResponse } from './base-http';
 export declare type PayloadOptions = {
     private: true;
 } | {

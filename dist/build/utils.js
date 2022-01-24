@@ -20,6 +20,7 @@ exports.getUnresolvedModuleFromError = getUnresolvedModuleFromError;
 exports.copyTracedFiles = copyTracedFiles;
 exports.isReservedPage = isReservedPage;
 exports.isCustomErrorPage = isCustomErrorPage;
+require("../server/node-polyfill-fetch");
 var _chalk = _interopRequireDefault(require("next/dist/compiled/chalk"));
 var _gzipSize = _interopRequireDefault(require("next/dist/compiled/gzip-size"));
 var _textTable = _interopRequireDefault(require("next/dist/compiled/text-table"));

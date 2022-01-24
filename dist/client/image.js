@@ -3,7 +3,7 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 exports.default = Image;
-var _react = _interopRequireDefault(require("react"));
+var _react = _interopRequireWildcard(require("react"));
 var _head = _interopRequireDefault(require("../shared/lib/head"));
 var _imageConfig = require("../server/image-config");
 var _useIntersection = require("./use-intersection");
@@ -24,6 +24,29 @@ function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
         default: obj
     };
+}
+function _interopRequireWildcard(obj) {
+    if (obj && obj.__esModule) {
+        return obj;
+    } else {
+        var newObj = {
+        };
+        if (obj != null) {
+            for(var key in obj){
+                if (Object.prototype.hasOwnProperty.call(obj, key)) {
+                    var desc = Object.defineProperty && Object.getOwnPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : {
+                    };
+                    if (desc.get || desc.set) {
+                        Object.defineProperty(newObj, key, desc);
+                    } else {
+                        newObj[key] = obj[key];
+                    }
+                }
+            }
+        }
+        newObj.default = obj;
+        return newObj;
+    }
 }
 function _objectSpread(target) {
     for(var i = 1; i < arguments.length; i++){
@@ -71,7 +94,6 @@ function _objectWithoutPropertiesLoose(source, excluded) {
     }
     return target;
 }
-const loadedImageURLs = new Set();
 const allImgs = new Map();
 let perfObserver;
 const emptyDataURL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
@@ -230,27 +252,30 @@ function defaultImageLoader(loaderProps) {
 }
 // See https://stackoverflow.com/q/39777833/266535 for why we use this ref
 // handler instead of the img's onLoad attribute.
-function handleLoading(img, src, layout, placeholder, onLoadingComplete) {
-    if (!img) {
-        return;
-    }
+function handleLoading(imgRef, src, layout, placeholder, onLoadingCompleteRef) {
     const handleLoad = ()=>{
+        const img = imgRef.current;
+        if (!img) {
+            return;
+        }
         if (img.src !== emptyDataURL) {
             const p = 'decode' in img ? img.decode() : Promise.resolve();
             p.catch(()=>{
             }).then(()=>{
+                if (!imgRef.current) {
+                    return;
+                }
                 if (placeholder === 'blur') {
                     img.style.filter = '';
                     img.style.backgroundSize = '';
                     img.style.backgroundImage = '';
                     img.style.backgroundPosition = '';
                 }
-                loadedImageURLs.add(src);
-                if (onLoadingComplete) {
+                if (onLoadingCompleteRef.current) {
                     const { naturalWidth , naturalHeight  } = img;
                     // Pass back read-only primitive values but not the
                     // underlying DOM element because it could be misused.
-                    onLoadingComplete({
+                    onLoadingCompleteRef.current({
                         naturalWidth,
                         naturalHeight
                     });
@@ -271,17 +296,21 @@ function handleLoading(img, src, layout, placeholder, onLoadingComplete) {
             });
         }
     };
-    if (img.complete) {
-        // If the real image fails to load, this will still remove the placeholder.
-        // This is the desired behavior for now, and will be revisited when error
-        // handling is worked on for the image component itself.
-        handleLoad();
-    } else {
-        img.onload = handleLoad;
+    if (imgRef.current) {
+        if (imgRef.current.complete) {
+            // If the real image fails to load, this will still remove the placeholder.
+            // This is the desired behavior for now, and will be revisited when error
+            // handling is worked on for the image component itself.
+            handleLoad();
+        } else {
+            imgRef.current.onload = handleLoad;
+        }
     }
 }
 function Image(_param) {
     var { src , sizes , unoptimized =false , priority =false , loading , lazyBoundary ='200px' , className , quality , width , height , objectFit , objectPosition , onLoadingComplete , loader =defaultImageLoader , placeholder ='empty' , blurDataURL  } = _param, all = _objectWithoutProperties(_param, ["src", "sizes", "unoptimized", "priority", "loading", "lazyBoundary", "className", "quality", "width", "height", "objectFit", "objectPosition", "onLoadingComplete", "loader", "placeholder", "blurDataURL"]);
+    var ref;
+    const imgRef = (0, _react).useRef(null);
     let rest = all;
     let layout = sizes ? 'responsive' : 'intrinsic';
     if ('layout' in rest) {
@@ -316,7 +345,7 @@ function Image(_param) {
         unoptimized = true;
         isLazy = false;
     }
-    if (typeof window !== 'undefined' && loadedImageURLs.has(src)) {
+    if (typeof window !== 'undefined' && ((ref = imgRef.current) === null || ref === void 0 ? void 0 : ref.complete)) {
         isLazy = false;
     }
     if (process.env.NODE_ENV !== 'production') {
@@ -405,7 +434,7 @@ function Image(_param) {
             });
         }
     }
-    const [setRef, isIntersected] = (0, _useIntersection).useIntersection({
+    const [setIntersection, isIntersected] = (0, _useIntersection).useIntersection({
         rootMargin: lazyBoundary,
         disabled: !isLazy
     });
@@ -545,6 +574,26 @@ function Image(_param) {
         [imageSrcSetPropName]: imgAttributes.srcSet,
         [imageSizesPropName]: imgAttributes.sizes
     };
+    const useLayoutEffect = typeof window === 'undefined' ? _react.default.useEffect : _react.default.useLayoutEffect;
+    const onLoadingCompleteRef = (0, _react).useRef(onLoadingComplete);
+    (0, _react).useEffect(()=>{
+        onLoadingCompleteRef.current = onLoadingComplete;
+    }, [
+        onLoadingComplete
+    ]);
+    useLayoutEffect(()=>{
+        setIntersection(imgRef.current);
+    }, [
+        setIntersection
+    ]);
+    (0, _react).useEffect(()=>{
+        handleLoading(imgRef, srcString, layout, placeholder, onLoadingCompleteRef);
+    }, [
+        srcString,
+        layout,
+        placeholder,
+        isVisible
+    ]);
     return(/*#__PURE__*/ _react.default.createElement("span", {
         style: wrapperStyle
     }, hasSizer ? /*#__PURE__*/ _react.default.createElement("span", {
@@ -569,10 +618,7 @@ function Image(_param) {
         decoding: "async",
         "data-nimg": layout,
         className: className,
-        ref: (img)=>{
-            setRef(img);
-            handleLoading(img, srcString, layout, placeholder, onLoadingComplete);
-        },
+        ref: imgRef,
         style: _objectSpread({
         }, imgStyle, blurStyle)
     })), isLazy && /*#__PURE__*/ _react.default.createElement("noscript", null, /*#__PURE__*/ _react.default.createElement("img", Object.assign({

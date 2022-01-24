@@ -13,15 +13,13 @@ var _utils = require("../shared/lib/router/utils");
 var envConfig = _interopRequireWildcard(require("../shared/lib/runtime-config"));
 var _utils1 = require("../shared/lib/utils");
 var _apiUtils = require("./api-utils");
-var _config = require("./config");
+var _utils2 = require("./utils");
 var _pathMatch = _interopRequireDefault(require("../shared/lib/router/utils/path-match"));
 var _router = _interopRequireWildcard(require("./router"));
 var _prepareDestination = require("../shared/lib/router/utils/prepare-destination");
 var _sendPayload = require("./send-payload");
 var _incrementalCache = require("./incremental-cache");
-var _utils2 = require("./utils");
 var _renderResult = _interopRequireDefault(require("./render-result"));
-var _env = require("@next/env");
 var _normalizeTrailingSlash = require("../client/normalize-trailing-slash");
 var _getRouteFromAssetPath = _interopRequireDefault(require("../shared/lib/router/utils/get-route-from-asset-path"));
 var _denormalizePagePath = require("./denormalize-page-path");
@@ -72,14 +70,16 @@ class Server {
         });
         this.dir = (0, _path).resolve(dir);
         this.quiet = quiet;
-        (0, _env).loadEnvConfig(this.dir, dev, Log);
+        this.loadEnvConfig({
+            dev
+        });
         // TODO: should conf be normalized to prevent missing
         // values from causing issues as this can be user provided
         this.nextConfig = conf;
         this.hostname = hostname;
         this.port = port;
         this.distDir = (0, _path).join(this.dir, this.nextConfig.distDir);
-        this.publicDir = (0, _path).join(this.dir, _constants.CLIENT_PUBLIC_FILES_PATH);
+        this.publicDir = this.getPublicDir();
         this.hasStaticDir = !minimalMode && this.getHasStaticDir();
         // Only serverRuntimeConfig needs the default
         // publicRuntimeConfig gets it's default in client/index.js
@@ -118,7 +118,6 @@ class Server {
             serverRuntimeConfig,
             publicRuntimeConfig
         });
-        this.serverBuildDir = (0, _path).join(this.distDir, this._isLikeServerless ? _constants.SERVERLESS_DIRECTORY : _constants.SERVER_DIRECTORY);
         this.pagesManifest = this.getPagesManifest();
         this.middlewareManifest = this.getMiddlewareManifest();
         this.customRoutes = this.getCustomRoutes();
@@ -134,20 +133,6 @@ class Server {
             flushToDisk: !minimalMode && this.nextConfig.experimental.isrFlushToDisk
         });
         this.responseCache = new _responseCache.default(this.incrementalCache);
-        /**
-     * This sets environment variable to be used at the time of SSR by head.tsx.
-     * Using this from process.env allows targeting both serverless and SSR by calling
-     * `process.env.__NEXT_OPTIMIZE_IMAGES`.
-     * TODO(atcastle@): Remove this when experimental.optimizeImages are being cleaned up.
-     */ if (this.renderOpts.optimizeFonts) {
-            process.env.__NEXT_OPTIMIZE_FONTS = JSON.stringify(true);
-        }
-        if (this.renderOpts.optimizeImages) {
-            process.env.__NEXT_OPTIMIZE_IMAGES = JSON.stringify(true);
-        }
-        if (this.renderOpts.optimizeCss) {
-            process.env.__NEXT_OPTIMIZE_CSS = JSON.stringify(true);
-        }
     }
     logError(err) {
         if (this.quiet) return;
@@ -247,7 +232,9 @@ class Server {
                             params = utils.dynamicRouteMatcher(matchedPathnameNoExt);
                         }
                         if (params) {
-                            params = utils.normalizeDynamicRouteParams(params).params;
+                            if (!paramsResult.hasValidParams) {
+                                params = utils.normalizeDynamicRouteParams(params).params;
+                            }
                             matchedPathname = utils.interpolateDynamicPath(matchedPathname, params);
                             req.url = utils.interpolateDynamicPath(req.url, params);
                         }
@@ -327,7 +314,7 @@ class Server {
         res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
     }
     getCustomRoutes() {
-        const customRoutes = require((0, _path).join(this.distDir, _constants.ROUTES_MANIFEST));
+        const customRoutes = this.getRoutesManifest();
         let rewrites;
         // rewrites can be stored as an array when an array is
         // returned in next.config.js so massage them into
@@ -345,24 +332,12 @@ class Server {
             rewrites
         });
     }
-    getPrerenderManifest() {
-        if (this._cachedPreviewManifest) {
-            return this._cachedPreviewManifest;
-        }
-        const manifest = require((0, _path).join(this.distDir, _constants.PRERENDER_MANIFEST));
-        return this._cachedPreviewManifest = manifest;
-    }
     getPreviewProps() {
         return this.getPrerenderManifest().preview;
     }
     async hasMiddleware(pathname, _isSSR) {
         try {
-            return this.getMiddlewareInfo({
-                dev: this.renderOpts.dev,
-                distDir: this.distDir,
-                page: pathname,
-                serverless: this._isLikeServerless
-            }).paths.length > 0;
+            return this.getMiddlewareInfo(pathname).paths.length > 0;
         } catch (_) {
         }
         return false;
@@ -429,7 +404,7 @@ class Server {
                     await this.render(req, res, pathname, {
                         ..._parsedUrl.query,
                         _nextDataReq: '1'
-                    }, parsedUrl);
+                    }, parsedUrl, true);
                     return {
                         finished: true
                     };
@@ -604,7 +579,7 @@ class Server {
                     }
                 }
                 try {
-                    await this.render(req, res, pathname, query, parsedUrl);
+                    await this.render(req, res, pathname, query, parsedUrl, true);
                     return {
                         finished: true
                     };
@@ -770,7 +745,7 @@ class Server {
         return payload.body.toUnchunkedString();
     }
     async render(req, res, pathname, query = {
-    }, parsedUrl) {
+    }, parsedUrl, internalRender = false) {
         var ref;
         if (!pathname.startsWith('/')) {
             console.warn(`Cannot render page with path "${pathname}", did you mean "/${pathname}"?. See more info here: https://nextjs.org/docs/messages/render-no-starting-slash`);
@@ -784,7 +759,7 @@ class Server {
         // so check if we need to serve a static _next file or not.
         // we don't modify the URL for _next/data request but still
         // call render so we special case this to prevent an infinite loop
-        if (!this.minimalMode && !query._nextDataReq && (((ref = req.url) === null || ref === void 0 ? void 0 : ref.match(/^\/_next\//)) || this.hasStaticDir && req.url.match(/^\/static\//))) {
+        if (!internalRender && !this.minimalMode && !query._nextDataReq && (((ref = req.url) === null || ref === void 0 ? void 0 : ref.match(/^\/_next\//)) || this.hasStaticDir && req.url.match(/^\/static\//))) {
             return this.handleRequest(req, res, parsedUrl);
         }
         // Custom server users can run `app.render()` which needs compression.
@@ -1328,7 +1303,7 @@ class Server {
         return this.renderError(null, req, res, pathname, query, setHeaders);
     }
     get _isLikeServerless() {
-        return (0, _config).isTargetLikeServerless(this.nextConfig.target);
+        return (0, _utils2).isTargetLikeServerless(this.nextConfig.target);
     }
 }
 exports.default = Server;

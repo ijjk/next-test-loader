@@ -57,7 +57,7 @@ async function parseImportsInfo(source, imports, isClientCompilation, pageExtens
     });
     let transformedSource = '';
     let lastIndex = 0;
-    let defaultExportName = 'RSComponent';
+    let defaultExportName = 'RSCComponent';
     for(let i = 0; i < body.length; i++){
         const node = body[i];
         switch(node.type){
@@ -86,7 +86,12 @@ async function parseImportsInfo(source, imports, isClientCompilation, pageExtens
                 }
             case 'ExportDefaultDeclaration':
                 {
-                    defaultExportName = node.declaration.id.name;
+                    const def = node.declaration;
+                    if (def.type === 'Identifier') {
+                        defaultExportName = def.name;
+                    } else if (def.type === 'FunctionDeclaration') {
+                        defaultExportName = def.id.name;
+                    }
                     break;
                 }
             default:

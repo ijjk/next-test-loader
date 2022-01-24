@@ -16,7 +16,8 @@ var _constants = require("../lib/constants");
 var _recursiveCopy = require("../lib/recursive-copy");
 var _recursiveDelete = require("../lib/recursive-delete");
 var _constants1 = require("../shared/lib/constants");
-var _config = _interopRequireWildcard(require("../server/config"));
+var _config = _interopRequireDefault(require("../server/config"));
+var _utils = require("../server/utils");
 var _events = require("../telemetry/events");
 var _ciInfo = require("../telemetry/ci-info");
 var _storage = require("../telemetry/storage");
@@ -417,7 +418,7 @@ async function exportApp(dir, options, span, configuration) {
                     serverRuntimeConfig,
                     subFolders,
                     buildExport: options.buildExport,
-                    serverless: (0, _config).isTargetLikeServerless(nextConfig.target),
+                    serverless: (0, _utils).isTargetLikeServerless(nextConfig.target),
                     optimizeFonts: nextConfig.optimizeFonts,
                     optimizeImages: nextConfig.experimental.optimizeImages,
                     optimizeCss: nextConfig.experimental.optimizeCss,

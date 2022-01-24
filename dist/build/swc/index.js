@@ -122,13 +122,6 @@ function loadNative() {
         } catch (e) {
         }
     }
-    for (const triple1 of triples){
-        try {
-            bindings = require(`next/native/next-swc.${triple1.platformArchABI}.node`);
-            break;
-        } catch (e) {
-        }
-    }
     if (!bindings) {
         for (const triple of triples){
             let pkg = `@next/swc-${triple.platformArchABI}`;

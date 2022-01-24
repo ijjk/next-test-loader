@@ -1,3 +1,4 @@
+import '../server/node-polyfill-fetch';
 import { CustomRoutes } from '../lib/load-custom-routes';
 import { GetStaticPaths } from 'next/types';
 import { BuildManifest } from '../server/get-page-files';

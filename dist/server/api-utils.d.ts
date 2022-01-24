@@ -1,5 +1,5 @@
 /// <reference types="node" />
-import { IncomingMessage, ServerResponse } from 'http';
+import type { IncomingMessage, ServerResponse } from 'http';
 import { PreviewData } from 'next/types';
 import { NextApiRequest, NextApiResponse } from '../shared/lib/utils';
 import { BaseNextRequest, BaseNextResponse } from './base-http';

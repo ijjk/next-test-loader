@@ -9,10 +9,10 @@ var _chalk = _interopRequireDefault(require("next/dist/compiled/chalk"));
 var _path = require("path");
 var _querystring = require("querystring");
 var _constants = require("../lib/constants");
-var _config = require("../server/config");
+var _utils = require("../server/utils");
 var _normalizePagePath = require("../server/normalize-page-path");
 var _log = require("./output/log");
-var _utils = require("./utils");
+var _utils1 = require("./utils");
 var _middlewarePlugin = require("./webpack/plugins/middleware-plugin");
 var _constants1 = require("../shared/lib/constants");
 function _interopRequireDefault(obj) {
@@ -94,10 +94,10 @@ function createEntrypoints(pages, target, buildId, previewMode, config, loadedEn
         const isApiRoute = page.match(_constants.API_ROUTE);
         const clientBundlePath = _path.posix.join('pages', bundleFile);
         const serverBundlePath = _path.posix.join('pages', bundleFile);
-        const isLikeServerless = (0, _config).isTargetLikeServerless(target);
-        const isReserved = (0, _utils).isReservedPage(page);
-        const isCustomError = (0, _utils).isCustomErrorPage(page);
-        const isFlight = (0, _utils).isFlightPage(config, absolutePagePath);
+        const isLikeServerless = (0, _utils).isTargetLikeServerless(target);
+        const isReserved = (0, _utils1).isReservedPage(page);
+        const isCustomError = (0, _utils1).isCustomErrorPage(page);
+        const isFlight = (0, _utils1).isFlightPage(config, absolutePagePath);
         const webServerRuntime = !!config.experimental.concurrentFeatures;
         const hasServerComponents = !!config.experimental.serverComponents;
         if (page.match(_constants.MIDDLEWARE_ROUTE)) {

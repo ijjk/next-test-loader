@@ -1,12 +1,12 @@
 /// <reference types="node" />
-import { IncomingMessage, ServerResponse } from 'http';
+import type { IncomingMessage, ServerResponse } from 'http';
+import type { Rewrite } from '../../../../lib/load-custom-routes';
+import type { BuildManifest } from '../../../../server/get-page-files';
+import type { NextConfig } from '../../../../server/config';
+import type { GetServerSideProps, GetStaticPaths, GetStaticProps } from '../../../../types';
 import { UrlWithParsedQuery } from 'url';
 import { ParsedUrlQuery } from 'querystring';
-import { Rewrite } from '../../../../lib/load-custom-routes';
 import { __ApiPreviewProps } from '../../../../server/api-utils';
-import { BuildManifest } from '../../../../server/get-page-files';
-import { GetServerSideProps, GetStaticPaths, GetStaticProps } from '../../../../types';
-import { NextConfig } from '../../../../server/config';
 import { BaseNextRequest } from '../../../../server/base-http';
 export declare const vercelHeader = "x-vercel-id";
 export declare type ServerlessHandlerCtx = {

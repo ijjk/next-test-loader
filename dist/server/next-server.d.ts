@@ -1,11 +1,13 @@
 /// <reference types="node" />
+import './node-polyfill-fetch';
 import type { Params, Route } from './router';
-import { CacheFs } from '../shared/lib/utils';
-import { NextParsedUrlQuery, NextUrlWithParsedQuery } from './request-meta';
+import type { CacheFs } from '../shared/lib/utils';
 import type { MiddlewareManifest } from '../build/webpack/plugins/middleware-plugin';
 import type RenderResult from './render-result';
 import type { FetchEventResult } from './web/types';
 import type { ParsedNextUrl } from '../shared/lib/router/utils/parse-next-url';
+import type { PrerenderManifest } from '../build';
+import { NextParsedUrlQuery, NextUrlWithParsedQuery } from './request-meta';
 import { IncomingMessage, ServerResponse } from 'http';
 import { PagesManifest } from '../build/webpack/plugins/pages-manifest-plugin';
 import { UrlWithParsedQuery } from 'url';
@@ -14,14 +16,19 @@ import { PayloadOptions } from './send-payload';
 import { ParsedUrlQuery } from 'querystring';
 import { RenderOpts } from './render';
 import { ParsedUrl } from '../shared/lib/router/utils/parse-url';
-import BaseServer, { FindComponentsResult } from './base-server';
+import BaseServer, { Options, FindComponentsResult } from './base-server';
 import { FontManifest } from './font-utils';
 export * from './base-server';
 export interface NodeRequestHandler {
     (req: IncomingMessage | BaseNextRequest, res: ServerResponse | BaseNextResponse, parsedUrl?: NextUrlWithParsedQuery | undefined): Promise<void>;
 }
 export default class NextNodeServer extends BaseServer {
+    constructor(options: Options);
     private compression;
+    protected loadEnvConfig({ dev }: {
+        dev: boolean;
+    }): void;
+    protected getPublicDir(): string;
     protected getHasStaticDir(): boolean;
     protected getPagesManifest(): PagesManifest | undefined;
     protected getBuildId(): string;
@@ -56,7 +63,7 @@ export default class NextNodeServer extends BaseServer {
     private normalizeReq;
     private normalizeRes;
     getRequestHandler(): NodeRequestHandler;
-    render(req: BaseNextRequest | IncomingMessage, res: BaseNextResponse | ServerResponse, pathname: string, query?: NextParsedUrlQuery, parsedUrl?: NextUrlWithParsedQuery): Promise<void>;
+    render(req: BaseNextRequest | IncomingMessage, res: BaseNextResponse | ServerResponse, pathname: string, query?: NextParsedUrlQuery, parsedUrl?: NextUrlWithParsedQuery, internal?: boolean): Promise<void>;
     renderToHTML(req: BaseNextRequest | IncomingMessage, res: BaseNextResponse | ServerResponse, pathname: string, query?: ParsedUrlQuery): Promise<string | null>;
     renderError(err: Error | null, req: BaseNextRequest | IncomingMessage, res: BaseNextResponse | ServerResponse, pathname: string, query?: NextParsedUrlQuery, setHeaders?: boolean): Promise<void>;
     renderErrorToHTML(err: Error | null, req: BaseNextRequest | IncomingMessage, res: BaseNextResponse | ServerResponse, pathname: string, query?: ParsedUrlQuery): Promise<string | null>;
@@ -64,12 +71,7 @@ export default class NextNodeServer extends BaseServer {
     serveStatic(req: BaseNextRequest | IncomingMessage, res: BaseNextResponse | ServerResponse, path: string, parsedUrl?: UrlWithParsedQuery): Promise<void>;
     protected getStaticRoutes(): Route[];
     protected isServeableUrl(untrustedFileUrl: string): boolean;
-    protected getMiddlewareInfo(params: {
-        dev?: boolean;
-        distDir: string;
-        page: string;
-        serverless: boolean;
-    }): {
+    protected getMiddlewareInfo(page: string): {
         name: string;
         paths: string[];
         env: string[];
@@ -90,4 +92,7 @@ export default class NextNodeServer extends BaseServer {
         parsed: UrlWithParsedQuery;
         onWarning?: (warning: Error) => void;
     }): Promise<FetchEventResult | null>;
+    private _cachedPreviewManifest;
+    protected getPrerenderManifest(): PrerenderManifest;
+    protected getRoutesManifest(): any;
 }

@@ -5,6 +5,7 @@ Object.defineProperty(exports, "__esModule", {
 var _exportNames = {
 };
 exports.default = void 0;
+require("./node-polyfill-fetch");
 var _utils = require("../shared/lib/utils");
 var _requestMeta = require("./request-meta");
 var _fs = _interopRequireDefault(require("fs"));
@@ -35,6 +36,7 @@ var _prepareDestination = require("../shared/lib/router/utils/prepare-destinatio
 var _normalizeLocalePath = require("../shared/lib/i18n/normalize-locale-path");
 var _utils2 = require("../shared/lib/router/utils");
 var _constants1 = require("../lib/constants");
+var _env = require("@next/env");
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
         default: obj
@@ -64,11 +66,40 @@ function _interopRequireWildcard(obj) {
     }
 }
 class NextNodeServer extends _baseServer.default {
+    constructor(options){
+        super(options);
+        this.compression = this.nextConfig.compress && this.nextConfig.target === 'server' ? (0, _compression).default() : undefined;
+        this._validFilesystemPathSet = null;
+        this.middlewareBetaWarning = (0, _utils).execOnce(()=>{
+            Log.warn(`using beta Middleware (not covered by semver) - https://nextjs.org/docs/messages/beta-middleware`);
+        });
+        /**
+     * This sets environment variable to be used at the time of SSR by head.tsx.
+     * Using this from process.env allows targeting both serverless and SSR by calling
+     * `process.env.__NEXT_OPTIMIZE_IMAGES`.
+     * TODO(atcastle@): Remove this when experimental.optimizeImages are being cleaned up.
+     */ if (this.renderOpts.optimizeFonts) {
+            process.env.__NEXT_OPTIMIZE_FONTS = JSON.stringify(true);
+        }
+        if (this.renderOpts.optimizeImages) {
+            process.env.__NEXT_OPTIMIZE_IMAGES = JSON.stringify(true);
+        }
+        if (this.renderOpts.optimizeCss) {
+            process.env.__NEXT_OPTIMIZE_CSS = JSON.stringify(true);
+        }
+    }
+    loadEnvConfig({ dev  }) {
+        (0, _env).loadEnvConfig(this.dir, dev, Log);
+    }
+    getPublicDir() {
+        return (0, _path).join(this.dir, _constants.CLIENT_PUBLIC_FILES_PATH);
+    }
     getHasStaticDir() {
         return _fs.default.existsSync((0, _path).join(this.dir, 'static'));
     }
     getPagesManifest() {
-        const pagesManifestPath = (0, _path).join(this.serverBuildDir, _constants.PAGES_MANIFEST);
+        const serverBuildDir = (0, _path).join(this.distDir, this._isLikeServerless ? _constants.SERVERLESS_DIRECTORY : _constants.SERVER_DIRECTORY);
+        const pagesManifestPath = (0, _path).join(serverBuildDir, _constants.PAGES_MANIFEST);
         return require(pagesManifestPath);
     }
     getBuildId() {
@@ -367,8 +398,8 @@ class NextNodeServer extends _baseServer.default {
             return handler(this.normalizeReq(req), this.normalizeRes(res), parsedUrl);
         };
     }
-    async render(req, res, pathname, query, parsedUrl) {
-        return super.render(this.normalizeReq(req), this.normalizeRes(res), pathname, query, parsedUrl);
+    async render(req, res, pathname, query, parsedUrl, internal = false) {
+        return super.render(this.normalizeReq(req), this.normalizeRes(res), pathname, query, parsedUrl, internal);
     }
     async renderToHTML(req, res, pathname, query) {
         return super.renderToHTML(this.normalizeReq(req), this.normalizeRes(res), pathname, query);
@@ -458,8 +489,13 @@ class NextNodeServer extends _baseServer.default {
         const resolved = (0, _path).relative(this.dir, untrustedFilePath);
         return filesystemUrls.has(resolved);
     }
-    getMiddlewareInfo(params) {
-        return (0, _require).getMiddlewareInfo(params);
+    getMiddlewareInfo(page) {
+        return (0, _require).getMiddlewareInfo({
+            dev: this.renderOpts.dev,
+            page,
+            distDir: this.distDir,
+            serverless: this._isLikeServerless
+        });
     }
     getMiddlewareManifest() {
         if (!this.minimalMode) {
@@ -645,12 +681,7 @@ class NextNodeServer extends _baseServer.default {
                     continue;
                 }
                 await this.ensureMiddleware(middleware.page, middleware.ssr);
-                const middlewareInfo = this.getMiddlewareInfo({
-                    dev: this.renderOpts.dev,
-                    distDir: this.distDir,
-                    page: middleware.page,
-                    serverless: this._isLikeServerless
-                });
+                const middlewareInfo = this.getMiddlewareInfo(middleware.page);
                 result = await (0, _sandbox).run({
                     name: middlewareInfo.name,
                     paths: middlewareInfo.paths,
@@ -698,13 +729,15 @@ class NextNodeServer extends _baseServer.default {
         }
         return result;
     }
-    constructor(...args){
-        super(...args);
-        this.compression = this.nextConfig.compress && this.nextConfig.target === 'server' ? (0, _compression).default() : undefined;
-        this._validFilesystemPathSet = null;
-        this.middlewareBetaWarning = (0, _utils).execOnce(()=>{
-            Log.warn(`using beta Middleware (not covered by semver) - https://nextjs.org/docs/messages/beta-middleware`);
-        });
+    getPrerenderManifest() {
+        if (this._cachedPreviewManifest) {
+            return this._cachedPreviewManifest;
+        }
+        const manifest = require((0, _path).join(this.distDir, _constants.PRERENDER_MANIFEST));
+        return this._cachedPreviewManifest = manifest;
+    }
+    getRoutesManifest() {
+        return require((0, _path).join(this.distDir, _constants.ROUTES_MANIFEST));
     }
 }
 exports.default = NextNodeServer;

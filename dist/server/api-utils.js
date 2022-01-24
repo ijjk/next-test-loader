@@ -14,7 +14,6 @@ exports.sendError = sendError;
 exports.setLazyProp = setLazyProp;
 exports.SYMBOL_CLEARED_COOKIES = exports.SYMBOL_PREVIEW_DATA = void 0;
 var _contentType = require("next/dist/compiled/content-type");
-var _rawBody = _interopRequireDefault(require("next/dist/compiled/raw-body"));
 var _stream = require("stream");
 var _utils = require("../shared/lib/utils");
 var _cryptoUtils = require("./crypto-utils");
@@ -132,7 +131,8 @@ async function parseBody(req, limit) {
     const encoding = parameters.charset || 'utf-8';
     let buffer;
     try {
-        buffer = await (0, _rawBody).default(req, {
+        const getRawBody = require('next/dist/compiled/raw-body');
+        buffer = await getRawBody(req, {
             encoding,
             limit
         });
