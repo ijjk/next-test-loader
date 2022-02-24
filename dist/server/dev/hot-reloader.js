@@ -27,6 +27,7 @@ var _utils1 = require("../../shared/lib/utils");
 var _trace = require("../../trace");
 var _isError = require("../../lib/is-error");
 var _ws = _interopRequireDefault(require("next/dist/compiled/ws"));
+var _fs = require("fs");
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
         default: obj
@@ -149,12 +150,12 @@ class HotReloader {
         this.serverStats = null;
         this.serverPrevDocumentHash = null;
         this.config = config;
-        this.webServerRuntime = !!config.experimental.concurrentFeatures;
-        this.hasServerComponents = !!(config.experimental.concurrentFeatures && config.experimental.serverComponents);
+        this.runtime = config.experimental.runtime;
+        this.hasServerComponents = !!(this.runtime && config.experimental.serverComponents);
         this.previewProps = previewProps;
         this.rewrites = rewrites;
         this.hotReloaderSpan = (0, _trace).trace('hot-reloader', undefined, {
-            version: "12.0.9-canary.8"
+            version: "12.1.1-canary.2"
         });
         // Ensure the hotReloaderSpan is flushed immediately as it's the parentSpan for all processing
         // of the current `next dev` invocation.
@@ -246,12 +247,13 @@ class HotReloader {
             this.pagesMapping = webpackConfigSpan.traceChild('create-pages-mapping').traceFn(()=>(0, _entries).createPagesMapping(pagePaths.filter((i)=>i !== null
                 ), this.config.pageExtensions, {
                     isDev: true,
-                    hasConcurrentFeatures: this.webServerRuntime,
+                    runtime: this.config.experimental.runtime,
                     hasServerComponents: this.hasServerComponents
                 })
             );
             const entrypoints = webpackConfigSpan.traceChild('create-entrypoints').traceFn(()=>(0, _entries).createEntrypoints(this.pagesMapping, 'server', this.buildId, this.previewProps, this.config, [])
             );
+            const hasEdgeRuntimePages = this.runtime === 'edge';
             return webpackConfigSpan.traceChild('generate-webpack-config').traceAsyncFn(()=>Promise.all([
                     (0, _webpackConfig).default(this.dir, {
                         dev: true,
@@ -273,15 +275,17 @@ class HotReloader {
                         entrypoints: entrypoints.server,
                         runWebpackSpan: this.hotReloaderSpan
                     }),
-                    this.webServerRuntime ? (0, _webpackConfig).default(this.dir, {
+                    // For the edge runtime, we need an extra compiler to generate the
+                    // web-targeted server bundle for now.
+                    hasEdgeRuntimePages ? (0, _webpackConfig).default(this.dir, {
                         dev: true,
                         isServer: true,
-                        webServerRuntime: true,
+                        isEdgeRuntime: true,
                         config: this.config,
                         buildId: this.buildId,
                         pagesDir: this.pagesDir,
                         rewrites: this.rewrites,
-                        entrypoints: entrypoints.serverWeb,
+                        entrypoints: entrypoints.edgeServer,
                         runWebpackSpan: this.hotReloaderSpan
                     }) : null, 
                 ].filter(Boolean))
@@ -326,6 +330,13 @@ class HotReloader {
         startSpan.stop() // Stop immediately to create an artificial parent span
         ;
         await this.clean(startSpan);
+        // Ensure distDir exists before writing package.json
+        await _fs.promises.mkdir(this.config.distDir, {
+            recursive: true
+        });
+        // Ensure commonjs handling is used for files in the distDir (generally .next)
+        // Files outside of the distDir can be "type": "module"
+        await _fs.promises.writeFile((0, _path).join(this.config.distDir, 'package.json'), '{"type": "commonjs"}');
         const configs = await this.getWebpackConfig(startSpan);
         for (const config of configs){
             const defaultEntry = config.entry;
@@ -333,14 +344,14 @@ class HotReloader {
                 // @ts-ignore entry is always a function
                 const entrypoints = await defaultEntry(...args);
                 const isClientCompilation = config.name === 'client';
-                const isServerCompilation = config.name === 'server';
-                const isServerWebCompilation = config.name === 'server-web';
+                const isNodeServerCompilation = config.name === 'server';
+                const isEdgeServerCompilation = config.name === 'edge-server';
                 await Promise.all(Object.keys(_onDemandEntryHandler.entries).map(async (pageKey)=>{
                     const isClientKey = pageKey.startsWith('client');
-                    const isServerWebKey = pageKey.startsWith('server-web');
+                    const isEdgeServerKey = pageKey.startsWith('edge-server');
                     if (isClientKey !== isClientCompilation) return;
-                    if (isServerWebKey !== isServerWebCompilation) return;
-                    const page = pageKey.slice(isClientKey ? 'client'.length : isServerWebKey ? 'server-web'.length : 'server'.length);
+                    if (isEdgeServerKey !== isEdgeServerCompilation) return;
+                    const page = pageKey.slice(isClientKey ? 'client'.length : isEdgeServerKey ? 'edge-server'.length : 'server'.length);
                     const isMiddleware = !!page.match(_constants.MIDDLEWARE_ROUTE);
                     if (isClientCompilation && page.match(_constants.API_ROUTE) && !isMiddleware) {
                         return;
@@ -359,7 +370,7 @@ class HotReloader {
                     const isCustomError = (0, _utils).isCustomErrorPage(page);
                     const isReserved = (0, _utils).isReservedPage(page);
                     const isServerComponent = this.hasServerComponents && (0, _utils).isFlightPage(this.config, absolutePagePath);
-                    if (isServerCompilation && this.webServerRuntime && !isApiRoute && !isCustomError) {
+                    if (isNodeServerCompilation && this.runtime === 'edge' && !isApiRoute && !isCustomError) {
                         return;
                     }
                     _onDemandEntryHandler.entries[pageKey].status = _onDemandEntryHandler.BUILDING;
@@ -384,35 +395,29 @@ class HotReloader {
                             _middlewarePlugin.ssrEntries.set(bundlePath, {
                                 requireFlightManifest: true
                             });
-                        } else if (this.webServerRuntime && !isReserved && !isCustomError) {
+                        } else if (this.runtime === 'edge' && !isReserved && !isCustomError) {
                             _middlewarePlugin.ssrEntries.set(bundlePath, {
                                 requireFlightManifest: false
                             });
                         }
-                    } else if (isServerWebCompilation) {
+                    } else if (isEdgeServerCompilation) {
                         if (!isReserved) {
                             entrypoints[bundlePath] = (0, _entries).finalizeEntrypoint({
                                 name: '[name].js',
                                 value: `next-middleware-ssr-loader?${(0, _querystring).stringify({
+                                    dev: true,
                                     page,
+                                    stringifiedConfig: JSON.stringify(this.config),
                                     absoluteAppPath: this.pagesMapping['/_app'],
                                     absoluteDocumentPath: this.pagesMapping['/_document'],
                                     absoluteErrorPath: this.pagesMapping['/_error'],
                                     absolute404Path: this.pagesMapping['/404'] || '',
                                     absolutePagePath,
                                     isServerComponent,
-                                    serverComponents: this.hasServerComponents,
-                                    buildId: this.buildId,
-                                    basePath: this.config.basePath,
-                                    assetPrefix: this.config.assetPrefix,
-                                    generateEtags: this.config.generateEtags,
-                                    poweredByHeader: this.config.poweredByHeader,
-                                    canonicalBase: this.config.amp.canonicalBase,
-                                    i18n: this.config.i18n,
-                                    previewProps: this.previewProps
+                                    buildId: this.buildId
                                 })}!`,
                                 isServer: false,
-                                isServerWeb: true
+                                isEdgeServer: true
                             });
                         }
                     } else {
@@ -442,20 +447,41 @@ class HotReloader {
         const prevClientPageHashes = new Map();
         const prevServerPageHashes = new Map();
         const trackPageChanges = (pageHashMap, changedItems)=>(stats)=>{
-                stats.entrypoints.forEach((entry, key)=>{
-                    if (key.startsWith('pages/')) {
-                        // TODO this doesn't handle on demand loaded chunks
-                        entry.chunks.forEach((chunk)=>{
-                            if (chunk.id === key) {
-                                const prevHash = pageHashMap.get(key);
-                                if (prevHash && prevHash !== chunk.hash) {
-                                    changedItems.add(key);
+                try {
+                    stats.entrypoints.forEach((entry, key)=>{
+                        if (key.startsWith('pages/')) {
+                            // TODO this doesn't handle on demand loaded chunks
+                            entry.chunks.forEach((chunk)=>{
+                                if (chunk.id === key) {
+                                    const modsIterable = stats.chunkGraph.getChunkModulesIterable(chunk);
+                                    let chunksHash = new _webpack.StringXor();
+                                    modsIterable.forEach((mod)=>{
+                                        if (mod.resource && mod.resource.replace(/\\/g, '/').includes(key)) {
+                                            // use original source to calculate hash since mod.hash
+                                            // includes the source map in development which changes
+                                            // every time for both server and client so we calculate
+                                            // the hash without the source map for the page module
+                                            const hash = require('crypto').createHash('sha256').update(mod.originalSource().buffer()).digest().toString('hex');
+                                            chunksHash.add(hash);
+                                        } else {
+                                            // for non-pages we can use the module hash directly
+                                            const hash = stats.chunkGraph.getModuleHash(mod, chunk.runtime);
+                                            chunksHash.add(hash);
+                                        }
+                                    });
+                                    const prevHash = pageHashMap.get(key);
+                                    const curHash = chunksHash.toString();
+                                    if (prevHash && prevHash !== curHash) {
+                                        changedItems.add(key);
+                                    }
+                                    pageHashMap.set(key, curHash);
                                 }
-                                pageHashMap.set(key, chunk.hash);
-                            }
-                        });
-                    }
-                });
+                            });
+                        }
+                    });
+                } catch (err) {
+                    console.error(err);
+                }
             }
         ;
         multiCompiler.compilers[0].hooks.emit.tap('NextjsHotReloaderForClient', trackPageChanges(prevClientPageHashes, changedClientPages));

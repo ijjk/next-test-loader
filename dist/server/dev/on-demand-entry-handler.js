@@ -53,11 +53,11 @@ function onDemandEntryHandler(watcher, multiCompiler, { pagesDir , nextConfig , 
         if (invalidator.rebuildAgain) {
             return invalidator.doneBuilding();
         }
-        const [clientStats, serverStats, serverWebStats] = multiStats.stats;
+        const [clientStats, serverStats, edgeServerStats] = multiStats.stats;
         const pagePaths = [
             ...getPagePathsFromEntrypoints('client', clientStats.compilation.entrypoints),
             ...getPagePathsFromEntrypoints('server', serverStats.compilation.entrypoints),
-            ...serverWebStats ? getPagePathsFromEntrypoints('server-web', serverWebStats.compilation.entrypoints) : [], 
+            ...edgeServerStats ? getPagePathsFromEntrypoints('edge-server', edgeServerStats.compilation.entrypoints) : [], 
         ];
         for (const page of pagePaths){
             const entry = entries[page];
@@ -147,7 +147,7 @@ function onDemandEntryHandler(watcher, multiCompiler, { pagesDir , nextConfig , 
             const normalizedPage = (0, _normalizePagePath).normalizePathSep(page);
             const isMiddleware = normalizedPage.match(_constants.MIDDLEWARE_ROUTE);
             const isApiRoute = normalizedPage.match(_constants.API_ROUTE) && !isMiddleware;
-            const isServerWeb = !!nextConfig.experimental.concurrentFeatures;
+            const isEdgeServer = nextConfig.experimental.runtime === 'edge';
             const isCustomError = (0, _utils).isCustomErrorPage(page);
             let entriesChanged = false;
             const addPageEntry = (type)=>{
@@ -183,7 +183,7 @@ function onDemandEntryHandler(watcher, multiCompiler, { pagesDir , nextConfig , 
             const isClientOrMiddleware = clientOnly || isMiddleware;
             const promise = isApiRoute ? addPageEntry('server') : isClientOrMiddleware ? addPageEntry('client') : Promise.all([
                 addPageEntry('client'),
-                addPageEntry(isServerWeb && !isCustomError ? 'server-web' : 'server'), 
+                addPageEntry(isEdgeServer && !isCustomError ? 'edge-server' : 'server'), 
             ]);
             if (entriesChanged) {
                 (0, _output).reportTrigger(isApiRoute || isMiddleware || clientOnly ? normalizedPage : `${normalizedPage} (client and server)`);

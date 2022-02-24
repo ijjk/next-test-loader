@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
+exports.getPageFromPath = getPageFromPath;
 exports.createPagesMapping = createPagesMapping;
 exports.createEntrypoints = createEntrypoints;
 exports.finalizeEntrypoint = finalizeEntrypoint;
@@ -20,21 +21,24 @@ function _interopRequireDefault(obj) {
         default: obj
     };
 }
-function createPagesMapping(pagePaths, extensions, { isDev , hasServerComponents , hasConcurrentFeatures  }) {
+function getPageFromPath(pagePath, extensions) {
+    let page = pagePath.replace(new RegExp(`\\.+(${extensions.join('|')})$`), '');
+    page = page.replace(/\\/g, '/').replace(/\/index$/, '');
+    return page === '' ? '/' : page;
+}
+function createPagesMapping(pagePaths, extensions, { isDev , hasServerComponents , runtime  }) {
     const previousPages = {
     };
     // Do not process .d.ts files inside the `pages` folder
     pagePaths = extensions.includes('ts') ? pagePaths.filter((pagePath)=>!pagePath.endsWith('.d.ts')
     ) : pagePaths;
     const pages = pagePaths.reduce((result, pagePath)=>{
-        let page = pagePath.replace(new RegExp(`\\.+(${extensions.join('|')})$`), '');
-        if (hasServerComponents && /\.client$/.test(page)) {
+        const pageKey = getPageFromPath(pagePath, extensions);
+        if (hasServerComponents && /\.client$/.test(pageKey)) {
             // Assume that if there's a Client Component, that there is
             // a matching Server Component that will map to the page.
             return result;
         }
-        page = page.replace(/\\/g, '/').replace(/\/index$/, '');
-        const pageKey = page === '' ? '/' : page;
         if (pageKey in result) {
             (0, _log).warn(`Duplicate page detected. ${_chalk.default.cyan((0, _path).join('pages', previousPages[pageKey]))} and ${_chalk.default.cyan((0, _path).join('pages', pagePath))} both resolve to ${_chalk.default.cyan(pageKey)}.`);
         } else {
@@ -47,7 +51,7 @@ function createPagesMapping(pagePaths, extensions, { isDev , hasServerComponents
     // we alias these in development and allow webpack to
     // allow falling back to the correct source file so
     // that HMR can work properly when a file is added/removed
-    const documentPage = `_document${hasConcurrentFeatures ? '-web' : ''}`;
+    const documentPage = `_document${runtime ? '-concurrent' : ''}`;
     if (isDev) {
         pages['/_app'] = `${_constants.PAGES_DIR_ALIAS}/_app`;
         pages['/_error'] = `${_constants.PAGES_DIR_ALIAS}/_error`;
@@ -64,7 +68,7 @@ function createEntrypoints(pages, target, buildId, previewMode, config, loadedEn
     };
     const server = {
     };
-    const serverWeb = {
+    const edgeServer = {
     };
     const hasRuntimeConfig = Object.keys(config.publicRuntimeConfig).length > 0 || Object.keys(config.serverRuntimeConfig).length > 0;
     const defaultServerlessOptions = {
@@ -86,7 +90,8 @@ function createEntrypoints(pages, target, buildId, previewMode, config, loadedEn
         previewProps: JSON.stringify(previewMode),
         // base64 encode to make sure contents don't break webpack URL loading
         loadedEnvFiles: Buffer.from(JSON.stringify(loadedEnvFiles)).toString('base64'),
-        i18n: config.i18n ? JSON.stringify(config.i18n) : ''
+        i18n: config.i18n ? JSON.stringify(config.i18n) : '',
+        reactRoot: config.experimental.reactRoot ? 'true' : ''
     };
     Object.keys(pages).forEach((page)=>{
         const absolutePagePath = pages[page];
@@ -98,8 +103,7 @@ function createEntrypoints(pages, target, buildId, previewMode, config, loadedEn
         const isReserved = (0, _utils1).isReservedPage(page);
         const isCustomError = (0, _utils1).isCustomErrorPage(page);
         const isFlight = (0, _utils1).isFlightPage(config, absolutePagePath);
-        const webServerRuntime = !!config.experimental.concurrentFeatures;
-        const hasServerComponents = !!config.experimental.serverComponents;
+        const edgeRuntime = config.experimental.runtime === 'edge';
         if (page.match(_constants.MIDDLEWARE_ROUTE)) {
             const loaderOpts = {
                 absolutePagePath: pages[page],
@@ -108,22 +112,23 @@ function createEntrypoints(pages, target, buildId, previewMode, config, loadedEn
             client[clientBundlePath] = `next-middleware-loader?${(0, _querystring).stringify(loaderOpts)}!`;
             return;
         }
-        if (webServerRuntime && !isReserved && !isCustomError && !isApiRoute) {
+        if (edgeRuntime && !isReserved && !isCustomError && !isApiRoute) {
             _middlewarePlugin.ssrEntries.set(clientBundlePath, {
                 requireFlightManifest: isFlight
             });
-            serverWeb[serverBundlePath] = finalizeEntrypoint({
+            edgeServer[serverBundlePath] = finalizeEntrypoint({
                 name: '[name].js',
                 value: `next-middleware-ssr-loader?${(0, _querystring).stringify({
+                    dev: false,
                     page,
+                    stringifiedConfig: JSON.stringify(config),
                     absolute500Path: pages['/500'] || '',
                     absolutePagePath,
                     isServerComponent: isFlight,
-                    serverComponents: hasServerComponents,
                     ...defaultServerlessOptions
                 })}!`,
                 isServer: false,
-                isServerWeb: true
+                isEdgeServer: true
             });
         }
         if (isApiRoute && isLikeServerless) {
@@ -134,12 +139,12 @@ function createEntrypoints(pages, target, buildId, previewMode, config, loadedEn
             };
             server[serverBundlePath] = `next-serverless-loader?${(0, _querystring).stringify(serverlessLoaderOptions)}!`;
         } else if (isApiRoute || target === 'server') {
-            if (!webServerRuntime || isReserved || isCustomError) {
+            if (!edgeRuntime || isReserved || isCustomError) {
                 server[serverBundlePath] = [
                     absolutePagePath
                 ];
             }
-        } else if (isLikeServerless && page !== '/_app' && page !== '/_document' && !webServerRuntime) {
+        } else if (isLikeServerless && page !== '/_app' && page !== '/_document' && !edgeRuntime) {
             const serverlessLoaderOptions = {
                 page,
                 absolutePagePath,
@@ -168,10 +173,10 @@ function createEntrypoints(pages, target, buildId, previewMode, config, loadedEn
     return {
         client,
         server,
-        serverWeb
+        edgeServer
     };
 }
-function finalizeEntrypoint({ name , value , isServer , isMiddleware , isServerWeb  }) {
+function finalizeEntrypoint({ name , value , isServer , isMiddleware , isEdgeServer  }) {
     const entry = typeof value !== 'object' || Array.isArray(value) ? {
         import: value
     } : value;
@@ -184,7 +189,7 @@ function finalizeEntrypoint({ name , value , isServer , isMiddleware , isServerW
             ...entry
         };
     }
-    if (isServerWeb) {
+    if (isEdgeServer) {
         const ssrMiddlewareEntry = {
             library: {
                 name: [

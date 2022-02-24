@@ -3,8 +3,6 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 exports.initNext = initNext;
-exports.render = render;
-exports.renderError = renderError;
 exports.emitter = exports.router = exports.version = void 0;
 require("../build/polyfills/polyfill-module");
 var _react = _interopRequireWildcard(require("react"));
@@ -24,8 +22,9 @@ var _performanceRelayer = _interopRequireDefault(require("./performance-relayer"
 var _routeAnnouncer = require("./route-announcer");
 var _router1 = require("./router");
 var _isError = require("../lib/is-error");
-var _vitals = require("./vitals");
-var _refresh = require("./rsc/refresh");
+var _vitals = require("./streaming/vitals");
+var _refresh = require("./streaming/refresh");
+var _imageConfigContext = require("../shared/lib/image-config-context");
 function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) {
     try {
         var info = gen[key](arg);
@@ -144,7 +143,7 @@ function _objectWithoutPropertiesLoose(source, excluded) {
 }
 const data = JSON.parse(document.getElementById('__NEXT_DATA__').textContent);
 window.__NEXT_DATA__ = data;
-const version = "12.0.9-canary.8";
+const version = "12.1.1-canary.2";
 exports.version = version;
 const looseToArray = (input)=>[].slice.call(input)
 ;
@@ -389,15 +388,10 @@ function _initNext() {
             props: hydrateProps,
             err: initialErr
         };
-        if (process.env.NODE_ENV === 'production') {
-            render(renderCtx);
-            return emitter;
-        } else {
-            return {
-                emitter,
-                renderCtx
-            };
+        if (opts.beforeRender) {
+            yield opts.beforeRender();
         }
+        render(renderCtx);
     });
     return _initNext.apply(this, arguments);
 }
@@ -435,6 +429,9 @@ function _render() {
 function render(renderingProps) {
     return _render.apply(this, arguments);
 }
+// This method handles all runtime and debug errors.
+// 404 and 500 errors are special kind of errors
+// and they are still handle via the main render method.
 function renderError(renderErrorProps) {
     const { App , err  } = renderErrorProps;
     // In development runtime errors are caught by our overlay
@@ -572,7 +569,9 @@ function AppContainer({ children  }) {
         value: (0, _router1).makePublicRouterInstance(router)
     }, /*#__PURE__*/ _react.default.createElement(_headManagerContext.HeadManagerContext.Provider, {
         value: headManager
-    }, children))));
+    }, /*#__PURE__*/ _react.default.createElement(_imageConfigContext.ImageConfigContext.Provider, {
+        value: process.env.__NEXT_IMAGE_OPTS
+    }, children)))));
 }
 function renderApp(App, appProps) {
     if (process.env.__NEXT_RSC && App.__next_rsc__) {
@@ -629,6 +628,9 @@ if (process.env.__NEXT_RSC) {
                 writer.write(encoder.encode(val));
             });
             buffer.length = 0;
+            // Clean buffer but not deleting the key to mark bootstrap as complete.
+            // Then `nextServerDataCallback` will be safely skipped in the future renders.
+            serverDataBuffer.set(key, []);
         }
         serverDataWriter.set(key, writer);
     }
@@ -660,7 +662,7 @@ if (process.env.__NEXT_RSC) {
         const id = _react.default.useId();
         let response = rscCache.get(cacheKey);
         if (response) return response;
-        const bufferCacheKey = cacheKey + ',' + id;
+        const bufferCacheKey = cacheKey + ',' + router.route + ',' + id;
         if (serverDataBuffer.has(bufferCacheKey)) {
             const t = new TransformStream();
             const writer = t.writable.getWriter();
@@ -681,9 +683,11 @@ if (process.env.__NEXT_RSC) {
         return response;
     }
     const ServerRoot = ({ cacheKey , serialized , _fresh  })=>{
+        _react.default.useEffect(()=>{
+            rscCache.delete(cacheKey);
+        });
         const response = useServerResponse(cacheKey, serialized);
         const root = response.readRoot();
-        rscCache.delete(cacheKey);
         return root;
     };
     RSCComponent = (props)=>{
@@ -857,6 +861,7 @@ function Root({ callbacks , children  }) {
     // don't cause any hydration delay:
     _react.default.useEffect(()=>{
         (0, _performanceRelayer).default(onPerfEntry);
+        (0, _vitals).flushBufferedVitalsMetrics();
     }, []);
     return children;
 }

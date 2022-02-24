@@ -5,7 +5,7 @@ Object.defineProperty(exports, "__esModule", {
 exports.normalizeConfig = normalizeConfig;
 exports.defaultConfig = void 0;
 var _os = _interopRequireDefault(require("os"));
-var _imageConfig = require("./image-config");
+var _imageConfig = require("../shared/lib/image-config");
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
         default: obj
@@ -83,7 +83,6 @@ const defaultConfig = {
         isrFlushToDisk: true,
         workerThreads: false,
         pageEnv: false,
-        optimizeImages: false,
         optimizeCss: false,
         scrollRestoration: false,
         externalDir: false,
@@ -95,7 +94,6 @@ const defaultConfig = {
         esmExternals: true,
         // default to 50MB limit
         isrMemoryCacheSize: 50 * 1024 * 1024,
-        concurrentFeatures: false,
         serverComponents: false,
         fullySpecified: false,
         outputFileTracingRoot: process.env.NEXT_PRIVATE_OUTPUT_TRACE_ROOT || '',
@@ -103,16 +101,14 @@ const defaultConfig = {
     }
 };
 exports.defaultConfig = defaultConfig;
-function normalizeConfig(phase, config) {
+async function normalizeConfig(phase, config) {
     if (typeof config === 'function') {
         config = config(phase, {
             defaultConfig
         });
-        if (typeof config.then === 'function') {
-            throw new Error('> Promise returned in next config. https://nextjs.org/docs/messages/promise-in-next-config');
-        }
     }
-    return config;
+    // Support `new Promise` and `async () =>` as return values of the config export
+    return await config;
 }
 
 //# sourceMappingURL=config-shared.js.map

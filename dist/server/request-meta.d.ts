@@ -2,7 +2,7 @@
 import type { IncomingMessage } from 'http';
 import type { ParsedUrlQuery } from 'querystring';
 import type { UrlWithParsedQuery } from 'url';
-import { BaseNextRequest } from './base-http';
+import type { BaseNextRequest } from './base-http';
 export declare const NEXT_REQUEST_META: unique symbol;
 export declare type NextIncomingMessage = (BaseNextRequest | IncomingMessage) & {
     [NEXT_REQUEST_META]?: RequestMeta;
@@ -21,15 +21,20 @@ export declare function getRequestMeta(req: NextIncomingMessage, key?: undefined
 export declare function getRequestMeta<K extends keyof RequestMeta>(req: NextIncomingMessage, key: K): RequestMeta[K];
 export declare function setRequestMeta(req: NextIncomingMessage, meta: RequestMeta): RequestMeta;
 export declare function addRequestMeta<K extends keyof RequestMeta>(request: NextIncomingMessage, key: K, value: RequestMeta[K]): RequestMeta;
-export declare type NextParsedUrlQuery = ParsedUrlQuery & {
+declare type NextQueryMetadata = {
+    __nextNotFoundSrcPage?: string;
     __nextDefaultLocale?: string;
     __nextFallback?: 'true';
     __nextLocale?: string;
     __nextSsgPath?: string;
     _nextBubbleNoFallback?: '1';
     _nextDataReq?: '1';
+};
+export declare type NextParsedUrlQuery = ParsedUrlQuery & NextQueryMetadata & {
     amp?: '1';
 };
 export interface NextUrlWithParsedQuery extends UrlWithParsedQuery {
     query: NextParsedUrlQuery;
 }
+export declare function getNextInternalQuery(query: NextParsedUrlQuery): NextQueryMetadata;
+export {};

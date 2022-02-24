@@ -12,6 +12,7 @@ class FlightManifestPlugin {
             this.dev = options.dev;
         }
         this.clientComponentsRegex = options.clientComponentsRegex;
+        this.runtime = options.runtime;
     }
     apply(compiler) {
         compiler.hooks.compilation.tap(PLUGIN_NAME, (compilation, { normalModuleFactory  })=>{
@@ -81,8 +82,8 @@ class FlightManifestPlugin {
                 }
             });
         });
-        const output = `self.__RSC_MANIFEST=` + JSON.stringify(json);
-        assets[`server/${_constants.MIDDLEWARE_FLIGHT_MANIFEST}.js`] = new _webpack.sources.RawSource(output);
+        const output = (this.runtime === 'edge' ? 'self.__RSC_MANIFEST=' : '') + JSON.stringify(json);
+        assets[`server/${_constants.MIDDLEWARE_FLIGHT_MANIFEST}${this.runtime === 'edge' ? '.js' : '.json'}`] = new _webpack.sources.RawSource(output);
     }
 }
 exports.FlightManifestPlugin = FlightManifestPlugin;

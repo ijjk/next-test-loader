@@ -34,7 +34,7 @@ class BaseResponse extends _body.Body {
             }
         }
     }
-    static redirect(url, status = 302) {
+    static redirect(url, status = 307) {
         if (!REDIRECTS.has(status)) {
             throw new RangeError('Failed to execute "redirect" on "response": Invalid status code');
         }

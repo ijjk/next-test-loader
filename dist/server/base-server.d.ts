@@ -3,34 +3,27 @@ import type { __ApiPreviewProps } from './api-utils';
 import type { CustomRoutes } from '../lib/load-custom-routes';
 import type { DomainLocale } from './config';
 import type { DynamicRoutes, PageChecker, Params, Route } from './router';
-import type { FetchEventResult } from './web/types';
 import type { FontManifest } from './font-utils';
 import type { LoadComponentsReturnType } from './load-components';
 import type { MiddlewareManifest } from '../build/webpack/plugins/middleware-plugin';
 import type { NextConfig, NextConfigComplete } from './config-shared';
 import type { NextParsedUrlQuery, NextUrlWithParsedQuery } from './request-meta';
-import type { ParsedNextUrl } from '../shared/lib/router/utils/parse-next-url';
-import type { ParsedUrl } from '../shared/lib/router/utils/parse-url';
 import type { ParsedUrlQuery } from 'querystring';
-import type { PrerenderManifest } from '../build';
 import type { RenderOpts } from './render';
 import type { UrlWithParsedQuery } from 'url';
 import type { CacheFs } from '../shared/lib/utils';
 import type { PagesManifest } from '../build/webpack/plugins/pages-manifest-plugin';
 import type { BaseNextRequest, BaseNextResponse } from './base-http';
-import { getRouteMatcher } from '../shared/lib/router/utils';
+import { RoutingItem } from '../shared/lib/router/utils';
 import Router from './router';
 import { PayloadOptions } from './send-payload';
 import RenderResult from './render-result';
+import { PrerenderManifest } from '../build';
+import { ImageConfigComplete } from '../shared/lib/image-config';
 export declare type FindComponentsResult = {
     components: LoadComponentsReturnType;
     query: NextParsedUrlQuery;
 };
-interface RoutingItem {
-    page: string;
-    match: ReturnType<typeof getRouteMatcher>;
-    ssr?: boolean;
-}
 export interface Options {
     /**
      * Object containing the configuration next.config.js
@@ -96,9 +89,8 @@ export default abstract class Server {
         };
         basePath: string;
         optimizeFonts: boolean;
-        images: string;
+        images: ImageConfigComplete;
         fontManifest?: FontManifest;
-        optimizeImages: boolean;
         disableOptimizedLoading?: boolean;
         optimizeCss: any;
         locale?: string;
@@ -106,9 +98,14 @@ export default abstract class Server {
         defaultLocale?: string;
         domainLocales?: DomainLocale[];
         distDir: string;
-        concurrentFeatures?: boolean;
+        runtime?: 'nodejs' | 'edge';
         serverComponents?: boolean;
         crossOrigin?: string;
+        supportsDynamicHTML?: boolean;
+        serverComponentManifest?: any;
+        renderServerComponentData?: boolean;
+        serverComponentProps?: any;
+        reactRoot: boolean;
     };
     private incrementalCache;
     private responseCache;
@@ -116,7 +113,8 @@ export default abstract class Server {
     protected dynamicRoutes?: DynamicRoutes;
     protected customRoutes: CustomRoutes;
     protected middlewareManifest?: MiddlewareManifest;
-    protected middleware?: RoutingItem[];
+    protected serverComponentManifest?: any;
+    protected allRoutes?: RoutingItem[];
     readonly hostname?: string;
     readonly port?: number;
     protected abstract getPublicDir(): string;
@@ -125,27 +123,26 @@ export default abstract class Server {
     protected abstract getBuildId(): string;
     protected abstract generatePublicRoutes(): Route[];
     protected abstract generateImageRoutes(): Route[];
-    protected abstract generateStaticRotes(): Route[];
+    protected abstract generateStaticRoutes(): Route[];
     protected abstract generateFsStaticRoutes(): Route[];
-    protected abstract generateCatchAllMiddlewareRoute(): Route | undefined;
-    protected abstract getFilesystemPaths(): Set<string>;
-    protected abstract getMiddleware(): {
-        match: (pathname: string | null | undefined) => false | {
-            [paramName: string]: string | string[];
-        };
-        page: string;
-    }[];
-    protected abstract findPageComponents(pathname: string, query?: NextParsedUrlQuery, params?: Params | null): Promise<FindComponentsResult | null>;
-    protected abstract getMiddlewareInfo(page: string): {
-        name: string;
-        paths: string[];
-        env: string[];
+    protected abstract generateCatchAllStaticMiddlewareRoute(): Route | undefined;
+    protected abstract generateCatchAllDynamicMiddlewareRoute(): Route | undefined;
+    protected abstract generateRewrites({ restrictedRedirectPaths, }: {
+        restrictedRedirectPaths: string[];
+    }): {
+        beforeFiles: Route[];
+        afterFiles: Route[];
+        fallback: Route[];
     };
+    protected abstract getFilesystemPaths(): Set<string>;
+    protected abstract findPageComponents(pathname: string, query?: NextParsedUrlQuery, params?: Params | null): Promise<FindComponentsResult | null>;
+    protected abstract hasMiddleware(pathname: string, _isSSR?: boolean): Promise<boolean>;
     protected abstract getPagePath(pathname: string, locales?: string[]): string;
     protected abstract getFontManifest(): FontManifest | undefined;
     protected abstract getMiddlewareManifest(): MiddlewareManifest | undefined;
-    protected abstract getPrerenderManifest(): PrerenderManifest;
     protected abstract getRoutesManifest(): CustomRoutes;
+    protected abstract getPrerenderManifest(): PrerenderManifest;
+    protected abstract getServerComponentManifest(): any;
     protected abstract sendRenderResult(req: BaseNextRequest, res: BaseNextResponse, options: {
         result: RenderResult;
         type: 'html' | 'json';
@@ -155,21 +152,7 @@ export default abstract class Server {
     }): Promise<void>;
     protected abstract runApi(req: BaseNextRequest, res: BaseNextResponse, query: ParsedUrlQuery, params: Params | boolean, page: string, builtPagePath: string): Promise<boolean>;
     protected abstract renderHTML(req: BaseNextRequest, res: BaseNextResponse, pathname: string, query: NextParsedUrlQuery, renderOpts: RenderOpts): Promise<RenderResult | null>;
-    protected abstract streamResponseChunk(res: BaseNextResponse, chunk: any): void;
     protected abstract handleCompression(req: BaseNextRequest, res: BaseNextResponse): void;
-    protected abstract proxyRequest(req: BaseNextRequest, res: BaseNextResponse, parsedUrl: ParsedUrl): Promise<{
-        finished: boolean;
-    }>;
-    protected abstract imageOptimizer(req: BaseNextRequest, res: BaseNextResponse, parsedUrl: UrlWithParsedQuery): Promise<{
-        finished: boolean;
-    }>;
-    protected abstract runMiddleware(params: {
-        request: BaseNextRequest;
-        response: BaseNextResponse;
-        parsedUrl: ParsedNextUrl;
-        parsed: UrlWithParsedQuery;
-        onWarning?: (warning: Error) => void;
-    }): Promise<FetchEventResult | null>;
     protected abstract loadEnvConfig(params: {
         dev: boolean;
     }): void;
@@ -180,10 +163,8 @@ export default abstract class Server {
     setAssetPrefix(prefix?: string): void;
     prepare(): Promise<void>;
     protected close(): Promise<void>;
-    protected setImmutableAssetCacheControl(res: BaseNextResponse): void;
     protected getCustomRoutes(): CustomRoutes;
     protected getPreviewProps(): __ApiPreviewProps;
-    protected hasMiddleware(pathname: string, _isSSR?: boolean): Promise<boolean>;
     protected ensureMiddleware(_pathname: string, _isSSR?: boolean): Promise<void>;
     protected generateRoutes(): {
         basePath: string;
@@ -194,9 +175,11 @@ export default abstract class Server {
             fallback: Route[];
         };
         fsRoutes: Route[];
+        internalFsRoutes: Route[];
         redirects: Route[];
         catchAllRoute: Route;
-        catchAllMiddleware?: Route;
+        catchAllStaticMiddleware?: Route;
+        catchAllDynamicMiddleware?: Route;
         pageChecker: PageChecker;
         useFileSystemPublicRoutes: boolean;
         dynamicRoutes: DynamicRoutes | undefined;
@@ -212,6 +195,7 @@ export default abstract class Server {
      * @param pathname path of request
      */
     private handleApiRequest;
+    protected getAllRoutes(): RoutingItem[];
     protected getDynamicRoutes(): Array<RoutingItem>;
     protected run(req: BaseNextRequest, res: BaseNextResponse, parsedUrl: UrlWithParsedQuery): Promise<void>;
     private pipe;
@@ -234,9 +218,9 @@ export default abstract class Server {
     protected get _isLikeServerless(): boolean;
 }
 export declare function prepareServerlessUrl(req: BaseNextRequest, query: ParsedUrlQuery): void;
-export declare const stringifyQuery: (req: BaseNextRequest, query: ParsedUrlQuery) => string;
+export { stringifyQuery } from './server-route-utils';
+export declare function isApiRoute(pathname: string): boolean;
 export declare class WrappedBuildError extends Error {
     innerError: Error;
     constructor(innerError: Error);
 }
-export {};

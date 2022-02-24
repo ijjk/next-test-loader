@@ -13,7 +13,6 @@ exports.isPageStatic = isPageStatic;
 exports.hasCustomGetInitialProps = hasCustomGetInitialProps;
 exports.getNamedExports = getNamedExports;
 exports.detectConflictingPaths = detectConflictingPaths;
-exports.getCssFilePaths = getCssFilePaths;
 exports.getRawPageExtensions = getRawPageExtensions;
 exports.isFlightPage = isFlightPage;
 exports.getUnresolvedModuleFromError = getUnresolvedModuleFromError;
@@ -92,27 +91,27 @@ const fsStat = (file)=>{
     return fileStats[file] = fileSize(file);
 };
 function collectPages(directory, pageExtensions) {
-    return((0, _recursiveReaddir).recursiveReadDir(directory, new RegExp(`\\.(?:${pageExtensions.join('|')})$`)));
+    return (0, _recursiveReaddir).recursiveReadDir(directory, new RegExp(`\\.(?:${pageExtensions.join('|')})$`));
 }
 async function printTreeView(list, pageInfos, serverless, { distPath , buildId , pagesDir , pageExtensions , buildManifest , useStatic404 , gzipSize =true  }) {
     const getPrettySize = (_size)=>{
         const size = (0, _prettyBytes).default(_size);
         // green for 0-130kb
-        if (_size < 130 * 1000) return(_chalk.default.green(size));
+        if (_size < 130 * 1000) return _chalk.default.green(size);
         // yellow for 130-170kb
-        if (_size < 170 * 1000) return(_chalk.default.yellow(size));
+        if (_size < 170 * 1000) return _chalk.default.yellow(size);
         // red for >= 170kb
-        return(_chalk.default.red.bold(size));
+        return _chalk.default.red.bold(size);
     };
     const MIN_DURATION = 300;
     const getPrettyDuration = (_duration)=>{
         const duration = `${_duration} ms`;
         // green for 300-1000ms
-        if (_duration < 1000) return(_chalk.default.green(duration));
+        if (_duration < 1000) return _chalk.default.green(duration);
         // yellow for 1000-2000ms
-        if (_duration < 2000) return(_chalk.default.yellow(duration));
+        if (_duration < 2000) return _chalk.default.yellow(duration);
         // red for >= 2000ms
-        return(_chalk.default.red.bold(duration));
+        return _chalk.default.red.bold(duration);
     };
     const getCleanName = (fileName)=>fileName// Trim off `static/`
         .replace(/^static\//, '')// Re-add `static/` for root files
@@ -743,25 +742,12 @@ function detectConflictingPaths(combinedPages, ssgPages, additionalSsgPaths) {
         process.exit(1);
     }
 }
-function getCssFilePaths(buildManifest) {
-    const cssFiles = new Set();
-    Object.values(buildManifest.pages).forEach((files)=>{
-        files.forEach((file)=>{
-            if (file.endsWith('.css')) {
-                cssFiles.add(file);
-            }
-        });
-    });
-    return [
-        ...cssFiles
-    ];
-}
 function getRawPageExtensions(pageExtensions) {
     return pageExtensions.filter((ext)=>!ext.startsWith('client.') && !ext.startsWith('server.')
     );
 }
 function isFlightPage(nextConfig, pagePath) {
-    if (!(nextConfig.experimental.serverComponents && nextConfig.experimental.concurrentFeatures)) return false;
+    if (!(nextConfig.experimental.serverComponents && nextConfig.experimental.runtime)) return false;
     const rawPageExtensions = getRawPageExtensions(nextConfig.pageExtensions || []);
     const isRscPage = rawPageExtensions.some((ext)=>{
         return new RegExp(`\\.server\\.${ext}$`).test(pagePath);
@@ -830,6 +816,10 @@ process.chdir(__dirname)
 const NextServer = require('next/dist/server/next-server').default
 const http = require('http')
 const path = require('path')
+
+// Make sure commands gracefully respect termination signals (e.g. from Docker)
+process.on('SIGTERM', () => process.exit(0))
+process.on('SIGINT', () => process.exit(0))
 
 let handler
 

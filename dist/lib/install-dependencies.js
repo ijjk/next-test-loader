@@ -14,7 +14,7 @@ function _interopRequireDefault(obj) {
     };
 }
 async function installDependencies(baseDir, deps, dev = false) {
-    const useYarn = (0, _shouldUseYarn).shouldUseYarn();
+    const useYarn = (0, _shouldUseYarn).shouldUseYarn(baseDir);
     const isOnline = !useYarn || await (0, _getOnline).getOnline();
     if (deps.length) {
         console.log();

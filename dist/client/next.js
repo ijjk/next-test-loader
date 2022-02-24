@@ -6,9 +6,7 @@ window.next = {
     get router () {
         return _.router;
     },
-    emitter: _.emitter,
-    render: _.render,
-    renderError: _.renderError
+    emitter: _.emitter
 };
 (0, _).initNext().catch(console.error);
 

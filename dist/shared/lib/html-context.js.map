@@ -1,0 +1,1 @@
+{"version":3,"sources":["../../../shared/lib/html-context.ts"],"names":["BuildManifest","NEXT_DATA","createContext","HtmlContext","process","env","NODE_ENV","displayName"],"mappings":";;;;;AAG8B,GAAO,CAAP,MAAO;AAkC9B,KAAK,CAAC,WAAW,OAlCM,MAAO,gBAkCe,IAAI;QAA3C,WAAW,GAAX,WAAW;AACxB,EAAE,EAAE,OAAO,CAAC,GAAG,CAAC,QAAQ,KAAK,CAAY,aAAE,CAAC;IAC1C,WAAW,CAAC,WAAW,GAAG,CAAa;AACzC,CAAC"}

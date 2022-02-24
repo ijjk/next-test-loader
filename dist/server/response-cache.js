@@ -14,7 +14,7 @@ class ResponseCache {
         this.incrementalCache = incrementalCache;
         this.pendingResponses = new Map();
     }
-    get(key, responseGenerator) {
+    get(key, responseGenerator, context) {
         const pendingResponse = key ? this.pendingResponses.get(key) : null;
         if (pendingResponse) {
             return pendingResponse;
@@ -44,9 +44,10 @@ class ResponseCache {
         (async ()=>{
             try {
                 const cachedResponse = key ? await this.incrementalCache.get(key) : null;
-                if (cachedResponse) {
+                if (cachedResponse && !context.isManualRevalidate) {
                     var ref;
                     resolve({
+                        isStale: cachedResponse.isStale,
                         revalidate: cachedResponse.curRevalidate,
                         value: ((ref = cachedResponse.value) === null || ref === void 0 ? void 0 : ref.kind) === 'PAGE' ? {
                             kind: 'PAGE',
@@ -60,8 +61,11 @@ class ResponseCache {
                         return;
                     }
                 }
-                const cacheEntry = await responseGenerator(resolved);
-                resolve(cacheEntry);
+                const cacheEntry = await responseGenerator(resolved, !!cachedResponse);
+                resolve(cacheEntry === null ? null : {
+                    ...cacheEntry,
+                    isMiss: !cachedResponse
+                });
                 if (key && cacheEntry && typeof cacheEntry.revalidate !== 'undefined') {
                     var ref;
                     await this.incrementalCache.set(key, ((ref = cacheEntry.value) === null || ref === void 0 ? void 0 : ref.kind) === 'PAGE' ? {

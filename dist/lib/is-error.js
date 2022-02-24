@@ -4,7 +4,7 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.default = isError;
 exports.getProperError = getProperError;
-var _isPlainObject = require("./is-plain-object");
+var _isPlainObject = require("../shared/lib/is-plain-object");
 function isError(err) {
     return typeof err === 'object' && err !== null && 'name' in err && 'message' in err;
 }

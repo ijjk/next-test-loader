@@ -31,7 +31,7 @@ const envConfig = require('../shared/lib/runtime-config');
 global.__NEXT_DATA__ = {
     nextExport: true
 };
-async function exportPage({ parentSpanId , path , pathMap , distDir , outDir , pagesDataDir , renderOpts , buildExport , serverRuntimeConfig , subFolders , serverless , optimizeFonts , optimizeImages , optimizeCss , disableOptimizedLoading , httpAgentOptions  }) {
+async function exportPage({ parentSpanId , path , pathMap , distDir , outDir , pagesDataDir , renderOpts , buildExport , serverRuntimeConfig , subFolders , serverless , optimizeFonts , optimizeCss , disableOptimizedLoading , httpAgentOptions  }) {
     (0, _config).setHttpAgentOptions(httpAgentOptions);
     const exportPageSpan = (0, _trace).trace('export-page-worker', parentSpanId);
     return exportPageSpan.traceAsyncFn(async ()=>{
@@ -198,8 +198,6 @@ async function exportPage({ parentSpanId , path , pathMap , distDir , outDir , p
                         /// @ts-ignore
                         optimizeFonts,
                         /// @ts-ignore
-                        optimizeImages,
-                        /// @ts-ignore
                         optimizeCss,
                         disableOptimizedLoading,
                         distDir,
@@ -254,9 +252,6 @@ async function exportPage({ parentSpanId , path , pathMap , distDir , outDir , p
            */ if (optimizeFonts) {
                         process.env.__NEXT_OPTIMIZE_FONTS = JSON.stringify(true);
                     }
-                    if (optimizeImages) {
-                        process.env.__NEXT_OPTIMIZE_IMAGES = JSON.stringify(true);
-                    }
                     if (optimizeCss) {
                         process.env.__NEXT_OPTIMIZE_CSS = JSON.stringify(true);
                     }
@@ -266,7 +261,6 @@ async function exportPage({ parentSpanId , path , pathMap , distDir , outDir , p
                         ampPath: renderAmpPath,
                         params,
                         optimizeFonts,
-                        optimizeImages,
                         optimizeCss,
                         disableOptimizedLoading,
                         fontManifest: optimizeFonts ? (0, _require).requireFontManifest(distDir, serverless) : null,

@@ -285,11 +285,11 @@ async function exportApp(dir, options, span, configuration) {
             disableOptimizedLoading: nextConfig.experimental.disableOptimizedLoading,
             // Exported pages do not currently support dynamic HTML.
             supportsDynamicHTML: false,
-            concurrentFeatures: nextConfig.experimental.concurrentFeatures,
+            runtime: nextConfig.experimental.runtime,
             crossOrigin: nextConfig.crossOrigin,
             optimizeCss: nextConfig.experimental.optimizeCss,
             optimizeFonts: nextConfig.optimizeFonts,
-            optimizeImages: nextConfig.experimental.optimizeImages
+            reactRoot: nextConfig.experimental.reactRoot || false
         };
         const { serverRuntimeConfig , publicRuntimeConfig  } = nextConfig;
         if (Object.keys(publicRuntimeConfig).length > 0) {
@@ -420,7 +420,6 @@ async function exportApp(dir, options, span, configuration) {
                     buildExport: options.buildExport,
                     serverless: (0, _utils).isTargetLikeServerless(nextConfig.target),
                     optimizeFonts: nextConfig.optimizeFonts,
-                    optimizeImages: nextConfig.experimental.optimizeImages,
                     optimizeCss: nextConfig.experimental.optimizeCss,
                     disableOptimizedLoading: nextConfig.experimental.disableOptimizedLoading,
                     parentSpanId: pageExportSpan.id,

@@ -21,19 +21,21 @@ Object.defineProperty(exports, "normalizeConfig", {
     }
 });
 exports.default = loadConfig;
+exports.shouldUseReactRoot = shouldUseReactRoot;
 exports.setHttpAgentOptions = setHttpAgentOptions;
-var _chalk = _interopRequireDefault(require("../lib/chalk"));
-var _findUp = _interopRequireDefault(require("next/dist/compiled/find-up"));
 var _path = require("path");
 var _url = require("url");
 var _http = require("http");
 var _https = require("https");
+var _semver = _interopRequireDefault(require("next/dist/compiled/semver"));
+var _findUp = _interopRequireDefault(require("next/dist/compiled/find-up"));
+var _chalk = _interopRequireDefault(require("../lib/chalk"));
 var Log = _interopRequireWildcard(require("../build/output/log"));
 var _constants = require("../shared/lib/constants");
 var _utils = require("../shared/lib/utils");
 var _configShared = require("./config-shared");
 var _configUtils = require("./config-utils");
-var _imageConfig = require("./image-config");
+var _imageConfig = require("../shared/lib/image-config");
 var _env = require("@next/env");
 var _ciInfo = require("../telemetry/ci-info");
 function _interopRequireDefault(obj) {
@@ -100,7 +102,7 @@ function assignDefaults(userConfig) {
         if (value === undefined || value === null) {
             return currentConfig;
         }
-        if (key === 'experimental' && value !== undefined && value !== _configShared.defaultConfig[key]) {
+        if (key === 'experimental' && value !== _configShared.defaultConfig[key] && typeof value === 'object' && Object.keys(value).length > 0) {
             experimentalWarning();
         }
         if (key === 'distDir') {
@@ -273,6 +275,16 @@ function assignDefaults(userConfig) {
                 throw new Error(`Specified images.formats should be an Array of mime type strings, received invalid values (${invalid.join(', ')}).\nSee more info here: https://nextjs.org/docs/messages/invalid-images-config`);
             }
         }
+        if (typeof images.dangerouslyAllowSVG !== 'undefined' && typeof images.dangerouslyAllowSVG !== 'boolean') {
+            throw new Error(`Specified images.dangerouslyAllowSVG should be a boolean
+          ', '
+        )}), received  (${images.dangerouslyAllowSVG}).\nSee more info here: https://nextjs.org/docs/messages/invalid-images-config`);
+        }
+        if (typeof images.contentSecurityPolicy !== 'undefined' && typeof images.contentSecurityPolicy !== 'string') {
+            throw new Error(`Specified images.contentSecurityPolicy should be a string
+          ', '
+        )}), received  (${images.contentSecurityPolicy}).\nSee more info here: https://nextjs.org/docs/messages/invalid-images-config`);
+        }
     }
     if (result.webpack5 === false) {
         throw new Error(`Webpack 4 is no longer supported in Next.js. Please upgrade to webpack 5 by removing "webpack5: false" from ${configFileName}. https://nextjs.org/docs/messages/webpack5`);
@@ -281,8 +293,32 @@ function assignDefaults(userConfig) {
         Log.warn(`\`swcMinify\` has been moved out of \`experimental\`. Please update your ${configFileName} file accordingly.`);
         result.swcMinify = result.experimental.swcMinify;
     }
+    if (result.experimental && 'relay' in result.experimental) {
+        Log.warn(`\`relay\` has been moved out of \`experimental\` and into \`compiler\`. Please update your ${configFileName} file accordingly.`);
+        result.compiler = result.compiler || {
+        };
+        result.compiler.relay = result.experimental.relay;
+    }
+    if (result.experimental && 'styledComponents' in result.experimental) {
+        Log.warn(`\`styledComponents\` has been moved out of \`experimental\` and into \`compiler\`. Please update your ${configFileName} file accordingly.`);
+        result.compiler = result.compiler || {
+        };
+        result.compiler.styledComponents = result.experimental.styledComponents;
+    }
+    if (result.experimental && 'reactRemoveProperties' in result.experimental) {
+        Log.warn(`\`reactRemoveProperties\` has been moved out of \`experimental\` and into \`compiler\`. Please update your ${configFileName} file accordingly.`);
+        result.compiler = result.compiler || {
+        };
+        result.compiler.reactRemoveProperties = result.experimental.reactRemoveProperties;
+    }
+    if (result.experimental && 'removeConsole' in result.experimental) {
+        Log.warn(`\`removeConsole\` has been moved out of \`experimental\` and into \`compiler\`. Please update your ${configFileName} file accordingly.`);
+        result.compiler = result.compiler || {
+        };
+        result.compiler.removeConsole = result.experimental.removeConsole;
+    }
     if (result.swcMinify) {
-        Log.warn('SWC minify beta enabled. https://nextjs.org/docs/messages/swc-minify-enabled');
+        Log.warn('SWC minify release candidate enabled. https://nextjs.org/docs/messages/swc-minify-enabled');
     }
     if (((ref1 = result.experimental) === null || ref1 === void 0 ? void 0 : ref1.outputFileTracingRoot) && !(0, _path).isAbsolute(result.experimental.outputFileTracingRoot)) {
         result.experimental.outputFileTracingRoot = (0, _path).resolve(result.experimental.outputFileTracingRoot);
@@ -415,7 +451,7 @@ async function loadConfig(phase, dir, customConfig) {
             Log.error(`Failed to load ${configFileName}, see more info here https://nextjs.org/docs/messages/next-config-error`);
             throw err;
         }
-        const userConfig = (0, _configShared).normalizeConfig(phase, userConfigModule.default || userConfigModule);
+        const userConfig = await (0, _configShared).normalizeConfig(phase, userConfigModule.default || userConfigModule);
         if (Object.keys(userConfig).length === 0) {
             Log.warn(`Detected ${configFileName}, no exported configuration found. https://nextjs.org/docs/messages/empty-configuration`);
         }
@@ -424,6 +460,13 @@ async function loadConfig(phase, dir, customConfig) {
         }
         if (userConfig.target && userConfig.target !== 'server') {
             Log.warn('The `target` config is deprecated and will be removed in a future version.\n' + 'See more info here https://nextjs.org/docs/messages/deprecated-target-config');
+        }
+        const hasReactRoot = shouldUseReactRoot();
+        if (hasReactRoot) {
+            // users might not have the `experimental` key in their config
+            userConfig.experimental = userConfig.experimental || {
+            };
+            userConfig.experimental.reactRoot = true;
         }
         if ((ref = userConfig.amp) === null || ref === void 0 ? void 0 : ref.canonicalBase) {
             const { canonicalBase  } = userConfig.amp || {
@@ -459,6 +502,13 @@ async function loadConfig(phase, dir, customConfig) {
     completeConfig.configFileName = configFileName;
     setHttpAgentOptions(completeConfig.httpAgentOptions);
     return completeConfig;
+}
+function shouldUseReactRoot() {
+    var ref;
+    const reactDomVersion = require('react-dom').version;
+    const isReactExperimental = Boolean(reactDomVersion && /0\.0\.0-experimental/.test(reactDomVersion));
+    const hasReact18 = Boolean(reactDomVersion) && (_semver.default.gte(reactDomVersion, '18.0.0') || ((ref = _semver.default.coerce(reactDomVersion)) === null || ref === void 0 ? void 0 : ref.version) === '18.0.0');
+    return hasReact18 || isReactExperimental;
 }
 function setHttpAgentOptions(options) {
     if (global.__NEXT_HTTP_AGENT) {

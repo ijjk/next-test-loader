@@ -8,6 +8,7 @@ exports.transformSync = transformSync;
 exports.minify = minify;
 exports.minifySync = minifySync;
 exports.bundle = bundle;
+exports.parse = parse;
 var _os = require("os");
 var _triples = require("next/dist/compiled/@napi-rs/triples");
 var Log = _interopRequireWildcard(require("../output/log"));
@@ -92,6 +93,9 @@ async function loadWasm() {
                 },
                 minify (src, options) {
                     return Promise.resolve(bindings.minifySync(src.toString(), options));
+                },
+                parse (src, options) {
+                    return Promise.resolve(bindings.parse(src.toString(), options));
                 }
             };
             return wasmBindings;
@@ -178,6 +182,10 @@ function loadNative() {
             },
             bundle (options) {
                 return bindings.bundle(toBuffer(options));
+            },
+            parse (src, options) {
+                return bindings.parse(src, toBuffer(options !== null && options !== void 0 ? options : {
+                }));
             }
         };
         return nativeBindings;
@@ -210,6 +218,11 @@ function minifySync(src, options) {
 async function bundle(options) {
     let bindings = loadBindingsSync();
     return bindings.bundle(toBuffer(options));
+}
+async function parse(src, options) {
+    let bindings = loadBindingsSync();
+    return bindings.parse(src, options).then((astStr)=>JSON.parse(astStr)
+    );
 }
 
 //# sourceMappingURL=index.js.map

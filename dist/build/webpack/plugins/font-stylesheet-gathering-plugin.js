@@ -7,10 +7,34 @@ var _fontUtils = require("../../../server/font-utils");
 var _postcss = _interopRequireDefault(require("postcss"));
 var _cssnanoSimple = _interopRequireDefault(require("next/dist/compiled/cssnano-simple"));
 var _constants = require("../../../shared/lib/constants");
+var Log = _interopRequireWildcard(require("../../output/log"));
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
         default: obj
     };
+}
+function _interopRequireWildcard(obj) {
+    if (obj && obj.__esModule) {
+        return obj;
+    } else {
+        var newObj = {
+        };
+        if (obj != null) {
+            for(var key in obj){
+                if (Object.prototype.hasOwnProperty.call(obj, key)) {
+                    var desc = Object.defineProperty && Object.getOwnPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : {
+                    };
+                    if (desc.get || desc.set) {
+                        Object.defineProperty(newObj, key, desc);
+                    } else {
+                        newObj[key] = obj[key];
+                    }
+                }
+            }
+        }
+        newObj.default = obj;
+        return newObj;
+    }
 }
 function minifyCss(css) {
     return (0, _postcss).default([
@@ -146,11 +170,16 @@ class FontStylesheetGatheringPlugin {
                 for(let promiseIndex in fontDefinitionPromises){
                     const css = await fontDefinitionPromises[promiseIndex];
                     if (css) {
-                        const content = await minifyCss(css);
-                        this.manifestContent.push({
-                            url: fontStylesheets[promiseIndex],
-                            content
-                        });
+                        try {
+                            const content = await minifyCss(css);
+                            this.manifestContent.push({
+                                url: fontStylesheets[promiseIndex],
+                                content
+                            });
+                        } catch (err) {
+                            Log.warn(`Failed to minify the stylesheet for ${fontStylesheets[promiseIndex]}. Skipped optimizing this font.`);
+                            console.error(err);
+                        }
                     }
                 }
                 compilation.assets[_constants.FONT_MANIFEST] = new _webpack.sources.RawSource(JSON.stringify(this.manifestContent, null, '  '));

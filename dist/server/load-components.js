@@ -8,8 +8,8 @@ var _constants = require("../shared/lib/constants");
 var _path = require("path");
 var _require = require("./require");
 var _interopDefault = require("../lib/interop-default");
-async function loadDefaultErrorComponents(distDir) {
-    const Document = (0, _interopDefault).interopDefault(require('next/dist/pages/_document'));
+async function loadDefaultErrorComponents(distDir, { hasConcurrentFeatures  }) {
+    const Document = (0, _interopDefault).interopDefault(require(`next/dist/pages/_document` + (hasConcurrentFeatures ? '-concurrent' : '')));
     const App = (0, _interopDefault).interopDefault(require('next/dist/pages/_app'));
     const ComponentMod = require('next/dist/pages/_error');
     const Component = (0, _interopDefault).interopDefault(ComponentMod);

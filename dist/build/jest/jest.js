@@ -54,7 +54,6 @@ async function getConfig(dir) {
         return loadClosestPackageJson(dir, attempts + 1);
     }
 }
-console.warn('"next/jest" is currently experimental. https://nextjs.org/docs/messages/experimental-jest-transformer');
 function nextJest(options = {
 }) {
     // createJestConfig
@@ -77,8 +76,10 @@ function nextJest(options = {
                 jsConfig = result.jsConfig;
                 resolvedBaseUrl = result.resolvedBaseUrl;
             }
+            var ref;
             // Ensure provided async config is supported
-            const resolvedJestConfig = typeof customJestConfig === 'function' ? await customJestConfig() : customJestConfig;
+            const resolvedJestConfig = (ref = typeof customJestConfig === 'function' ? await customJestConfig() : customJestConfig) !== null && ref !== void 0 ? ref : {
+            };
             return {
                 ...resolvedJestConfig,
                 moduleNameMapper: {
@@ -88,7 +89,7 @@ function nextJest(options = {
                     // Handle CSS imports (without CSS modules)
                     '^.+\\.(css|sass|scss)$': require.resolve('./__mocks__/styleMock.js'),
                     // Handle image imports
-                    '^.+\\.(jpg|jpeg|png|gif|webp|avif|svg)$': require.resolve(`./__mocks__/fileMock.js`),
+                    '^.+\\.(png|jpg|jpeg|gif|webp|avif|ico|bmp|svg)$': require.resolve(`./__mocks__/fileMock.js`),
                     // Custom config will be able to override the default mappings
                     ...resolvedJestConfig.moduleNameMapper || {
                     }

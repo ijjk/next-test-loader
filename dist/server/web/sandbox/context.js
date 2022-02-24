@@ -191,6 +191,7 @@ function getModuleContext(options) {
         File: _formdataNode.File,
         FormData: _formdataNode.FormData,
         process: {
+            ...polyfills.process,
             env: buildEnvironmentVariablesFrom(options.env)
         },
         ReadableStream: polyfills.ReadableStream,

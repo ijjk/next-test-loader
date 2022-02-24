@@ -5,8 +5,9 @@ Object.defineProperty(exports, "__esModule", {
 exports.default = Image;
 var _react = _interopRequireWildcard(require("react"));
 var _head = _interopRequireDefault(require("../shared/lib/head"));
-var _imageConfig = require("../server/image-config");
+var _imageConfig = require("../shared/lib/image-config");
 var _useIntersection = require("./use-intersection");
+var _imageConfigContext = require("../shared/lib/image-config-context");
 function _defineProperty(obj, key, value) {
     if (key in obj) {
         Object.defineProperty(obj, key, {
@@ -94,11 +95,24 @@ function _objectWithoutPropertiesLoose(source, excluded) {
     }
     return target;
 }
+const configEnv = process.env.__NEXT_IMAGE_OPTS;
+const loadedImageURLs = new Set();
 const allImgs = new Map();
 let perfObserver;
 const emptyDataURL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
 if (typeof window === 'undefined') {
     global.__NEXT_IMAGE_IMPORTED = true;
+}
+let warnOnce = (_)=>{
+};
+if (process.env.NODE_ENV !== 'production') {
+    const warnings = new Set();
+    warnOnce = (msg)=>{
+        if (!warnings.has(msg)) {
+            console.warn(msg);
+        }
+        warnings.add(msg);
+    };
 }
 const VALID_LOADING_VALUES = [
     'lazy',
@@ -143,17 +157,7 @@ function isStaticImageData(src) {
 function isStaticImport(src) {
     return typeof src === 'object' && (isStaticRequire(src) || isStaticImageData(src));
 }
-const { deviceSizes: configDeviceSizes , imageSizes: configImageSizes , loader: configLoader , path: configPath , domains: configDomains ,  } = process.env.__NEXT_IMAGE_OPTS || _imageConfig.imageConfigDefault;
-// sort smallest to largest
-const allSizes = [
-    ...configDeviceSizes,
-    ...configImageSizes
-];
-configDeviceSizes.sort((a, b)=>a - b
-);
-allSizes.sort((a, b)=>a - b
-);
-function getWidths(width, layout, sizes) {
+function getWidths({ deviceSizes , allSizes  }, width, layout, sizes) {
     if (sizes && (layout === 'fill' || layout === 'responsive')) {
         // Find all the "vw" percent sizes used in the sizes prop
         const viewportWidthRe = /(^|\s)(1?\d?\d)vw/g;
@@ -164,7 +168,7 @@ function getWidths(width, layout, sizes) {
         if (percentSizes.length) {
             const smallestRatio = Math.min(...percentSizes) * 0.01;
             return {
-                widths: allSizes.filter((s)=>s >= configDeviceSizes[0] * smallestRatio
+                widths: allSizes.filter((s)=>s >= deviceSizes[0] * smallestRatio
                 ),
                 kind: 'w'
             };
@@ -176,7 +180,7 @@ function getWidths(width, layout, sizes) {
     }
     if (typeof width !== 'number' || layout === 'fill' || layout === 'responsive') {
         return {
-            widths: configDeviceSizes,
+            widths: deviceSizes,
             kind: 'w'
         };
     }
@@ -201,7 +205,7 @@ function getWidths(width, layout, sizes) {
         kind: 'x'
     };
 }
-function generateImgAttrs({ src , unoptimized , layout , width , quality , sizes , loader  }) {
+function generateImgAttrs({ config , src , unoptimized , layout , width , quality , sizes , loader  }) {
     if (unoptimized) {
         return {
             src,
@@ -209,11 +213,12 @@ function generateImgAttrs({ src , unoptimized , layout , width , quality , sizes
             sizes: undefined
         };
     }
-    const { widths , kind  } = getWidths(width, layout, sizes);
+    const { widths , kind  } = getWidths(config, width, layout, sizes);
     const last = widths.length - 1;
     return {
         sizes: !sizes && kind === 'w' ? '100vw' : sizes,
         srcSet: widths.map((w, i)=>`${loader({
+                config,
                 src,
                 quality,
                 width: w
@@ -226,6 +231,7 @@ function generateImgAttrs({ src , unoptimized , layout , width , quality , sizes
         // and `sizes` are defined.
         // This bug cannot be reproduced in Chrome or Firefox.
         src: loader({
+            config,
             src,
             quality,
             width: widths[last]
@@ -242,13 +248,13 @@ function getInt(x) {
     return undefined;
 }
 function defaultImageLoader(loaderProps) {
-    const load = loaders.get(configLoader);
+    var ref;
+    const loaderKey = ((ref = loaderProps.config) === null || ref === void 0 ? void 0 : ref.loader) || 'default';
+    const load = loaders.get(loaderKey);
     if (load) {
-        return load(_objectSpread({
-            root: configPath
-        }, loaderProps));
+        return load(loaderProps);
     }
-    throw new Error(`Unknown "loader" found in "next.config.js". Expected: ${_imageConfig.VALID_LOADERS.join(', ')}. Received: ${configLoader}`);
+    throw new Error(`Unknown "loader" found in "next.config.js". Expected: ${_imageConfig.VALID_LOADERS.join(', ')}. Received: ${loaderKey}`);
 }
 // See https://stackoverflow.com/q/39777833/266535 for why we use this ref
 // handler instead of the img's onLoad attribute.
@@ -265,6 +271,7 @@ function handleLoading(imgRef, src, layout, placeholder, onLoadingCompleteRef) {
                 if (!imgRef.current) {
                     return;
                 }
+                loadedImageURLs.add(src);
                 if (placeholder === 'blur') {
                     img.style.filter = '';
                     img.style.backgroundSize = '';
@@ -287,9 +294,9 @@ function handleLoading(imgRef, src, layout, placeholder, onLoadingCompleteRef) {
                         if (!parent.position) {
                         // The parent has not been rendered to the dom yet and therefore it has no position. Skip the warnings for such cases.
                         } else if (layout === 'responsive' && parent.display === 'flex') {
-                            console.warn(`Image with src "${src}" may not render properly as a child of a flex container. Consider wrapping the image with a div to configure the width.`);
-                        } else if (layout === 'fill' && parent.position !== 'relative' && parent.position !== 'fixed') {
-                            console.warn(`Image with src "${src}" may not render properly with a parent using position:"${parent.position}". Consider changing the parent style to position:"relative" with a width and height.`);
+                            warnOnce(`Image with src "${src}" may not render properly as a child of a flex container. Consider wrapping the image with a div to configure the width.`);
+                        } else if (layout === 'fill' && parent.position !== 'relative' && parent.position !== 'fixed' && parent.position !== 'absolute') {
+                            warnOnce(`Image with src "${src}" may not render properly with a parent using position:"${parent.position}". Consider changing the parent style to position:"relative" with a width and height.`);
                         }
                     }
                 }
@@ -308,9 +315,26 @@ function handleLoading(imgRef, src, layout, placeholder, onLoadingCompleteRef) {
     }
 }
 function Image(_param) {
-    var { src , sizes , unoptimized =false , priority =false , loading , lazyBoundary ='200px' , className , quality , width , height , objectFit , objectPosition , onLoadingComplete , loader =defaultImageLoader , placeholder ='empty' , blurDataURL  } = _param, all = _objectWithoutProperties(_param, ["src", "sizes", "unoptimized", "priority", "loading", "lazyBoundary", "className", "quality", "width", "height", "objectFit", "objectPosition", "onLoadingComplete", "loader", "placeholder", "blurDataURL"]);
-    var ref;
+    var { src , sizes , unoptimized =false , priority =false , loading , lazyRoot =null , lazyBoundary ='200px' , className , quality , width , height , objectFit , objectPosition , onLoadingComplete , loader =defaultImageLoader , placeholder ='empty' , blurDataURL  } = _param, all = _objectWithoutProperties(_param, ["src", "sizes", "unoptimized", "priority", "loading", "lazyRoot", "lazyBoundary", "className", "quality", "width", "height", "objectFit", "objectPosition", "onLoadingComplete", "loader", "placeholder", "blurDataURL"]);
     const imgRef = (0, _react).useRef(null);
+    const configContext = (0, _react).useContext(_imageConfigContext.ImageConfigContext);
+    const config = (0, _react).useMemo(()=>{
+        const c = configEnv || configContext || _imageConfig.imageConfigDefault;
+        const allSizes = [
+            ...c.deviceSizes,
+            ...c.imageSizes
+        ].sort((a, b)=>a - b
+        );
+        const deviceSizes = c.deviceSizes.sort((a, b)=>a - b
+        );
+        return _objectSpread({
+        }, c, {
+            allSizes,
+            deviceSizes
+        });
+    }, [
+        configContext
+    ]);
     let rest = all;
     let layout = sizes ? 'responsive' : 'intrinsic';
     if ('layout' in rest) {
@@ -345,7 +369,7 @@ function Image(_param) {
         unoptimized = true;
         isLazy = false;
     }
-    if (typeof window !== 'undefined' && ((ref = imgRef.current) === null || ref === void 0 ? void 0 : ref.complete)) {
+    if (typeof window !== 'undefined' && loadedImageURLs.has(src)) {
         isLazy = false;
     }
     if (process.env.NODE_ENV !== 'production') {
@@ -363,7 +387,7 @@ function Image(_param) {
             throw new Error(`Image with src "${src}" has invalid "width" or "height" property. These should be numeric values.`);
         }
         if (layout === 'fill' && (width || height)) {
-            console.warn(`Image with src "${src}" and "layout='fill'" has unused properties assigned. Please remove "width" and "height".`);
+            warnOnce(`Image with src "${src}" and "layout='fill'" has unused properties assigned. Please remove "width" and "height".`);
         }
         if (!VALID_LOADING_VALUES.includes(loading)) {
             throw new Error(`Image with src "${src}" has invalid "loading" property. Provided "${loading}" should be one of ${VALID_LOADING_VALUES.map(String).join(',')}.`);
@@ -372,11 +396,11 @@ function Image(_param) {
             throw new Error(`Image with src "${src}" has both "priority" and "loading='lazy'" properties. Only one should be used.`);
         }
         if (sizes && layout !== 'fill' && layout !== 'responsive') {
-            console.warn(`Image with src "${src}" has "sizes" property but it will be ignored. Only use "sizes" with "layout='fill'" or "layout='responsive'".`);
+            warnOnce(`Image with src "${src}" has "sizes" property but it will be ignored. Only use "sizes" with "layout='fill'" or "layout='responsive'".`);
         }
         if (placeholder === 'blur') {
             if (layout !== 'fill' && (widthInt || 0) * (heightInt || 0) < 1600) {
-                console.warn(`Image with src "${src}" is smaller than 40x40. Consider removing the "placeholder='blur'" property to improve performance.`);
+                warnOnce(`Image with src "${src}" is smaller than 40x40. Consider removing the "placeholder='blur'" property to improve performance.`);
             }
             if (!blurDataURL) {
                 const VALID_BLUR_EXT = [
@@ -395,13 +419,14 @@ function Image(_param) {
             }
         }
         if ('ref' in rest) {
-            console.warn(`Image with src "${src}" is using unsupported "ref" property. Consider using the "onLoadingComplete" property instead.`);
+            warnOnce(`Image with src "${src}" is using unsupported "ref" property. Consider using the "onLoadingComplete" property instead.`);
         }
         if ('style' in rest) {
-            console.warn(`Image with src "${src}" is using unsupported "style" property. Please use the "className" property instead.`);
+            warnOnce(`Image with src "${src}" is using unsupported "style" property. Please use the "className" property instead.`);
         }
-        if (!unoptimized) {
+        if (!unoptimized && loader !== defaultImageLoader) {
             const urlStr = loader({
+                config,
                 src,
                 width: widthInt || 400,
                 quality: qualityInt || 75
@@ -412,7 +437,7 @@ function Image(_param) {
             } catch (err) {
             }
             if (urlStr === src || url && url.pathname === src && !url.search) {
-                console.warn(`Image with src "${src}" has a "loader" property that does not implement width. Please implement it or use the "unoptimized" property instead.` + `\nRead more: https://nextjs.org/docs/messages/next-image-missing-loader-width`);
+                warnOnce(`Image with src "${src}" has a "loader" property that does not implement width. Please implement it or use the "unoptimized" property instead.` + `\nRead more: https://nextjs.org/docs/messages/next-image-missing-loader-width`);
             }
         }
         if (typeof window !== 'undefined' && !perfObserver && window.PerformanceObserver) {
@@ -424,7 +449,7 @@ function Image(_param) {
                     const lcpImage = allImgs.get(imgSrc);
                     if (lcpImage && !lcpImage.priority && lcpImage.placeholder !== 'blur' && !lcpImage.src.startsWith('data:') && !lcpImage.src.startsWith('blob:')) {
                         // https://web.dev/lcp/#measure-lcp-in-javascript
-                        console.warn(`Image with src "${lcpImage.src}" was detected as the Largest Contentful Paint (LCP). Please add the "priority" property if this image is above the fold.` + `\nRead more: https://nextjs.org/docs/api-reference/next/image#priority`);
+                        warnOnce(`Image with src "${lcpImage.src}" was detected as the Largest Contentful Paint (LCP). Please add the "priority" property if this image is above the fold.` + `\nRead more: https://nextjs.org/docs/api-reference/next/image#priority`);
                     }
                 }
             });
@@ -435,6 +460,7 @@ function Image(_param) {
         }
     }
     const [setIntersection, isIntersected] = (0, _useIntersection).useIntersection({
+        rootRef: lazyRoot,
         rootMargin: lazyBoundary,
         disabled: !isLazy
     });
@@ -516,8 +542,7 @@ function Image(_param) {
             wrapperStyle.maxWidth = '100%';
             hasSizer = true;
             sizerStyle.maxWidth = '100%';
-            // url encoded svg is a little bit shorten than base64 encoding
-            sizerSvgUrl = `data:image/svg+xml,%3csvg xmlns=%27http://www.w3.org/2000/svg%27 version=%271.1%27 width=%27${widthInt}%27 height=%27${heightInt}%27/%3e`;
+            sizerSvgUrl = `data:image/svg+xml,%3csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20version=%271.1%27%20width=%27${widthInt}%27%20height=%27${heightInt}%27/%3e`;
         } else if (layout === 'fixed') {
             // <Image src="i.png" width="100" height="100" layout="fixed" />
             wrapperStyle.display = 'inline-block';
@@ -538,6 +563,7 @@ function Image(_param) {
     };
     if (isVisible) {
         imgAttributes = generateImgAttrs({
+            config,
             src,
             unoptimized,
             layout,
@@ -623,6 +649,7 @@ function Image(_param) {
         }, imgStyle, blurStyle)
     })), isLazy && /*#__PURE__*/ _react.default.createElement("noscript", null, /*#__PURE__*/ _react.default.createElement("img", Object.assign({
     }, rest, generateImgAttrs({
+        config,
         src,
         unoptimized,
         layout,
@@ -652,9 +679,9 @@ function Image(_param) {
 function normalizeSrc(src) {
     return src[0] === '/' ? src.slice(1) : src;
 }
-function imgixLoader({ root , src , width , quality  }) {
+function imgixLoader({ config , src , width , quality  }) {
     // Demo: https://static.imgix.net/daisy.png?auto=format&fit=max&w=300
-    const url = new URL(`${root}${normalizeSrc(src)}`);
+    const url = new URL(`${config.path}${normalizeSrc(src)}`);
     const params = url.searchParams;
     params.set('auto', params.get('auto') || 'format');
     params.set('fit', params.get('fit') || 'max');
@@ -664,10 +691,10 @@ function imgixLoader({ root , src , width , quality  }) {
     }
     return url.href;
 }
-function akamaiLoader({ root , src , width  }) {
-    return `${root}${normalizeSrc(src)}?imwidth=${width}`;
+function akamaiLoader({ config , src , width  }) {
+    return `${config.path}${normalizeSrc(src)}?imwidth=${width}`;
 }
-function cloudinaryLoader({ root , src , width , quality  }) {
+function cloudinaryLoader({ config , src , width , quality  }) {
     // Demo: https://res.cloudinary.com/demo/image/upload/w_300,c_limit,q_auto/turtles.jpg
     const params = [
         'f_auto',
@@ -676,12 +703,12 @@ function cloudinaryLoader({ root , src , width , quality  }) {
         'q_' + (quality || 'auto')
     ];
     const paramsString = params.join(',') + '/';
-    return `${root}${paramsString}${normalizeSrc(src)}`;
+    return `${config.path}${paramsString}${normalizeSrc(src)}`;
 }
 function customLoader({ src  }) {
     throw new Error(`Image with src "${src}" is missing "loader" prop.` + `\nRead more: https://nextjs.org/docs/messages/next-image-missing-loader`);
 }
-function defaultLoader({ root , src , width , quality  }) {
+function defaultLoader({ config , src , width , quality  }) {
     if (process.env.NODE_ENV !== 'production') {
         const missingValues = [];
         // these should always be provided but make sure they are
@@ -697,7 +724,7 @@ function defaultLoader({ root , src , width , quality  }) {
         if (src.startsWith('//')) {
             throw new Error(`Failed to parse src "${src}" on \`next/image\`, protocol-relative URL (//) must be changed to an absolute URL (http:// or https://)`);
         }
-        if (!src.startsWith('/') && configDomains) {
+        if (!src.startsWith('/') && config.domains) {
             let parsedSrc;
             try {
                 parsedSrc = new URL(src);
@@ -705,12 +732,17 @@ function defaultLoader({ root , src , width , quality  }) {
                 console.error(err);
                 throw new Error(`Failed to parse src "${src}" on \`next/image\`, if using relative image it must start with a leading slash "/" or be an absolute URL (http:// or https://)`);
             }
-            if (process.env.NODE_ENV !== 'test' && !configDomains.includes(parsedSrc.hostname)) {
+            if (process.env.NODE_ENV !== 'test' && !config.domains.includes(parsedSrc.hostname)) {
                 throw new Error(`Invalid src prop (${src}) on \`next/image\`, hostname "${parsedSrc.hostname}" is not configured under images in your \`next.config.js\`\n` + `See more info: https://nextjs.org/docs/messages/next-image-unconfigured-host`);
             }
         }
     }
-    return `${root}?url=${encodeURIComponent(src)}&w=${width}&q=${quality || 75}`;
+    if (src.endsWith('.svg') && !config.dangerouslyAllowSVG) {
+        // Special case to make svg serve as-is to avoid proxying
+        // through the built-in Image Optimization API.
+        return src;
+    }
+    return `${config.path}?url=${encodeURIComponent(src)}&w=${width}&q=${quality || 75}`;
 }
 
 //# sourceMappingURL=image.js.map

@@ -4,7 +4,7 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.default = void 0;
 let chalk;
-if (typeof window === 'undefined') {
+if (!process.browser) {
     chalk = require('next/dist/compiled/chalk');
 } else {
     chalk = require('./web/chalk').default;

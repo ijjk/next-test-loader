@@ -15,7 +15,7 @@ export default class HotReloader {
     private pagesDir;
     private webpackHotMiddleware?;
     private config;
-    private webServerRuntime;
+    private runtime?;
     private hasServerComponents;
     clientStats: webpack5.Stats | null;
     serverStats: webpack5.Stats | null;

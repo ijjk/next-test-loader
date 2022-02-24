@@ -271,7 +271,7 @@ function hasAlreadyWarnedAboutFullRefresh() {
     return sessionStorage.getItem(FULL_REFRESH_STORAGE_KEY) !== null;
 }
 function clearFullRefreshStorage() {
-    sessionStorage.removeItem(FULL_REFRESH_STORAGE_KEY);
+    if (sessionStorage.getItem(FULL_REFRESH_STORAGE_KEY) !== 'ignore') sessionStorage.removeItem(FULL_REFRESH_STORAGE_KEY);
 }
 
 //# sourceMappingURL=hot-dev-client.js.map

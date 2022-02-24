@@ -1,8 +1,8 @@
 /// <reference types="node" />
 import type { ParsedUrlQuery } from 'querystring';
-import type { NextUrlWithParsedQuery } from './request-meta';
+import type { BaseNextRequest, BaseNextResponse } from './base-http';
+import { NextUrlWithParsedQuery } from './request-meta';
 import { RouteHas } from '../lib/load-custom-routes';
-import { BaseNextRequest, BaseNextResponse } from './base-http';
 export declare const route: (path: string, regexModifier?: ((regex: string) => string) | undefined) => (pathname: string | null | undefined, params?: any) => any;
 export declare type Params = {
     [param: string]: any;
@@ -35,6 +35,7 @@ export default class Router {
     basePath: string;
     headers: Route[];
     fsRoutes: Route[];
+    internalFsRoutes: Route[];
     redirects: Route[];
     rewrites: {
         beforeFiles: Route[];
@@ -42,16 +43,18 @@ export default class Router {
         fallback: Route[];
     };
     catchAllRoute: Route;
-    catchAllMiddleware?: Route;
+    catchAllStaticMiddleware?: Route;
+    catchAllDynamicMiddleware?: Route;
     pageChecker: PageChecker;
     dynamicRoutes: DynamicRoutes;
     useFileSystemPublicRoutes: boolean;
     locales: string[];
     seenRequests: Set<any>;
-    constructor({ basePath, headers, fsRoutes, rewrites, redirects, catchAllRoute, catchAllMiddleware, dynamicRoutes, pageChecker, useFileSystemPublicRoutes, locales, }: {
+    constructor({ basePath, headers, fsRoutes, internalFsRoutes, rewrites, redirects, catchAllRoute, catchAllStaticMiddleware, catchAllDynamicMiddleware, dynamicRoutes, pageChecker, useFileSystemPublicRoutes, locales, }: {
         basePath: string;
         headers: Route[];
         fsRoutes: Route[];
+        internalFsRoutes: Route[];
         rewrites: {
             beforeFiles: Route[];
             afterFiles: Route[];
@@ -59,7 +62,8 @@ export default class Router {
         };
         redirects: Route[];
         catchAllRoute: Route;
-        catchAllMiddleware?: Route;
+        catchAllStaticMiddleware?: Route;
+        catchAllDynamicMiddleware?: Route;
         dynamicRoutes: DynamicRoutes | undefined;
         pageChecker: PageChecker;
         useFileSystemPublicRoutes: boolean;

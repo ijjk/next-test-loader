@@ -35,7 +35,6 @@ var _utils2 = require("../../shared/lib/utils");
 var _middleware = require("next/dist/compiled/@next/react-dev-overlay/middleware");
 var Log = _interopRequireWildcard(require("../../build/output/log"));
 var _isError = _interopRequireWildcard(require("../../lib/is-error"));
-var _getMiddlewareRegex = require("../../shared/lib/router/utils/get-middleware-regex");
 var _utils3 = require("../../build/utils");
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
@@ -202,41 +201,47 @@ class DevServer extends _nextServer.default {
                 const routedMiddleware = [];
                 const routedPages = [];
                 const knownFiles = wp.getTimeInfoEntries();
-                const ssrMiddleware = new Set();
-                const isWebServerRuntime = this.nextConfig.experimental.concurrentFeatures;
-                const hasServerComponents = isWebServerRuntime && this.nextConfig.experimental.serverComponents;
+                const runtime = this.nextConfig.experimental.runtime;
+                const isEdgeRuntime = runtime === 'edge';
+                const hasServerComponents = runtime && this.nextConfig.experimental.serverComponents;
                 for (const [fileName, { accuracy  }] of knownFiles){
                     if (accuracy === undefined || !regexPageExtension.test(fileName)) {
                         continue;
                     }
                     if (regexMiddleware.test(fileName)) {
-                        routedMiddleware.push(`/${(0, _path).relative(pagesDir, fileName).replace(/\\+/g, '/')}`.replace(/^\/+/g, '/').replace(regexMiddleware, '/'));
+                        routedMiddleware.push({
+                            page: `/${(0, _path).relative(pagesDir, fileName).replace(/\\+/g, '/')}`.replace(/^\/+/g, '/').replace(regexMiddleware, '') || '/',
+                            ssr: false
+                        });
                         continue;
                     }
                     let pageName = '/' + (0, _path).relative(pagesDir, fileName).replace(/\\+/g, '/');
                     pageName = pageName.replace(regexPageExtension, '');
                     pageName = pageName.replace(/\/index$/, '') || '/';
                     if (hasServerComponents && pageName.endsWith('.server')) {
-                        routedMiddleware.push(pageName);
-                        ssrMiddleware.add(pageName);
-                    } else if (isWebServerRuntime && !((0, _utils3).isReservedPage(pageName) || (0, _utils3).isCustomErrorPage(pageName))) {
-                        routedMiddleware.push(pageName);
-                        ssrMiddleware.add(pageName);
+                        routedMiddleware.push({
+                            page: pageName,
+                            ssr: true
+                        });
+                    } else if (isEdgeRuntime && !((0, _utils3).isReservedPage(pageName) || (0, _utils3).isCustomErrorPage(pageName))) {
+                        routedMiddleware.push({
+                            page: pageName,
+                            ssr: true
+                        });
                     }
                     routedPages.push(pageName);
                 }
-                this.middleware = (0, _utils).getSortedRoutes(routedMiddleware).map((page)=>({
-                        match: (0, _utils).getRouteMatcher((0, _getMiddlewareRegex).getMiddlewareRegex(page, !ssrMiddleware.has(page))),
-                        page,
-                        ssr: ssrMiddleware.has(page)
-                    })
+                this.allRoutes = (0, _utils).getRoutingItems(routedPages, routedMiddleware);
+                this.middleware = this.allRoutes.filter((r)=>r.isMiddleware
                 );
                 try {
                     var ref;
                     // we serve a separate manifest with all pages for the client in
                     // dev mode so that we can match a page after a rewrite on the client
                     // before it has been built and is populated in the _buildManifest
-                    const sortedRoutes = (0, _utils).getSortedRoutes(routedPages);
+                    const sortedRoutes = this.allRoutes.filter((r)=>!r.isMiddleware
+                    ).map((r)=>r.page
+                    );
                     if (!((ref = this.sortedRoutes) === null || ref === void 0 ? void 0 : ref.every((val, idx)=>val === sortedRoutes[idx]
                     ))) {
                         // emit the change so clients fetch the update
@@ -245,10 +250,7 @@ class DevServer extends _nextServer.default {
                         });
                     }
                     this.sortedRoutes = sortedRoutes;
-                    this.dynamicRoutes = this.sortedRoutes.filter(_utils.isDynamicRoute).map((page)=>({
-                            page,
-                            match: (0, _utils).getRouteMatcher((0, _utils).getRouteRegex(page))
-                        })
+                    this.dynamicRoutes = this.allRoutes.filter((r)=>!r.isMiddleware && (0, _utils).isDynamicRoute(r.page)
                     );
                     this.router.setDynamicRoutes(this.dynamicRoutes);
                     if (!resolved) {
@@ -533,6 +535,9 @@ class DevServer extends _nextServer.default {
     getMiddlewareManifest() {
         return undefined;
     }
+    getServerComponentManifest() {
+        return undefined;
+    }
     async hasMiddleware(pathname, isSSR) {
         return this.hasPage(isSSR ? pathname : getMiddlewareFilepath(pathname));
     }
@@ -540,10 +545,10 @@ class DevServer extends _nextServer.default {
         return this.hotReloader.ensurePage(isSSR ? pathname : getMiddlewareFilepath(pathname));
     }
     generateRoutes() {
-        const { fsRoutes , ...otherRoutes } = super.generateRoutes();
+        const { fsRoutes , internalFsRoutes , ...otherRoutes } = super.generateRoutes();
         // In development we expose all compiled files for react-error-overlay's line show feature
         // We use unshift so that we're sure the routes is defined before Next's default routes
-        fsRoutes.unshift({
+        internalFsRoutes.unshift({
             match: (0, _router).route('/_next/development/:path*'),
             type: 'route',
             name: '_next/development catchall',
@@ -555,7 +560,7 @@ class DevServer extends _nextServer.default {
                 };
             }
         });
-        fsRoutes.unshift({
+        internalFsRoutes.unshift({
             match: (0, _router).route(`/_next/${_constants1.CLIENT_STATIC_FILES_PATH}/${this.buildId}/${_constants1.DEV_CLIENT_PAGES_MANIFEST}`),
             type: 'route',
             name: `_next/${_constants1.CLIENT_STATIC_FILES_PATH}/${this.buildId}/${_constants1.DEV_CLIENT_PAGES_MANIFEST}`,
@@ -570,7 +575,7 @@ class DevServer extends _nextServer.default {
                 };
             }
         });
-        fsRoutes.unshift({
+        internalFsRoutes.unshift({
             match: (0, _router).route(`/_next/${_constants1.CLIENT_STATIC_FILES_PATH}/${this.buildId}/${_constants1.DEV_MIDDLEWARE_MANIFEST}`),
             type: 'route',
             name: `_next/${_constants1.CLIENT_STATIC_FILES_PATH}/${this.buildId}/${_constants1.DEV_MIDDLEWARE_MANIFEST}`,
@@ -611,11 +616,15 @@ class DevServer extends _nextServer.default {
         });
         return {
             fsRoutes,
+            internalFsRoutes,
             ...otherRoutes
         };
     }
     // In development public files are not added to the router but handled as a fallback instead
     generatePublicRoutes() {
+        return [];
+    }
+    getAllRoutes() {
         return [];
     }
     // In development dynamic routes cannot be known ahead of time
@@ -668,6 +677,11 @@ class DevServer extends _nextServer.default {
         }
         try {
             await this.hotReloader.ensurePage(pathname);
+            // When the new page is compiled, we need to reload the server component
+            // manifest.
+            if (this.nextConfig.experimental.serverComponents) {
+                this.serverComponentManifest = super.getServerComponentManifest();
+            }
             return super.findPageComponents(pathname, query, params);
         } catch (err) {
             if (err.code !== 'ENOENT') {
@@ -681,7 +695,9 @@ class DevServer extends _nextServer.default {
         // Build the error page to ensure the fallback is built too.
         // TODO: See if this can be moved into hotReloader or removed.
         await this.hotReloader.ensurePage('/_error');
-        return await (0, _loadComponents).loadDefaultErrorComponents(this.distDir);
+        return await (0, _loadComponents).loadDefaultErrorComponents(this.distDir, {
+            hasConcurrentFeatures: !!this.renderOpts.runtime
+        });
     }
     setImmutableAssetCacheControl(res) {
         res.setHeader('Cache-Control', 'no-store, must-revalidate');

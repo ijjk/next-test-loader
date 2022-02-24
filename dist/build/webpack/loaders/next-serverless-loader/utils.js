@@ -96,6 +96,7 @@ function getUtils({ page , i18n , basePath , rewrites , pageIsDynamic  }) {
                     // Simulate a RegExp match from the \`req.url\` input
                     exec: (str)=>{
                         const obj = (0, _querystring).parse(str);
+                        const matchesHasLocale = i18n && detectedLocale && obj['1'] === detectedLocale;
                         // favor named matches if available
                         const routeKeyNames = Object.keys(routeKeys || {
                         });
@@ -138,8 +139,12 @@ function getUtils({ page , i18n , basePath , rewrites , pageIsDynamic  }) {
                         }
                         return Object.keys(obj).reduce((prev, key)=>{
                             if (!filterLocaleItem(obj[key])) {
+                                let normalizedKey = key;
+                                if (matchesHasLocale) {
+                                    normalizedKey = parseInt(key, 10) - 1 + '';
+                                }
                                 return Object.assign(prev, {
-                                    [key]: obj[key]
+                                    [normalizedKey]: obj[key]
                                 });
                             }
                             return prev;

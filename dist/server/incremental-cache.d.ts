@@ -2,22 +2,7 @@
 import type { CacheFs } from '../shared/lib/utils';
 import LRUCache from 'next/dist/compiled/lru-cache';
 import { PrerenderManifest } from '../build';
-interface CachedRedirectValue {
-    kind: 'REDIRECT';
-    props: Object;
-}
-interface CachedPageValue {
-    kind: 'PAGE';
-    html: string;
-    pageData: Object;
-}
-export declare type IncrementalCacheValue = CachedRedirectValue | CachedPageValue;
-declare type IncrementalCacheEntry = {
-    curRevalidate?: number | false;
-    revalidateAfter: number | false;
-    isStale?: boolean;
-    value: IncrementalCacheValue | null;
-};
+import { IncrementalCacheValue, IncrementalCacheEntry } from './response-cache';
 export declare class IncrementalCache {
     incrementalOptions: {
         flushToDisk?: boolean;
@@ -29,7 +14,7 @@ export declare class IncrementalCache {
     cache?: LRUCache<string, IncrementalCacheEntry>;
     locales?: string[];
     fs: CacheFs;
-    constructor({ fs, max, dev, distDir, pagesDir, flushToDisk, locales, }: {
+    constructor({ fs, max, dev, distDir, pagesDir, flushToDisk, locales, getPrerenderManifest, }: {
         fs: CacheFs;
         dev: boolean;
         max?: number;
@@ -37,6 +22,7 @@ export declare class IncrementalCache {
         pagesDir: string;
         flushToDisk?: boolean;
         locales?: string[];
+        getPrerenderManifest: () => PrerenderManifest;
     });
     private getSeedPath;
     private calculateRevalidate;
@@ -44,4 +30,3 @@ export declare class IncrementalCache {
     get(pathname: string): Promise<IncrementalCacheEntry | null>;
     set(pathname: string, data: IncrementalCacheValue | null, revalidateSeconds?: number | false): Promise<void>;
 }
-export {};

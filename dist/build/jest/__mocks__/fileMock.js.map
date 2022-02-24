@@ -1,1 +1,1 @@
-{"version":3,"sources":["../../../../build/jest/__mocks__/fileMock.js"],"names":["module","exports"],"mappings":";AAAA,MAAM,CAAC,OAAO,GAAG,CAAgB"}
+{"version":3,"sources":["../../../../build/jest/__mocks__/fileMock.js"],"names":["module","exports","src","height","width","blurDataURL"],"mappings":";AAAA,MAAM,CAAC,OAAO,GAAG,CAAC;IAChB,GAAG,EAAE,CAAU;IACf,MAAM,EAAE,EAAE;IACV,KAAK,EAAE,EAAE;IACT,WAAW,EAAE,CAAiC;AAChD,CAAC"}

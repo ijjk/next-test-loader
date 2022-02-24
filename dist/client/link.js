@@ -37,15 +37,13 @@ function isModifiedEvent(event) {
 }
 function linkClicked(e, router, href, as, replace, shallow, scroll, locale) {
     const { nodeName  } = e.currentTarget;
-    if (nodeName === 'A' && (isModifiedEvent(e) || !(0, _router).isLocalURL(href))) {
+    // anchors inside an svg have a lowercase nodeName
+    const isAnchorNodeName = nodeName.toUpperCase() === 'A';
+    if (isAnchorNodeName && (isModifiedEvent(e) || !(0, _router).isLocalURL(href))) {
         // ignore click for browser’s default behavior
         return;
     }
     e.preventDefault();
-    //  avoid scroll for urls with anchor refs
-    if (scroll == null && as.indexOf('#') >= 0) {
-        scroll = false;
-    }
     // replace state instead of push if prop is present
     router[replace ? 'replace' : 'push'](href, as, {
         shallow,
@@ -193,6 +191,11 @@ function Link(props) {
     const childProps = {
         ref: setRef,
         onClick: (e)=>{
+            if (process.env.NODE_ENV !== 'production') {
+                if (!e) {
+                    throw new Error(`Component rendered inside next/link has to pass click event to "onClick" prop.`);
+                }
+            }
             if (child.props && typeof child.props.onClick === 'function') {
                 child.props.onClick(e);
             }

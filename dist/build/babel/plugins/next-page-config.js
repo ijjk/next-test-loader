@@ -64,11 +64,15 @@ function nextPageConfig({ types: t  }) {
                                 })) {
                                     continue;
                                 }
-                                if (!_core.types.isObjectExpression(declaration.init)) {
-                                    const got = declaration.init ? declaration.init.type : 'undefined';
+                                let { init  } = declaration;
+                                if (_core.types.isTSAsExpression(init)) {
+                                    init = init.expression;
+                                }
+                                if (!_core.types.isObjectExpression(init)) {
+                                    const got = init ? init.type : 'undefined';
                                     throw new Error(errorMessage(exportState, `Expected object but got ${got}`));
                                 }
-                                for (const prop of declaration.init.properties){
+                                for (const prop of init.properties){
                                     if (_core.types.isSpreadElement(prop)) {
                                         throw new Error(errorMessage(exportState, `Property spread is not allowed`));
                                     }

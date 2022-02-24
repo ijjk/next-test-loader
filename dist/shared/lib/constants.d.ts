@@ -12,6 +12,7 @@ export declare const ROUTES_MANIFEST = "routes-manifest.json";
 export declare const IMAGES_MANIFEST = "images-manifest.json";
 export declare const SERVER_FILES_MANIFEST = "required-server-files.json";
 export declare const DEV_CLIENT_PAGES_MANIFEST = "_devPagesManifest.json";
+export declare const FUNCTIONS_MANIFEST = "functions-manifest.json";
 export declare const MIDDLEWARE_MANIFEST = "middleware-manifest.json";
 export declare const DEV_MIDDLEWARE_MANIFEST = "_devMiddlewareManifest.json";
 export declare const REACT_LOADABLE_MANIFEST = "react-loadable-manifest.json";

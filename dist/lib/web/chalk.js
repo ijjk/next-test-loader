@@ -9,8 +9,8 @@ exports.default = void 0;
 // - chalk.red('error')
 // - chalk.bold.cyan('message')
 // - chalk.hex('#fff').underline('hello')
-const log = console.log;
-const chalk = new Proxy(log, {
+const chalk = new Proxy((s)=>s
+, {
     get (_, prop) {
         if ([
             'hex',

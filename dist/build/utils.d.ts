@@ -63,7 +63,6 @@ export declare function isPageStatic(page: string, distDir: string, serverless: 
 export declare function hasCustomGetInitialProps(page: string, distDir: string, isLikeServerless: boolean, runtimeEnvConfig: any, checkingApp: boolean): Promise<boolean>;
 export declare function getNamedExports(page: string, distDir: string, isLikeServerless: boolean, runtimeEnvConfig: any): Promise<Array<string>>;
 export declare function detectConflictingPaths(combinedPages: string[], ssgPages: Set<string>, additionalSsgPaths: Map<string, string[]>): void;
-export declare function getCssFilePaths(buildManifest: BuildManifest): string[];
 export declare function getRawPageExtensions(pageExtensions: string[]): string[];
 export declare function isFlightPage(nextConfig: NextConfigComplete, pagePath: string): boolean;
 export declare function getUnresolvedModuleFromError(error: string): string | undefined;

@@ -3,7 +3,7 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 exports.isSerializableProps = isSerializableProps;
-var _isPlainObject = require("./is-plain-object");
+var _isPlainObject = require("../shared/lib/is-plain-object");
 const regexpPlainIdentifier = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
 function isSerializableProps(page, method, input) {
     if (!(0, _isPlainObject).isPlainObject(input)) {
