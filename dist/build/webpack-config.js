@@ -39,6 +39,7 @@ var _utils1 = require("./utils");
 var _browserslist = _interopRequireDefault(require("next/dist/compiled/browserslist"));
 var _loadJsconfig = _interopRequireDefault(require("./load-jsconfig"));
 var _config1 = require("../server/config");
+var _middlewareSourceMapsPlugin = require("./webpack/plugins/middleware-source-maps-plugin");
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
         default: obj
@@ -1007,6 +1008,7 @@ async function getBaseWebpackConfig(dir, { buildId , config , dev =false , isSer
             ].filter(Boolean)
         },
         plugins: [
+            ...!dev && !isServer && !!config.experimental.middlewareSourceMaps && !config.productionBrowserSourceMaps ? (0, _middlewareSourceMapsPlugin).getMiddlewareSourceMapPlugins() : [],
             hasReactRefresh && new _reactRefreshWebpackPlugin.default(_webpack.webpack),
             // Makes sure `Buffer` and `process` are polyfilled in client and flight bundles (same behavior as webpack 4)
             targetWeb && new _webpack.webpack.ProvidePlugin({

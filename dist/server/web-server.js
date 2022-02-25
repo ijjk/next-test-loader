@@ -126,6 +126,14 @@ class NextWebServer extends _baseServer.default {
         });
     }
     async sendRenderResult(_req, res, options) {
+        // Add necessary headers.
+        // @TODO: Share the isomorphic logic with server/send-payload.ts.
+        if (options.poweredByHeader && options.type === 'html') {
+            res.setHeader('X-Powered-By', 'Next.js');
+        }
+        if (!res.getHeader('Content-Type')) {
+            res.setHeader('Content-Type', options.type === 'json' ? 'application/json' : 'text/html; charset=utf-8');
+        }
         // @TODO
         const writer = res.transformStream.writable.getWriter();
         if (options.result.isDynamic()) {

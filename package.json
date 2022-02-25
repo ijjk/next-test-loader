@@ -68,6 +68,20 @@
       "./taskfile-swc.js"
     ]
   },
+  "optionalDependencies": {
+    "@next/swc-android-arm-eabi": "12.1.1-canary.2",
+    "@next/swc-android-arm64": "12.1.1-canary.2",
+    "@next/swc-darwin-arm64": "12.1.1-canary.2",
+    "@next/swc-darwin-x64": "12.1.1-canary.2",
+    "@next/swc-linux-arm-gnueabihf": "12.1.1-canary.2",
+    "@next/swc-linux-arm64-gnu": "12.1.1-canary.2",
+    "@next/swc-linux-arm64-musl": "12.1.1-canary.2",
+    "@next/swc-linux-x64-gnu": "12.1.1-canary.2",
+    "@next/swc-linux-x64-musl": "12.1.1-canary.2",
+    "@next/swc-win32-arm64-msvc": "12.1.1-canary.2",
+    "@next/swc-win32-ia32-msvc": "12.1.1-canary.2",
+    "@next/swc-win32-x64-msvc": "12.1.1-canary.2"
+  },
   "dependencies": {
     "@next/env": "12.1.1-canary.2",
     "caniuse-lite": "^1.0.30001283",
@@ -93,20 +107,6 @@
       "optional": true
     }
   },
-  "optionalDependencies": {
-    "@next/swc-android-arm-eabi": "12.1.1-canary.2",
-    "@next/swc-android-arm64": "12.1.1-canary.2",
-    "@next/swc-darwin-arm64": "12.1.1-canary.2",
-    "@next/swc-darwin-x64": "12.1.1-canary.2",
-    "@next/swc-linux-arm-gnueabihf": "12.1.1-canary.2",
-    "@next/swc-linux-arm64-gnu": "12.1.1-canary.2",
-    "@next/swc-linux-arm64-musl": "12.1.1-canary.2",
-    "@next/swc-linux-x64-gnu": "12.1.1-canary.2",
-    "@next/swc-linux-x64-musl": "12.1.1-canary.2",
-    "@next/swc-win32-arm64-msvc": "12.1.1-canary.2",
-    "@next/swc-win32-ia32-msvc": "12.1.1-canary.2",
-    "@next/swc-win32-x64-msvc": "12.1.1-canary.2"
-  },
   "devDependencies": {
     "@ampproject/toolbox-optimizer": "2.7.1-alpha.0",
     "@babel/code-frame": "7.12.11",
@@ -130,7 +130,7 @@
     "@babel/types": "7.15.0",
     "@hapi/accept": "5.0.2",
     "@napi-rs/cli": "2.4.4",
-    "@napi-rs/triples": "1.0.3",
+    "@napi-rs/triples": "1.1.0",
     "@next/polyfill-module": "12.1.1-canary.2",
     "@next/polyfill-nomodule": "12.1.1-canary.2",
     "@next/react-dev-overlay": "12.1.1-canary.2",

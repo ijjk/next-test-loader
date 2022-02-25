@@ -22,7 +22,7 @@ var envConfig = _interopRequireWildcard(require("../shared/lib/runtime-config"))
 var _utils1 = require("../shared/lib/utils");
 var _utils2 = require("./utils");
 var _router = _interopRequireWildcard(require("./router"));
-var _sendPayload = require("./send-payload");
+var _revalidateHeaders = require("./send-payload/revalidate-headers");
 var _incrementalCache = require("./incremental-cache");
 var _renderResult = _interopRequireDefault(require("./render-result"));
 var _normalizeTrailingSlash = require("../client/normalize-trailing-slash");
@@ -1022,7 +1022,7 @@ class Server {
         } : undefined;
         if (!cachedData) {
             if (revalidateOptions) {
-                (0, _sendPayload).setRevalidateHeaders(res, revalidateOptions);
+                (0, _revalidateHeaders).setRevalidateHeaders(res, revalidateOptions);
             }
             if (isDataReq) {
                 res.statusCode = 404;

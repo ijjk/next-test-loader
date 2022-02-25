@@ -746,13 +746,14 @@ function getRawPageExtensions(pageExtensions) {
     return pageExtensions.filter((ext)=>!ext.startsWith('client.') && !ext.startsWith('server.')
     );
 }
-function isFlightPage(nextConfig, pagePath) {
-    if (!(nextConfig.experimental.serverComponents && nextConfig.experimental.runtime)) return false;
+function isFlightPage(nextConfig, filePath) {
+    if (!(nextConfig.experimental.serverComponents && nextConfig.experimental.runtime)) {
+        return false;
+    }
     const rawPageExtensions = getRawPageExtensions(nextConfig.pageExtensions || []);
-    const isRscPage = rawPageExtensions.some((ext)=>{
-        return new RegExp(`\\.server\\.${ext}$`).test(pagePath);
+    return rawPageExtensions.some((ext)=>{
+        return filePath.endsWith(`.server.${ext}`);
     });
-    return isRscPage;
 }
 function getUnresolvedModuleFromError(error) {
     const moduleErrorRegex = new RegExp(`Module not found: Can't resolve '(\\w+)'`);

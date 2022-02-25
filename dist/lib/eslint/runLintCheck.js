@@ -47,6 +47,15 @@ function _interopRequireWildcard(obj) {
         return newObj;
     }
 }
+// 0 is off, 1 is warn, 2 is error. See https://eslint.org/docs/user-guide/configuring/rules#configuring-rules
+const VALID_SEVERITY = [
+    'off',
+    'warn',
+    'error'
+];
+function isValidSeverity(severity) {
+    return VALID_SEVERITY.includes(severity);
+}
 const requiredPackages = [
     {
         file: 'eslint',
@@ -112,6 +121,7 @@ async function lint(baseDir, lintDirs, eslintrcFile, pkgJsonPath, lintDuringBuil
         };
         let eslint = new ESLint(options);
         let nextEslintPluginIsEnabled = false;
+        const nextRulesEnabled = new Map();
         const pagesDirRules = [
             '@next/next/no-html-link-for-pages'
         ];
@@ -124,6 +134,16 @@ async function lint(baseDir, lintDirs, eslintrcFile, pkgJsonPath, lintDuringBuil
             const completeConfig = await eslint.calculateConfigForFile(configFile);
             if ((ref9 = completeConfig.plugins) === null || ref9 === void 0 ? void 0 : ref9.includes('@next/next')) {
                 nextEslintPluginIsEnabled = true;
+                for (const [name, [severity]] of Object.entries(completeConfig.rules)){
+                    if (!name.startsWith('@next/next/')) {
+                        continue;
+                    }
+                    if (typeof severity === 'number' && severity >= 0 && severity < VALID_SEVERITY.length) {
+                        nextRulesEnabled.set(name, VALID_SEVERITY[severity]);
+                    } else if (typeof severity === 'string' && isValidSeverity(severity)) {
+                        nextRulesEnabled.set(name, severity);
+                    }
+                }
                 break;
             }
         }
@@ -171,7 +191,8 @@ async function lint(baseDir, lintDirs, eslintrcFile, pkgJsonPath, lintDuringBuil
                 lintFix: !!options.fix,
                 nextEslintPluginVersion: nextEslintPluginIsEnabled && deps.resolved.has('eslint-config-next') ? require(_path.default.join(_path.default.dirname(deps.resolved.get('eslint-config-next')), 'package.json')).version : null,
                 nextEslintPluginErrorsCount: formattedResult.totalNextPluginErrorCount,
-                nextEslintPluginWarningsCount: formattedResult.totalNextPluginWarningCount
+                nextEslintPluginWarningsCount: formattedResult.totalNextPluginWarningCount,
+                nextRulesEnabled: Object.fromEntries(nextRulesEnabled)
             }
         };
     } catch (err) {

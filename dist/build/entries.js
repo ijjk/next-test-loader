@@ -71,6 +71,7 @@ function createEntrypoints(pages, target, buildId, previewMode, config, loadedEn
     const edgeServer = {
     };
     const hasRuntimeConfig = Object.keys(config.publicRuntimeConfig).length > 0 || Object.keys(config.serverRuntimeConfig).length > 0;
+    const edgeRuntime = config.experimental.runtime === 'edge';
     const defaultServerlessOptions = {
         absoluteAppPath: pages['/_app'],
         absoluteDocumentPath: pages['/_document'],
@@ -103,7 +104,6 @@ function createEntrypoints(pages, target, buildId, previewMode, config, loadedEn
         const isReserved = (0, _utils1).isReservedPage(page);
         const isCustomError = (0, _utils1).isCustomErrorPage(page);
         const isFlight = (0, _utils1).isFlightPage(config, absolutePagePath);
-        const edgeRuntime = config.experimental.runtime === 'edge';
         if (page.match(_constants.MIDDLEWARE_ROUTE)) {
             const loaderOpts = {
                 absolutePagePath: pages[page],

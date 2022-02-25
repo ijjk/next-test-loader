@@ -356,7 +356,6 @@ class HotReloader {
                     if (isClientCompilation && page.match(_constants.API_ROUTE) && !isMiddleware) {
                         return;
                     }
-                    const isApiRoute = page.match(_constants.API_ROUTE);
                     if (!isClientCompilation && isMiddleware) {
                         return;
                     }
@@ -367,10 +366,12 @@ class HotReloader {
                         delete _onDemandEntryHandler.entries[pageKey];
                         return;
                     }
+                    const isApiRoute = page.match(_constants.API_ROUTE);
                     const isCustomError = (0, _utils).isCustomErrorPage(page);
                     const isReserved = (0, _utils).isReservedPage(page);
                     const isServerComponent = this.hasServerComponents && (0, _utils).isFlightPage(this.config, absolutePagePath);
-                    if (isNodeServerCompilation && this.runtime === 'edge' && !isApiRoute && !isCustomError) {
+                    const isEdgeSSRPage = this.runtime === 'edge' && !isApiRoute;
+                    if (isNodeServerCompilation && isEdgeSSRPage && !isCustomError) {
                         return;
                     }
                     _onDemandEntryHandler.entries[pageKey].status = _onDemandEntryHandler.BUILDING;
@@ -378,27 +379,35 @@ class HotReloader {
                         page,
                         absolutePagePath
                     };
-                    if (isClientCompilation && isMiddleware) {
-                        entrypoints[bundlePath] = (0, _entries).finalizeEntrypoint({
-                            name: bundlePath,
-                            value: `next-middleware-loader?${(0, _querystring).stringify(pageLoaderOpts)}!`,
-                            isServer: false,
-                            isMiddleware: true
-                        });
-                    } else if (isClientCompilation) {
-                        entrypoints[bundlePath] = (0, _entries).finalizeEntrypoint({
-                            name: bundlePath,
-                            value: `next-client-pages-loader?${(0, _querystring).stringify(pageLoaderOpts)}!`,
-                            isServer: false
-                        });
-                        if (isServerComponent) {
-                            _middlewarePlugin.ssrEntries.set(bundlePath, {
-                                requireFlightManifest: true
+                    if (isClientCompilation) {
+                        if (isMiddleware) {
+                            // Middleware
+                            entrypoints[bundlePath] = (0, _entries).finalizeEntrypoint({
+                                name: bundlePath,
+                                value: `next-middleware-loader?${(0, _querystring).stringify(pageLoaderOpts)}!`,
+                                isServer: false,
+                                isMiddleware: true
                             });
-                        } else if (this.runtime === 'edge' && !isReserved && !isCustomError) {
-                            _middlewarePlugin.ssrEntries.set(bundlePath, {
-                                requireFlightManifest: false
+                        } else {
+                            // A page route
+                            entrypoints[bundlePath] = (0, _entries).finalizeEntrypoint({
+                                name: bundlePath,
+                                value: `next-client-pages-loader?${(0, _querystring).stringify(pageLoaderOpts)}!`,
+                                isServer: false
                             });
+                            // Tell the middleware plugin of the client compilation
+                            // that this route is a page.
+                            if (isEdgeSSRPage) {
+                                if (isServerComponent) {
+                                    _middlewarePlugin.ssrEntries.set(bundlePath, {
+                                        requireFlightManifest: true
+                                    });
+                                } else if (!isCustomError && !isReserved) {
+                                    _middlewarePlugin.ssrEntries.set(bundlePath, {
+                                        requireFlightManifest: false
+                                    });
+                                }
+                            }
                         }
                     } else if (isEdgeServerCompilation) {
                         if (!isReserved) {
@@ -420,7 +429,7 @@ class HotReloader {
                                 isEdgeServer: true
                             });
                         }
-                    } else {
+                    } else if (isNodeServerCompilation) {
                         let request = (0, _path).relative(config.context, absolutePagePath);
                         if (!(0, _path).isAbsolute(request) && !request.startsWith('../')) {
                             request = `./${request}`;

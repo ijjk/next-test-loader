@@ -19,6 +19,9 @@ export declare type EventLintCheckCompleted = {
     nextEslintPluginVersion?: string | null;
     nextEslintPluginErrorsCount?: number;
     nextEslintPluginWarningsCount?: number;
+    nextRulesEnabled: {
+        [ruleName: `@next/next/${string}`]: 'off' | 'warn' | 'error';
+    };
 };
 export declare function eventLintCheckCompleted(event: EventLintCheckCompleted): {
     eventName: string;
